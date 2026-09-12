@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import {
-  RECENT_LOGIN_MAX_AGE_SECONDS,
   SESSION_COOKIE_NAME,
   SESSION_DURATION_MS,
 } from "@/lib/auth/constants";
 import { getLandingPathForRole } from "@/lib/auth/authorization";
+import { isRecentLogin } from "@/lib/auth/session";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import {
@@ -43,12 +43,8 @@ export async function POST(request: Request) {
   try {
     const adminAuth = getAdminAuth();
     const token = await adminAuth.verifyIdToken(parsed.data.idToken, true);
-    const tokenAgeSeconds = Math.floor(Date.now() / 1_000) - token.auth_time;
 
-    if (
-      tokenAgeSeconds < 0 ||
-      tokenAgeSeconds > RECENT_LOGIN_MAX_AGE_SECONDS
-    ) {
+    if (!isRecentLogin(token.auth_time)) {
       return errorResponse(401);
     }
 
