@@ -18,6 +18,7 @@ const GENERIC_AUTH_ERROR = "Invalid email or password.";
 export function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -96,14 +97,25 @@ export function LoginForm() {
         <label htmlFor="password" className="block text-sm text-zinc-300">
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className="mt-2 h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-amber-500"
-        />
+        <div className="relative mt-2">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            className="h-12 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 pr-20 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-amber-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 px-4 text-sm font-medium text-zinc-400 hover:text-zinc-200"
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
       </div>
       {error ? (
         <p role="alert" className="text-sm text-red-300">
