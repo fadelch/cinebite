@@ -2,9 +2,10 @@ import type { DatabaseTimestamp } from "@/types/database";
 import type { UserRole } from "@/types/status";
 
 export interface UserProfile {
-  id: string;
-  organizationId: string;
+  uid: string;
+  organizationId: string | null;
   locationIds: string[];
+  allLocations: boolean;
   role: UserRole;
   active: boolean;
   displayName: string;
@@ -13,5 +14,5 @@ export interface UserProfile {
   updatedAt: DatabaseTimestamp;
 }
 
-/** The profile ID will be the Firebase Authentication UID in Phase 3. */
-export type UserProfileDocument = Omit<UserProfile, "id">;
+/** The profile UID is derived from the users/{uid} document path. */
+export type UserProfileDocument = Omit<UserProfile, "uid">;

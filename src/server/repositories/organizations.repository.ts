@@ -2,7 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 
-import { adminFirestore } from "@/lib/firebase/admin";
+import { getAdminFirestore } from "@/lib/firebase/admin";
 import { mapOrganizationDocument } from "@/server/firestore/mappers";
 import { organizationDocumentPath } from "@/server/firestore/paths";
 import type { Organization } from "@/types/organization";
@@ -14,13 +14,18 @@ import {
 } from "@/validation/organization";
 import { slugSchema } from "@/validation/shared";
 
-const organizations = adminFirestore.collection("organizations");
+function organizationsCollection() {
+  return getAdminFirestore().collection("organizations");
+}
 
 async function assertSlugAvailable(
   slug: string,
   excludedOrganizationId?: string,
 ): Promise<void> {
-  const snapshot = await organizations.where("slug", "==", slug).limit(2).get();
+  const snapshot = await organizationsCollection()
+    .where("slug", "==", slug)
+    .limit(2)
+    .get();
   const conflict = snapshot.docs.some(
     (document) => document.id !== excludedOrganizationId,
   );
@@ -36,7 +41,7 @@ export async function createOrganization(
   const data = createOrganizationSchema.parse(input);
   await assertSlugAvailable(data.slug);
 
-  const reference = organizations.doc();
+  const reference = organizationsCollection().doc();
   const timestamp = FieldValue.serverTimestamp();
 
   await reference.set({
@@ -57,7 +62,7 @@ export async function createOrganization(
 export async function getOrganizationById(
   organizationId: string,
 ): Promise<Organization | null> {
-  const snapshot = await adminFirestore
+  const snapshot = await getAdminFirestore()
     .doc(organizationDocumentPath(organizationId))
     .get();
 
@@ -68,7 +73,7 @@ export async function getOrganizationBySlug(
   rawSlug: string,
 ): Promise<Organization | null> {
   const slug = slugSchema.parse(rawSlug);
-  const snapshot = await organizations
+  const snapshot = await organizationsCollection()
     .where("slug", "==", slug)
     .limit(1)
     .get();
@@ -81,7 +86,7 @@ export async function updateOrganization(
   organizationId: string,
   input: UpdateOrganizationInput,
 ): Promise<Organization> {
-  const reference = adminFirestore.doc(
+  const reference = getAdminFirestore().doc(
     organizationDocumentPath(organizationId),
   );
   const data = updateOrganizationSchema.parse(input);
