@@ -2,7 +2,7 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 
-import { adminFirestore } from "@/lib/firebase/admin";
+import { getAdminFirestore } from "@/lib/firebase/admin";
 import { mapLocationDocument } from "@/server/firestore/mappers";
 import {
   locationDocumentPath,
@@ -29,7 +29,7 @@ async function assertLocationSlugAvailable(
   organizationId: string,
   slug: string,
 ): Promise<void> {
-  const snapshot = await adminFirestore
+  const snapshot = await getAdminFirestore()
     .collection(locationsCollectionPath(organizationId))
     .where("slug", "==", slug)
     .limit(1)
@@ -50,7 +50,7 @@ export async function createLocation(
   await assertOrganizationExists(organizationId);
   await assertLocationSlugAvailable(organizationId, data.slug);
 
-  const reference = adminFirestore
+  const reference = getAdminFirestore()
     .collection(locationsCollectionPath(organizationId))
     .doc();
   const timestamp = FieldValue.serverTimestamp();
@@ -77,7 +77,7 @@ export async function getLocationById(
   organizationId: string,
   locationId: string,
 ): Promise<Location | null> {
-  const snapshot = await adminFirestore
+  const snapshot = await getAdminFirestore()
     .doc(locationDocumentPath(organizationId, locationId))
     .get();
 
@@ -89,7 +89,7 @@ export async function listLocationsForOrganization(
 ): Promise<Location[]> {
   await assertOrganizationExists(organizationId);
 
-  const snapshot = await adminFirestore
+  const snapshot = await getAdminFirestore()
     .collection(locationsCollectionPath(organizationId))
     .orderBy("name", "asc")
     .get();
