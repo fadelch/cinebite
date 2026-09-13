@@ -147,6 +147,14 @@ FIREBASE_ADMIN_PRIVATE_KEY=
 ```
 
 Phase 3 adds no environment variables. Keep the private key quoted when it contains escaped `\n` characters.
+Copy only the raw values from the downloaded service-account JSON. An `.env.local`
+assignment is not a JSON property, so do not include the JSON key name or trailing
+comma. For example:
+
+```env
+FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-example@your-project.iam.gserviceaccount.com
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
 
 Also consider enabling Firebase Authentication email enumeration protection. No Firebase Console settings are modified automatically by this repository.
 

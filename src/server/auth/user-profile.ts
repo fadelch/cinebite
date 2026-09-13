@@ -1,7 +1,5 @@
 import "server-only";
 
-import type { DecodedIdToken } from "firebase-admin/auth";
-
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import type { AuthenticatedUser } from "@/types/auth";
 import type { UserProfile } from "@/types/user";
@@ -20,17 +18,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     uid: snapshot.id,
     ...userProfileDocumentSchema.parse(snapshot.data()),
   };
-}
-
-export function claimsMatchProfile(
-  token: DecodedIdToken,
-  profile: UserProfile,
-): boolean {
-  return (
-    token.role === profile.role &&
-    token.organizationId === profile.organizationId &&
-    token.email === profile.email
-  );
 }
 
 export function toAuthenticatedUser(profile: UserProfile): AuthenticatedUser {
