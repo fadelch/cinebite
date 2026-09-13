@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/constants";
 import { getLandingPathForRole } from "@/lib/auth/authorization";
 import { isRecentLogin } from "@/lib/auth/session";
+import { getServerEnv } from "@/lib/env.server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import {
@@ -13,6 +14,30 @@ import {
   getUserProfile,
 } from "@/server/auth/user-profile";
 import { sessionRequestSchema } from "@/validation/auth";
+
+export const runtime = "nodejs";
+
+type SessionStage =
+  | "validate-server-environment"
+  | "initialize-admin"
+  | "verify-id-token"
+  | "load-user-profile"
+  | "create-session-cookie";
+
+function logSessionFailure(stage: SessionStage, error: unknown) {
+  const details =
+    typeof error === "object" && error !== null
+      ? {
+          name: "name" in error ? String(error.name) : "UnknownError",
+          code: "code" in error ? String(error.code) : undefined,
+        }
+      : { name: typeof error, code: undefined };
+
+  console.error("[auth/session] Session creation failed.", {
+    stage,
+    ...details,
+  });
+}
 
 function errorResponse(status: number) {
   return NextResponse.json(
@@ -40,20 +65,29 @@ export async function POST(request: Request) {
     return errorResponse(400);
   }
 
+  let stage: SessionStage = "validate-server-environment";
+
   try {
+    getServerEnv();
+
+    stage = "initialize-admin";
     const adminAuth = getAdminAuth();
+
+    stage = "verify-id-token";
     const token = await adminAuth.verifyIdToken(parsed.data.idToken, true);
 
     if (!isRecentLogin(token.auth_time)) {
       return errorResponse(401);
     }
 
+    stage = "load-user-profile";
     const profile = await getUserProfile(token.uid);
 
     if (!profile?.active || !claimsMatchProfile(token, profile)) {
       return errorResponse(403);
     }
 
+    stage = "create-session-cookie";
     const sessionCookie = await adminAuth.createSessionCookie(
       parsed.data.idToken,
       { expiresIn: SESSION_DURATION_MS },
@@ -77,7 +111,8 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch {
-    return errorResponse(401);
+  } catch (error) {
+    logSessionFailure(stage, error);
+    return errorResponse(stage === "verify-id-token" ? 401 : 500);
   }
 }
