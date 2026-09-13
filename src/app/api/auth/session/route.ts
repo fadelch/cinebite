@@ -4,15 +4,13 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_DURATION_MS,
 } from "@/lib/auth/constants";
+import { claimsMatchProfile } from "@/lib/auth/claims";
 import { getLandingPathForRole } from "@/lib/auth/authorization";
 import { isRecentLogin } from "@/lib/auth/session";
 import { getServerEnv } from "@/lib/env.server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { isSameOriginRequest } from "@/server/auth/request-security";
-import {
-  claimsMatchProfile,
-  getUserProfile,
-} from "@/server/auth/user-profile";
+import { getUserProfile } from "@/server/auth/user-profile";
 import { sessionRequestSchema } from "@/validation/auth";
 
 export const runtime = "nodejs";
@@ -62,6 +60,9 @@ export async function POST(request: Request) {
   const parsed = sessionRequestSchema.safeParse(input);
 
   if (!parsed.success) {
+    console.warn("[auth/session] Invalid session request body.", {
+      issuePaths: parsed.error.issues.map((issue) => issue.path.join(".")),
+    });
     return errorResponse(400);
   }
 
