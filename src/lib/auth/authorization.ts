@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from "@/types/auth";
-import type { UserRole } from "@/types/status";
+import type { OrganizationStatus, UserRole } from "@/types/status";
 
 const ROLE_LANDING_PATHS = {
   SUPER_ADMIN: "/super-admin",
@@ -52,4 +52,19 @@ export function canAccessLocation(
   }
 
   return user.locationIds.includes(locationId);
+}
+
+export function canUseOrganization(
+  user: Pick<AuthenticatedUser, "active" | "organizationId" | "role">,
+  organizationStatus: OrganizationStatus | null,
+): boolean {
+  if (!user.active) {
+    return false;
+  }
+
+  if (user.role === "SUPER_ADMIN") {
+    return true;
+  }
+
+  return user.organizationId !== null && organizationStatus === "ACTIVE";
 }
