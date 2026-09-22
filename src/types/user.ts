@@ -14,5 +14,5 @@ export interface UserProfile {
   updatedAt: DatabaseTimestamp;
 }
 
-/** The profile UID is derived from the users/{uid} document path. */
+/** The profile UID is the verified Firebase Authentication UID. */
 export type UserProfileDocument = Omit<UserProfile, "uid">;

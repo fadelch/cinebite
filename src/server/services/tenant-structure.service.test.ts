@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/server/auth/current-user", () => ({ getCurrentUser: vi.fn() }));
-vi.mock("@/lib/firebase/admin", () => ({ getAdminFirestore: vi.fn() }));
 vi.mock("@/server/repositories/tenant-structure.repository", () => ({}));
 vi.mock("@/server/repositories/organizations.repository", () => ({}));
 

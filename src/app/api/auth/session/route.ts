@@ -87,7 +87,10 @@ export async function POST(request: Request) {
     }
 
     stage = "load-user-profile";
-    const profile = await getUserProfile(token.uid);
+    const profile = await getUserProfile(
+      token.uid,
+      typeof token.organizationId === "string" ? token.organizationId : null,
+    );
 
     if (!profile?.active || !claimsMatchProfile(token, profile)) {
       return errorResponse(403);

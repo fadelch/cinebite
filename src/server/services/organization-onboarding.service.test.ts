@@ -4,7 +4,6 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/server/auth/current-user", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/lib/firebase/admin", () => ({
   getAdminAuth: vi.fn(),
-  getAdminFirestore: vi.fn(),
 }));
 
 import {
@@ -137,10 +136,10 @@ describe("organization onboarding service", () => {
     });
   });
 
-  it("cleans up the new Auth user when Firestore onboarding fails", async () => {
+  it("cleans up the new Auth user when the PostgreSQL onboarding transaction fails", async () => {
     const dependencies = createDependencies();
     vi.mocked(dependencies.commitOnboarding).mockRejectedValue(
-      new Error("Firestore unavailable"),
+      new Error("PostgreSQL unavailable"),
     );
 
     await expect(

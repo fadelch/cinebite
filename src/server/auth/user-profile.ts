@@ -1,22 +1,63 @@
 import "server-only";
 
-import { getAdminFirestore } from "@/lib/firebase/admin";
+import { prisma } from "@/lib/db/prisma";
+import { toDatabaseTimestamp } from "@/server/database/mappers";
 import type { AuthenticatedUser } from "@/types/auth";
 import type { UserProfile } from "@/types/user";
 import { documentIdSchema } from "@/validation/shared";
-import { userProfileDocumentSchema } from "@/validation/user";
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const validUid = documentIdSchema.parse(uid);
-  const snapshot = await getAdminFirestore().collection("users").doc(validUid).get();
+export async function getUserProfile(
+  firebaseUidInput: string,
+  organizationIdHint?: string | null,
+): Promise<UserProfile | null> {
+  const firebaseUid = documentIdSchema.parse(firebaseUidInput);
+  const user = await prisma.user.findUnique({
+    where: { firebaseUid },
+    include: {
+      memberships: {
+        include: { locationAccess: { select: { locationId: true } } },
+      },
+    },
+  });
 
-  if (!snapshot.exists) {
-    return null;
+  if (!user) return null;
+
+  if (user.platformRole === "SUPER_ADMIN") {
+    return {
+      uid: user.firebaseUid,
+      email: user.email,
+      displayName: user.displayName,
+      role: "SUPER_ADMIN",
+      organizationId: null,
+      locationIds: [],
+      allLocations: false,
+      active: user.active,
+      createdAt: toDatabaseTimestamp(user.createdAt),
+      updatedAt: toDatabaseTimestamp(user.updatedAt),
+    };
   }
 
+  const membership = organizationIdHint
+    ? user.memberships.find(
+        (candidate) => candidate.organizationId === organizationIdHint,
+      )
+    : user.memberships.length === 1
+      ? user.memberships[0]
+      : null;
+
+  if (!membership) return null;
+
   return {
-    uid: snapshot.id,
-    ...userProfileDocumentSchema.parse(snapshot.data()),
+    uid: user.firebaseUid,
+    email: user.email,
+    displayName: user.displayName,
+    role: membership.role,
+    organizationId: membership.organizationId,
+    locationIds: membership.locationAccess.map((access) => access.locationId),
+    allLocations: membership.allLocations,
+    active: user.active,
+    createdAt: toDatabaseTimestamp(user.createdAt),
+    updatedAt: toDatabaseTimestamp(user.updatedAt),
   };
 }
 

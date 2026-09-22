@@ -1,0 +1,217 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlatformRole {
+  USER
+  SUPER_ADMIN
+}
+
+enum MembershipRole {
+  CINEMA_ADMIN
+  LOCATION_MANAGER
+  KITCHEN_STAFF
+  DELIVERY_STAFF
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum LocationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum HallStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SeatStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AuditAction {
+  ORGANIZATION_CREATED
+  ORGANIZATION_SUSPENDED
+  ORGANIZATION_REACTIVATED
+  LOCATION_CREATED
+  CINEMA_ADMIN_CREATED
+  HALL_CREATED
+  HALL_STATUS_CHANGED
+  SEATS_GENERATED
+  SEAT_DISABLED
+  SEAT_ENABLED
+}
+
+enum AuditEntityType {
+  ORGANIZATION
+  LOCATION
+  USER
+  HALL
+  SEAT
+}
+
+model User {
+  id           String       @id @default(cuid())
+  firebaseUid  String       @unique
+  email        String       @unique
+  displayName  String
+  active       Boolean      @default(true)
+  platformRole PlatformRole @default(USER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  memberships OrganizationMembership[]
+  auditLogs   AuditLog[]               @relation("AuditActor")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String             @id @default(cuid())
+  name      String
+  slug      String             @unique
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  memberships OrganizationMembership[]
+  locations   Location[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationMembership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MembershipRole
+  allLocations   Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  locationAccess LocationAccess[]
+
+  @@unique([userId, organizationId])
+  @@unique([id, organizationId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("organization_memberships")
+}
+
+model Location {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  addressLine1   String
+  addressLine2   String?
+  postalCode     String?
+  city           String
+  country        String
+  timezone       String
+  status         LocationStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  halls        Hall[]
+  access       LocationAccess[]
+  auditLogs    AuditLog[]
+
+  @@unique([organizationId, slug])
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@map("locations")
+}
+
+model LocationAccess {
+  membershipId   String
+  locationId     String
+  organizationId String
+
+  membership OrganizationMembership @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  location   Location               @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@id([membershipId, locationId])
+  @@index([locationId])
+  @@index([organizationId])
+  @@map("location_access")
+}
+
+model Hall {
+  id         String     @id @default(cuid())
+  locationId String
+  name       String
+  number     Int
+  status     HallStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  location  Location   @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  seats     Seat[]
+  auditLogs AuditLog[]
+
+  @@unique([locationId, number])
+  @@index([locationId])
+  @@map("halls")
+}
+
+model Seat {
+  id        String
+  hallId    String
+  row       String
+  number    Int
+  label     String
+  status    SeatStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  hall Hall @relation(fields: [hallId], references: [id], onDelete: Restrict)
+
+  @@id([hallId, id])
+  @@unique([hallId, label])
+  @@index([hallId])
+  @@map("seats")
+}
+
+model AuditLog {
+  id             String          @id @default(cuid())
+  actorUserId    String?
+  action         AuditAction
+  entityType     AuditEntityType
+  entityId       String
+  organizationId String?
+  locationId     String?
+  hallId         String?
+  metadata       Json
+  createdAt      DateTime        @default(now())
+
+  actor        User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  location     Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  hall         Hall?         @relation(fields: [hallId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([organizationId, createdAt])
+  @@index([locationId, createdAt])
+  @@index([hallId, createdAt])
+  @@map("audit_logs")
+}
