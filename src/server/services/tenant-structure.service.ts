@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 import { generateSeatLayout } from "@/lib/tenant-admin/seats";
 import { getCurrentUser } from "@/server/auth/current-user";
 import {
@@ -21,7 +23,6 @@ import {
 } from "@/server/repositories/tenant-structure.repository";
 import { getOrganizationById } from "@/server/repositories/organizations.repository";
 import { ServiceError } from "@/server/services/service-error";
-import { getAdminFirestore } from "@/lib/firebase/admin";
 import type { AuthenticatedUser } from "@/types/auth";
 import type { Hall } from "@/types/hall";
 import type { Location } from "@/types/location";
@@ -285,10 +286,9 @@ function productionDependencies(): TenantStructureDependencies {
     getHall: getLocationHall,
     listSeats: listHallSeats,
     allocateIds() {
-      const database = getAdminFirestore();
       return {
-        entityId: database.collection("_ids").doc().id,
-        auditLogId: database.collection("auditLogs").doc().id,
+        entityId: randomUUID(),
+        auditLogId: randomUUID(),
       };
     },
     createLocation: createTenantLocationRecord,

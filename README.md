@@ -1,294 +1,39 @@
 # CineBite
 
-CineBite will allow cinema customers to order food and have it delivered directly to their seats.
+CineBite is a multi-tenant cinema food-service application. Phase 6 replaces Firestore as the authoritative business-data store with Neon PostgreSQL and Prisma while retaining Firebase Authentication.
 
 ## Current phase
 
-**Phase 5 — Cinema Admin Structure Management**
+**Phase 6 - Neon PostgreSQL + Prisma**
 
-Phase 5 replaces the Cinema Admin placeholder with a tenant-isolated dashboard for locations, halls, and seats. `CINEMA_ADMIN` users manage their organization's complete cinema structure. `LOCATION_MANAGER` users see and manage only permitted locations. Phase 4 Super Admin behavior remains intact.
+This phase establishes the relational foundation for users, organizations, memberships, locations, location access, halls, seats, and audit logs. It includes a safe Firestore-to-PostgreSQL migration and cuts all normal Phase 1-5 business repositories over to Prisma.
 
-Phase 5 intentionally excludes QR codes, screenings, menus, products, customers, ordering, kitchen and delivery workflows, inventory, payments, revenue, and analytics.
+Phase 6 does not implement movies, screenings, QR ordering, menus, products, inventory, customer ordering, orders, payments, kitchen/delivery workflow, or analytics.
 
-## Phase 5 Cinema Admin routes
-
-- `/admin`: real organization overview with accessible location, hall, and maintained seat counts.
-- `/admin/locations`: server-scoped location directory.
-- `/admin/locations/new`: `CINEMA_ADMIN`-only location creation.
-- `/admin/locations/{locationId}`: authorized location details and hall creation.
-- `/admin/locations/{locationId}/halls/{hallId}`: hall status, seat generator, seat grid, and seat status management.
-
-The shared `/admin` layout permits only `CINEMA_ADMIN` and `LOCATION_MANAGER`. Every read and mutation repeats authentication, tenant-status, role, and location authorization in the server service layer.
-
-## Phase 5 tenant data flow
+## Architecture
 
 ```text
-verified session + users/{uid} profile
-  -> trusted role and organizationId
-  -> reload ACTIVE organization
-  -> apply CINEMA_ADMIN or LOCATION_MANAGER location policy
-  -> validate browser data with Zod
-  -> parent-scoped repository operation
-  -> Firebase Admin / Firestore
-  -> mutation audit event
+browser
+  -> Firebase Authentication (credentials and identity)
+  -> verified Firebase ID token / HttpOnly session cookie
+  -> Next.js server
+  -> PostgreSQL User by Firebase UID
+  -> active platform role or OrganizationMembership
+  -> ACTIVE Organization and LocationAccess checks
+  -> Prisma repositories and transactions
+  -> Neon PostgreSQL (business source of truth)
 ```
 
-Normal tenant requests never accept `organizationId` from the browser. A create-location body contains location fields only; the service derives the parent organization from the verified session. Strict Zod objects reject extra fields such as a client-supplied foreign organization ID.
-
-### Cinema Admin and Location Manager permissions
-
-- `CINEMA_ADMIN` sees every location in its own organization and may create locations, halls, and seats.
-- `LOCATION_MANAGER` receives either explicit `locationIds` or `allLocations` from the trusted user profile. It may create halls and manage seats only inside those locations.
-- `LOCATION_MANAGER` cannot create organization-level locations in Phase 5.
-- `KITCHEN_STAFF`, `DELIVERY_STAFF`, inactive users, missing tenants, and suspended/inactive organizations are denied.
-- An unauthorized location ID is rejected before its document is read, preventing metadata leakage.
-
-### Firestore hierarchy and parent-scoped repositories
-
-```text
-organizations/{organizationId}
-  locations/{locationId}
-    halls/{hallId}
-      seats/{normalizedSeatLabel}
-```
-
-Repository reads require every parent ID, for example `getLocationHall(organizationId, locationId, hallId)` and `listHallSeats(organizationId, locationId, hallId)`. Location Managers are fetched by their assigned document paths; the browser never receives all CineBite locations for client-side filtering.
-
-### Location and hall creation
-
-Location slugs remain unique only inside one organization through `organizations/{organizationId}/locationSlugs/{slug}`. The location document, slug reservation, and audit event are created in one transaction. Different organizations may safely use the same slug.
-
-Hall IDs remain opaque Firestore IDs. Hall numbers are checked within the parent location. `seatCount` starts at zero on the server and is never accepted as authoritative browser input. Halls and locations use status changes instead of normal hard deletion so future historical references remain valid.
-
-### Seat generation and uniqueness
-
-The generator accepts a starting row, row count, seats per row, and starting number. Preview is local and performs no Firestore write. After explicit confirmation, the server validates the numbers again and creates canonical labels such as `A1`, `A2`, and `B1`; client-generated labels are never accepted.
-
-Seat document IDs are deterministic lowercase labels (`A12` becomes document `a12`) inside the hall's seat collection. This makes a label unique within one hall while allowing `A1` in other halls. Firestore batch `create` operations never overwrite an existing seat and make concurrent duplicate attempts fail.
-
-Generation limits are centralized in `src/validation/seat.ts`:
-
-- maximum rows: 26
-- maximum seats per row: 30
-- maximum seats per request: 300
-
-One generation uses at most 302 writes: 300 seat creates, one hall count update, and one audit create. This remains below Firestore's 500-write batch limit, so Phase 5 deliberately uses one atomic batch instead of chunking and risking a partially created layout.
-
-Seats use `ACTIVE` and `DISABLED`. Disabling preserves the seat document and label; reactivation updates that same identity. The seat grid shows both text and visual state and supports horizontal scrolling for larger halls.
-
-### Phase 5 audit events
-
-Phase 5 extends the existing trusted audit log with:
-
-- `LOCATION_CREATED`
-- `HALL_CREATED`
-- `HALL_STATUS_CHANGED`
-- `SEATS_GENERATED`
-- `SEAT_DISABLED`
-- `SEAT_ENABLED`
-
-Events record the verified actor UID, organization, entity and safe parent identifiers using a server timestamp. Tokens, cookies, passwords, credentials, and request secrets are never audit metadata.
-
-### Phase 5 interface and Motion
-
-Cinema Admin reuses the Phase 4 dark design tokens, panels, controls, status badges, loading skeletons, errors, and empty states. Motion for React provides restrained page, card, dialog, preview, navigation, and success transitions. Reduced-motion preferences disable nonessential movement. No additional package or environment variable was required for Phase 5.
-
-## Phase 4 Super Admin routes
-
-- `/super-admin`: live organization totals, status counts, recent organizations, and onboarding entry point.
-- `/super-admin/organizations`: searchable and status-filterable tenant directory.
-- `/super-admin/organizations/new`: four-step organization, location, administrator, and review wizard.
-- `/super-admin/organizations/{organizationId}`: organization status, locations, safe administrator profile information, location creation, and status actions.
-
-Every page verifies `SUPER_ADMIN` on the server. The matching API routes repeat authorization and never rely on navigation visibility.
-
-## Organization onboarding architecture
-
-The onboarding wizard collects all information in browser memory and performs one authoritative server workflow only after review:
-
-```text
-validated request + verified SUPER_ADMIN session
-  → confirm administrator email is unused
-  → allocate server-side organization/location/audit IDs
-  → create Firebase Authentication user without a password
-  → assign CINEMA_ADMIN + organizationId custom claims
-  → generate a sensitive Firebase password setup link
-  → run one Firestore transaction
-       organization
-       first location
-       CINEMA_ADMIN users/{uid} profile
-       organization slug ownership
-       location slug ownership
-       audit events
-  → return the setup link once to the authenticated SUPER_ADMIN
-```
-
-The browser never controls IDs, roles, custom claims, actor identity, timestamps, or administrator tenant membership. Zod validates the full request server-side even though the wizard also validates each step for usability.
-
-### Password setup and invitation
-
-CineBite never asks a Super Admin to choose another user's permanent password. Firebase Admin creates the account and generates a password-reset/setup link. Until an email provider is integrated, the link is displayed once in the authenticated onboarding success state so the Super Admin can copy and deliver it securely.
-
-The setup link is deliberately excluded from Firestore writes, audit metadata, and server logs. It disappears when the success page is left or refreshed.
-
-### Slug uniqueness
-
-Organization slug ownership is reserved at `organizationSlugs/{slug}` in the same transaction that creates the organization. Location ownership is reserved at `organizations/{organizationId}/locationSlugs/{slug}` with its location. These registry documents turn slug creation into an atomic create-or-conflict decision and prevent the race in a query-then-create design.
-
-### Transaction and cleanup strategy
-
-Firebase Authentication and Firestore cannot share one transaction. CineBite therefore creates only a new Auth user, assigns claims, and generates the setup link before the Firestore transaction. If claims, link generation, or the Firestore transaction fail, the newly created Auth account is deleted as compensating cleanup. A pre-existing account is rejected before creation and is never reassigned or deleted.
-
-The Firestore transaction atomically creates all tenant records and audit events, so an organization tree is not intentionally left half-created.
-
-## Organization status and tenant access
-
-Organizations reuse the Phase 2 statuses: `ACTIVE`, `SUSPENDED`, and `INACTIVE`. No hard delete is available.
-
-- `ACTIVE`: eligible tenant staff may authenticate and use their assigned routes.
-- `SUSPENDED` or `INACTIVE`: tenant sessions fail closed, even if the user profile and custom claims are otherwise valid.
-- `SUPER_ADMIN`: remains able to inspect and reactivate a suspended organization.
-
-Both ID-token session creation and later session-cookie verification reload organization state. A status change therefore takes effect without trusting stale client state.
-
-## Audit logging
-
-Security-relevant operations write to `auditLogs/{auditLogId}` from trusted server code. Current actions are:
-
-- `ORGANIZATION_CREATED`
-- `CINEMA_ADMIN_CREATED`
-- `LOCATION_CREATED`
-- `ORGANIZATION_SUSPENDED`
-- `ORGANIZATION_REACTIVATED`
-
-Audit entries contain the verified actor UID, action, entity type and ID, relevant organization ID, safe metadata, and a server timestamp. Passwords, setup links, ID tokens, session cookies, and credentials are forbidden from audit data.
-
-## Phase 4 interface and Motion
-
-The Super Admin UI uses a responsive dark dashboard shell with a desktop sidebar and mobile navigation. Reusable panels, fields, buttons, status badges, loading skeletons, empty states, error recovery, dialogs, and focus styles share design tokens from `globals.css`.
-
-Motion for React provides restrained page, statistic-card, wizard-step, active-navigation, dialog, and success transitions. Client components call Motion's reduced-motion hook so operating-system `prefers-reduced-motion` settings remove nonessential movement.
-
-## Authentication architecture
-
-Authentication proves who a person is. Authorization decides what that authenticated person may access. Firebase Authentication verifies staff credentials, but CineBite does not treat a client login as authorization.
-
-```text
-Email + password
-  → Firebase Authentication
-  → short-lived Firebase ID token
-  → POST /api/auth/session
-  → Firebase Admin verifies token and revocation
-  → server loads and validates users/{uid}
-  → claims must match the current profile
-  → 12-hour HttpOnly cinebite_session cookie
-  → server verifies session and profile on protected requests
-```
-
-The password is sent only to Firebase Authentication. CineBite never stores it in Firestore, sends it to a custom server endpoint, hashes it, or logs it.
-
-## UserProfile authorization model
-
-Each staff profile lives at `users/{uid}`. The UID is derived from the document path and is not duplicated inside the document.
-
-```text
-email
-displayName
-role
-organizationId
-locationIds
-allLocations
-active
-createdAt
-updatedAt
-```
-
-Security invariants are validated with Zod:
-
-- `SUPER_ADMIN`: no organization and no location restrictions.
-- `CINEMA_ADMIN`: an organization is required and `allLocations` must be true.
-- `LOCATION_MANAGER`: an organization is required; it may have all-location access or an explicit nonempty location list.
-- `KITCHEN_STAFF` and `DELIVERY_STAFF`: an organization and at least one explicit location are required. Organization-wide access is intentionally disallowed.
-- Duplicate location IDs and inconsistent combinations are rejected.
-- `active: false` always fails authorization.
-
-## Custom claims
-
-Firebase custom claims contain only compact authorization metadata:
-
-```json
-{
-  "role": "CINEMA_ADMIN",
-  "organizationId": "organization-document-id"
-}
-```
-
-Location arrays, display names, and other profile data remain in Firestore. Claims have size limits and can become stale, so every protected request also loads the current profile. Session creation and protected requests require the claim role and organization to match that profile.
-
-Only Firebase Admin code may set claims. Clients never submit their role or organization.
-
-## RBAC and tenant isolation
-
-Central role landing paths are:
-
-| Role | Landing path |
-| --- | --- |
-| `SUPER_ADMIN` | `/super-admin` |
-| `CINEMA_ADMIN` | `/admin` |
-| `LOCATION_MANAGER` | `/admin` |
-| `KITCHEN_STAFF` | `/kitchen` |
-| `DELIVERY_STAFF` | `/delivery` |
-
-Tenant users may access only their own organization. Location access first checks the organization, then permits access when `allLocations` is true or the location appears in `locationIds`. `SUPER_ADMIN` may cross tenants only when a server operation explicitly calls the corresponding authorization helper.
-
-Protected pages perform authorization in server components. Middleware is not the security boundary. Future sensitive APIs must independently call `requireAuth`, `requireRole`, `requireOrganizationAccess`, or `requireLocationAccess`.
-
-## Session and cookie security
-
-The `cinebite_session` cookie is:
-
-- `HttpOnly`, so client JavaScript cannot read it.
-- `Secure` in production, so browsers send it only over HTTPS.
-- `SameSite=Lax`, providing a strong same-site baseline while preserving normal navigation.
-- Scoped to `Path=/`.
-- Limited to approximately 12 hours.
-
-Session creation accepts only recently authenticated ID tokens. Protected requests use Firebase Admin session verification with revocation checking and reload `users/{uid}`. Disabled Firebase users, revoked sessions, inactive profiles, invalid profiles, and claims/profile mismatches fail closed.
-
-Authentication state-changing endpoints require the HTTP `Origin` to match the request origin. This complements `SameSite` cookies. Future authenticated mutation APIs must consistently use the same-origin/CSRF strategy.
-
-## Staff pages
-
-- `/login`: email/password login; no registration link or signup flow.
-- `/forgot-password`: Firebase password reset with a generic account-enumeration-safe response.
-- `/super-admin`: `SUPER_ADMIN` only.
-- `/admin`: `CINEMA_ADMIN` or `LOCATION_MANAGER`.
-- `/kitchen`: `KITCHEN_STAFF` only.
-- `/delivery`: `DELIVERY_STAFF` only.
-- `/unauthorized`: safe landing page for a valid session with the wrong role.
-
-The Cinema Admin routes are now a real structure-management dashboard. Kitchen and delivery routes remain authorization placeholders.
-
-## First SUPER_ADMIN bootstrap
-
-The bootstrap is a local server-side operation, never an HTTP endpoint.
-
-1. In Firebase Console, enable **Authentication → Sign-in method → Email/Password**.
-2. In **Authentication → Users**, manually add your initial developer account.
-3. Add valid Firebase Admin credentials to `.env.local`.
-4. Run:
-
-   ```bash
-   npm run bootstrap:super-admin -- user@example.com
-   ```
-
-The script finds the existing Firebase Auth user, rejects disabled accounts, sets only the `SUPER_ADMIN` role and null organization claims, and creates or updates `users/{uid}` with server timestamps. It never accepts, changes, or prints a password and never prints credentials.
-
-Sign in again after bootstrapping so Firebase issues a token containing the new claims.
-
-## Firebase and environment setup
-
-Client values come from **Firebase Console → Project settings → General → Your apps → Web app**:
+- Firebase Authentication owns passwords, identity verification, reset/setup links, revocation, and session-cookie verification.
+- Firebase Storage remains configured for future media.
+- Neon PostgreSQL owns current application and authorization data.
+- Prisma provides the schema, generated types, migrations, relational queries, and transactions.
+- Firestore is retained unchanged as legacy migration/backup data. Normal application reads and writes no longer use it.
+- Firebase custom claims remain a compact coarse signal, but sensitive server operations reload current PostgreSQL authorization state.
+
+## Environment variables
+
+Copy `.env.example` to the ignored `.env.local` and fill values privately. Never commit or print server secrets.
 
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=
@@ -297,97 +42,199 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
-```
 
-Server values come from **Project settings → Service accounts → Generate new private key**:
-
-```env
 FIREBASE_ADMIN_PROJECT_ID=
 FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=
+
+DATABASE_URL=
+DIRECT_URL=
 ```
 
-Phases 4 and 5 add no environment variables. Keep the private key quoted when it contains escaped `\n` characters.
-Copy only the raw values from the downloaded service-account JSON. An `.env.local`
-assignment is not a JSON property, so do not include the JSON key name or trailing
-comma. For example:
+`DATABASE_URL` is the Neon pooled connection used by the running application through `PrismaNeon`. Pooling is appropriate for concurrent and serverless runtime traffic.
 
-```env
-FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-example@your-project.iam.gserviceaccount.com
-FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
+`DIRECT_URL` is the Neon direct connection loaded by `prisma.config.ts` for controlled Prisma CLI and migration operations. It is not prefixed with `NEXT_PUBLIC_` and must not enter browser bundles.
 
-Also consider enabling Firebase Authentication email enumeration protection. No Firebase Console settings are modified automatically by this repository.
-
-### Manual Firebase configuration for Phase 4
-
-1. In **Authentication → Sign-in method**, keep Email/Password enabled.
-2. In **Authentication → Settings → Authorized domains**, verify `localhost` is present for local development and add each HTTPS production domain before deployment.
-3. In **Authentication → Templates → Password reset**, review the sender name, subject, and action URL. Firebase Admin uses this template/action handler when generating the administrator setup link.
-4. If you customize the action URL, ensure its domain is authorized and that it can complete Firebase password actions for this project.
-5. Keep service-account credentials only in `.env.local` locally and in encrypted deployment environment variables in production.
-
-No organization, location, or cinema administrator needs to be created manually in Firebase Console after Phase 4. Use the CineBite onboarding wizard.
-
-## Firestore security
-
-Client Firestore access remains denied by `firestore.rules`. Staff traffic follows:
+## Prisma layout
 
 ```text
-Browser → authenticated Next.js server → Firebase Admin → Firestore
+prisma/
+  schema.prisma
+  migrations/
+    migration_lock.toml
+    20260922160000_initial_postgresql_cutover/
+      migration.sql
+prisma.config.ts
+src/
+  generated/prisma/                # generated locally, ignored by Git
+  lib/db/
+    prisma.ts                       # lazy server-only pooled client
+    errors.ts                       # safe Prisma error-code helper
+  server/database/mappers.ts       # Prisma row -> existing domain types
+  server/repositories/             # PostgreSQL business persistence
+  server/migration/
+    firestore-source.ts            # read-only legacy extractor
+    firestore-to-postgres.ts       # validation, mapping, apply, verification
+scripts/
+  migrate-firestore-postgres.ts    # dry-run/apply CLI
+  bootstrap-super-admin.ts          # Firebase identity + PostgreSQL role
+docs/
+  firestore-to-postgres-migration.md
 ```
 
-The Admin SDK bypasses client Firestore rules, so server authorization checks are mandatory. Rules and indexes are not deployed automatically.
+Prisma Client is generated into `src/generated/prisma` using the current `prisma-client` generator. The directory is ignored because it is reproducible through `npm install`/`npm run prisma:generate`.
 
-## Development
+## Relational model
+
+### User
+
+Represents application state for a Firebase identity. Its generated `id` is the primary key; `firebaseUid` and normalized lowercase `email` are unique. `platformRole` represents `SUPER_ADMIN` without forcing a tenant membership. It relates to memberships and authored audit logs. It stores no passwords, password hashes, ID tokens, or session cookies.
+
+### Organization
+
+Represents a cinema tenant. Its generated or migration-preserved `id` is the primary key, and `slug` is globally unique. Status is `ACTIVE`, `SUSPENDED`, or `INACTIVE`. It owns memberships, locations, and organization audit relations.
+
+### OrganizationMembership
+
+Joins a user to an organization with `CINEMA_ADMIN`, `LOCATION_MANAGER`, `KITCHEN_STAFF`, or `DELIVERY_STAFF`. `userId` and `organizationId` are foreign keys with cascade cleanup, and their compound uniqueness prevents duplicate tenant memberships. `allLocations` handles organization-wide tenant access; restricted access uses child rows.
+
+### Location
+
+Belongs to one organization through a restrictive foreign key. Address fields are flattened into relational columns while repository mappers preserve the existing nested domain shape. `@@unique([organizationId, slug])` allows different tenants to reuse a slug but prevents duplicates within one tenant. `organizationId` is indexed for tenant listings.
+
+### LocationAccess
+
+Connects one membership to an explicitly permitted location. The compound primary key `[membershipId, locationId]` prevents duplicate grants. Composite foreign keys include `organizationId`, so PostgreSQL itself requires the membership and location to belong to the same organization. This replaces long-term authorization arrays.
+
+### Hall
+
+Belongs to one location through a restrictive foreign key. `[locationId, number]` is unique, so hall numbers are scoped to a location. `locationId` is indexed. Seat counts are derived with a relational count rather than stored as a denormalized authority.
+
+### Seat
+
+Belongs to one hall. Its compound primary key `[hallId, id]` preserves legacy Firestore IDs such as `a1` while allowing that ID in multiple halls. `[hallId, label]` is also unique. This preserves Phase 5 hall-scoped uniqueness, and `hallId` is indexed for seat-grid reads.
+
+### AuditLog
+
+Stores trusted security/business events with action/entity enums, safe JSON metadata, and indexed organization/location/hall timelines. Actor and hierarchy references are nullable with `SET NULL`, so historical records remain readable if a referenced entity is later removed. Secrets are never valid audit metadata.
+
+## Constraints and indexes
+
+PostgreSQL enforces unique Firebase UID, normalized email, organization slug, user/organization membership, organization/location slug, location/hall number, hall/seat ID, hall/seat label, and membership/location grant. Foreign keys enforce the relational hierarchy. Indexes support current lookup patterns without speculative indexing: memberships by user/organization, locations by organization, halls and seats by parent, and audit history by parent plus creation time.
+
+## Repository and service cutover
+
+The existing UI-facing domain types and service boundaries remain stable. Domain mappers convert Prisma `Date` values back into the existing timestamp interface, so pages do not depend on persistence details.
+
+Normal repositories now use Prisma for:
+
+- organization creation, status, list, detail, and dashboard counts;
+- organization-scoped location reads and creation;
+- user profile, memberships, and location-access loading;
+- hall reads, creation, and status changes;
+- seat reads, generation, and status changes;
+- all new audit events.
+
+Mutations scope queries by their parent organization/location/hall. Browser data cannot select an organization. Services derive identity and tenant scope from the verified server session, validate request fields with Zod, re-check current organization status, and fail closed for unauthorized access.
+
+Organization onboarding still creates the Firebase Auth identity first, sets claims, and generates the one-time setup link. Organization, first location, PostgreSQL user, membership, and audit rows are then committed atomically in one Prisma transaction. If any later step fails, the newly created Firebase user is safely deleted as compensation. A pre-existing account is never deleted.
+
+Seat generation uses a serializable transaction. It validates the active organization/location/hall hierarchy, checks existing labels, inserts all seats, and writes the audit event atomically. A concurrent unique-constraint collision rolls back and returns a duplicate-seat conflict.
+
+## Authentication and authorization
+
+Firebase verifies credentials and sessions; PostgreSQL is authoritative for application authorization:
+
+1. verify the Firebase session cookie with revocation checking;
+2. load `User` by `firebaseUid`;
+3. require the user to be active;
+4. resolve `SUPER_ADMIN` or the claimed tenant membership;
+5. compare compact Firebase claims with the current server-loaded profile;
+6. load the organization and require `ACTIVE` for tenant roles;
+7. apply `allLocations` or explicit `LocationAccess` rows;
+8. repeat role/tenant/location checks inside sensitive services.
+
+`SUPER_ADMIN` needs no organization membership and can manage suspended tenants. Tenant users are denied when their organization is suspended/inactive. Location Managers and later staff roles cannot cross their explicit location boundary.
+
+## Database health
+
+`GET /api/health` runs a minimal server-side `SELECT 1`. Success returns only service/database status; failure returns `503` with the same safe fields. Logs include only an error name/code, never URLs, hosts, users, or passwords.
+
+## Firestore migration
+
+Read the full operator runbook at [docs/firestore-to-postgres-migration.md](docs/firestore-to-postgres-migration.md).
+
+The initial schema is managed through the committed Prisma migration:
+
+```bash
+npm run prisma:validate
+npm run prisma:generate
+npm run prisma:migrate:deploy
+```
+
+The data command is dry-run by default:
+
+```bash
+npm run migrate:firestore-postgres
+```
+
+It reads Firestore, performs strict schema/reference/uniqueness validation, maps profiles into users/memberships/location access, reports counts, and performs zero PostgreSQL writes.
+
+After reviewing the report, deliberate application requires the exact flag:
+
+```bash
+npm run migrate:firestore-postgres -- --apply
+```
+
+The apply order follows foreign keys: organizations, locations, halls, seats, users, memberships, location access, then audit logs. The destination must be empty or already match the exact migrated IDs and counts. New writes use one serializable transaction; conflicts stop safely without silent overwrites. Post-write counts must match the validated source plan.
+
+Legacy organization, location, hall, and hall-scoped seat IDs are explicitly inserted. User primary keys use the Firebase UID during migration, while new users may use generated IDs. Historical audit foreign keys that no longer reference an existing migrated entity become null while their original entity identifiers and safe metadata remain.
+
+No migration path deletes or changes Firestore data.
+
+## Remaining Firestore usage
+
+Normal application business reads/writes no longer use Firestore. Remaining references are intentional:
+
+- Firebase Admin exposes Firestore for the migration reader;
+- `src/server/migration/firestore-source.ts` reads legacy collections only;
+- old Firestore path/mapper helpers and rules/index definitions are retained as explicit legacy documentation/support while backup data remains;
+- Firebase Authentication and Firebase Storage are independent Firebase products and remain enabled.
+
+## Initial Super Admin
+
+After deploying the PostgreSQL schema, ensure the identity already exists in Firebase Authentication, then run:
+
+```bash
+npm run bootstrap:super-admin -- user@example.com
+```
+
+The script accepts an email, never a password. It rejects disabled identities, upserts the PostgreSQL user as `SUPER_ADMIN`, and updates compact Firebase claims. Sign out and sign in again afterward to receive refreshed claims.
+
+## Development and quality checks
 
 ```bash
 npm install
+npm run prisma:validate
+npm run prisma:generate
 npm test
 npm run lint
 npm run build
 npm run dev
 ```
 
-Tests cover validation, role and suspension authorization, onboarding orchestration, trusted claim/profile intent, duplicate email and slug handling, tenant-derived location creation, assigned-location scoping, hall authorization, canonical seat labels, generation limits, duplicate-seat protection, mutation audit intent, and Auth cleanup after Firestore failure. Integrations are mocked; automated tests do not connect to Firebase or create production users/data.
+Tests mock persistence and never modify a configured Neon database or Firestore project. They cover database invariants, authorization and suspension behavior, tenant/location isolation, onboarding orchestration and Firebase cleanup, repository writes/audits, seat generation/status changes, migration mapping, dry-run no-write behavior, validation, and conflict reporting.
 
-## Manual Phase 4 test
+## Vercel preparation
 
-1. Start the app with `npm run dev` and sign in as the bootstrapped `SUPER_ADMIN`.
-2. Open `/super-admin` and confirm the counts match Firestore.
-3. Open **Organizations → Add organization**.
-4. Complete all four wizard steps using a unique organization slug and administrator email.
-5. Copy the setup link from the success screen; do not paste it into logs or source files.
-6. Open the organization detail page and add another unique location.
-7. Suspend the organization and confirm its tenant administrator can no longer access tenant routes.
-8. Reactivate it and confirm tenant eligibility is restored after a fresh sign-in/session.
-9. Confirm Firestore contains the organization, locations, slug registries, user profile, and audit entries, but not the setup link.
+Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Firebase configuration in the appropriate Vercel environment settings. Do not put database URLs in `vercel.json`. Run `npm run prisma:migrate:deploy` through a controlled deployment workflow before starting application code that requires the new schema. This repository does not deploy or migrate production automatically.
 
-## Manual Phase 5 test
+## Known limitations
 
-1. Start the app with `npm run dev` and sign in as a Phase 4-created `CINEMA_ADMIN`.
-2. Open `/admin`; confirm the organization name and structure counts match its Firestore hierarchy.
-3. Open **Locations**, add a location with a unique slug, and confirm no organization selector is shown.
-4. Open the new location, add a hall, and confirm its seat count starts at zero.
-5. Open the hall and preview rows `A` through `J` with 16 seats per row. Confirm preview makes no Firestore changes.
-6. Confirm generation, refresh the page, and verify the grid contains `A1` through `J16`.
-7. Select a seat such as `A1`; verify it visibly changes to `Off`/`DISABLED` but its document is preserved. Select it again to reactivate it.
-8. Try generating an overlapping range and confirm the whole request is rejected without overwriting existing seats.
-9. Mark the hall inactive and confirm seat generation/status controls are unavailable; reactivate it afterward.
-10. If a `LOCATION_MANAGER` test user exists, sign in and confirm only assigned locations appear. Confirm `/admin/locations/new` and its POST API reject that role.
-11. While signed in as a Location Manager, manually navigate to an unassigned location ID and confirm access is denied without revealing its details.
-12. Suspend the organization as Super Admin, sign in again as tenant staff, and confirm `/admin` and tenant APIs fail closed. Reactivate it when finished.
-13. Inspect `auditLogs` and verify the mutations above have safe events with actor and parent identifiers but no tokens or secrets.
-
-Normal Phase 5 usage does not require manually creating Firestore location, hall, or seat documents. Creating a Location Manager test account remains outside Phase 5 because employee management is not implemented yet.
-
-## Current limitations
-
-- Invitation delivery is manual; a future phase can send the setup link through a transactional email provider.
-- Kitchen and delivery routes remain authorization placeholders.
-- There is no staff-management UI beyond creating the first `CINEMA_ADMIN` during onboarding.
-- There is no UI to change a location's status; Super Admin and trusted future workflows preserve the existing status model.
-- Hall layouts are generated as row/number grids; advanced drag-and-drop floorplans and aisles are intentionally deferred.
-- There are no seat QR codes, screenings, menus, products, customer accounts, carts, orders, kitchen workflows, delivery workflows, inventory, payments, or operational analytics.
-- Organization search is an in-memory filter over the authorized server result; pagination/full-text search can be introduced when tenant volume requires it.
-- Logging out clears the current browser cookie; account-wide revocation remains reserved for explicit security/admin operations.
+- Migration is designed for an empty PostgreSQL destination or an exact prior migration match; it deliberately does not merge arbitrary partial datasets.
+- Organization, location, and hall legacy IDs are preserved only when globally unique. Phase 4-5 generated opaque IDs satisfy that assumption; an older nested collection containing repeated location/hall IDs is rejected for manual resolution instead of being silently rewritten and breaking URLs.
+- Email normalization is lowercase application policy backed by a unique column; direct out-of-band SQL must follow the same normalization rule.
+- Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
+- There is no staff-management UI beyond initial Cinema Admin onboarding.
+- Firestore remains legacy backup data until a separately reviewed retention decision.
+- Advanced cinema layouts and all menu/order/payment/operations features are deferred to later phases.

@@ -1,18 +1,12 @@
 import "server-only";
 
-import { FieldValue } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 
+import { isPrismaError } from "@/lib/db/errors";
+import { prisma } from "@/lib/db/prisma";
 import { getCurrentUser } from "@/server/auth/current-user";
-import {
-  auditLogDocumentPath,
-  locationDocumentPath,
-  locationSlugDocumentPath,
-  organizationDocumentPath,
-  organizationSlugDocumentPath,
-  userDocumentPath,
-} from "@/server/firestore/paths";
 import { ServiceError } from "@/server/services/service-error";
-import { getAdminAuth, getAdminFirestore } from "@/lib/firebase/admin";
+import { getAdminAuth } from "@/lib/firebase/admin";
 import type { AuthenticatedUser } from "@/types/auth";
 import type { AuditAction, AuditEntityType } from "@/types/audit";
 import type { OrganizationOnboardingResult } from "@/types/super-admin";
@@ -210,23 +204,8 @@ export function createOrganizationOnboardingService(
   };
 }
 
-function auditRecord(input: {
-  actorUid: string;
-  action: AuditAction;
-  entityType: AuditEntityType;
-  entityId: string;
-  organizationId: string;
-  metadata: Record<string, string | number | boolean | null>;
-}) {
-  return {
-    ...input,
-    createdAt: FieldValue.serverTimestamp(),
-  };
-}
-
 function productionDependencies(): OrganizationOnboardingDependencies {
   const auth = getAdminAuth();
-  const firestore = getAdminFirestore();
 
   return {
     async administratorEmailExists(email) {
@@ -262,81 +241,90 @@ function productionDependencies(): OrganizationOnboardingDependencies {
     },
     allocateIds() {
       return {
-        organizationId: firestore.collection("organizations").doc().id,
-        locationId: firestore.collection("_ids").doc().id,
-        organizationAuditId: firestore.collection("auditLogs").doc().id,
-        locationAuditId: firestore.collection("auditLogs").doc().id,
-        administratorAuditId: firestore.collection("auditLogs").doc().id,
+        organizationId: randomUUID(),
+        locationId: randomUUID(),
+        organizationAuditId: randomUUID(),
+        locationAuditId: randomUUID(),
+        administratorAuditId: randomUUID(),
       };
     },
     async commitOnboarding(input) {
-      const organizationReference = firestore.doc(
-        organizationDocumentPath(input.organizationId),
-      );
-      const organizationSlugReference = firestore.doc(
-        organizationSlugDocumentPath(input.data.organization.slug),
-      );
-      const locationReference = firestore.doc(
-        locationDocumentPath(input.organizationId, input.locationId),
-      );
-      const locationSlugReference = firestore.doc(
-        locationSlugDocumentPath(
-          input.organizationId,
-          input.data.firstLocation.slug,
-        ),
-      );
-      const profileReference = firestore.doc(
-        userDocumentPath(input.administratorUid),
-      );
+      try {
+        await prisma.$transaction(async (transaction) => {
+          const actor = await transaction.user.findUnique({
+            where: { firebaseUid: input.actorUid },
+            select: { id: true },
+          });
+          if (!actor) {
+            throw new ServiceError(
+              "AUTHENTICATION_REQUIRED",
+              401,
+              "Authentication is required.",
+            );
+          }
 
-      await firestore.runTransaction(async (transaction) => {
-        const slugOwnership = await transaction.get(
-          organizationSlugReference,
-        );
-
-        if (slugOwnership.exists) {
+          await transaction.organization.create({
+            data: {
+              id: input.organizationId,
+              ...input.data.organization,
+            },
+          });
+          await transaction.location.create({
+            data: {
+              id: input.locationId,
+              organizationId: input.organizationId,
+              name: input.data.firstLocation.name,
+              slug: input.data.firstLocation.slug,
+              status: input.data.firstLocation.status,
+              addressLine1: input.data.firstLocation.address.line1,
+              addressLine2: input.data.firstLocation.address.line2,
+              postalCode: input.data.firstLocation.address.postalCode,
+              city: input.data.firstLocation.city,
+              country: input.data.firstLocation.country,
+              timezone: input.data.firstLocation.timezone,
+            },
+          });
+          const administrator = await transaction.user.create({
+            data: {
+              firebaseUid: input.administratorUid,
+              email: input.administratorProfile.email.toLowerCase(),
+              displayName: input.administratorProfile.displayName,
+              active: input.administratorProfile.active,
+              platformRole: "USER",
+            },
+          });
+          await transaction.organizationMembership.create({
+            data: {
+              userId: administrator.id,
+              organizationId: input.organizationId,
+              role: "CINEMA_ADMIN",
+              allLocations: true,
+            },
+          });
+          await transaction.auditLog.createMany({
+            data: input.auditEvents.map((event) => ({
+              id: event.id,
+              actorUserId: actor.id,
+              action: event.action,
+              entityType: event.entityType,
+              entityId: event.entityId,
+              organizationId: event.organizationId,
+              locationId:
+                event.entityType === "LOCATION" ? event.entityId : null,
+              metadata: event.metadata,
+            })),
+          });
+        });
+      } catch (error) {
+        if (isPrismaError(error, "P2002")) {
           throw new ServiceError(
             "DUPLICATE_ORGANIZATION_SLUG",
             409,
-            "This organization slug is already in use.",
+            "The organization slug or administrator identity already exists.",
           );
         }
-
-        const timestamp = FieldValue.serverTimestamp();
-
-        transaction.create(organizationReference, {
-          ...input.data.organization,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-        transaction.create(organizationSlugReference, {
-          organizationId: input.organizationId,
-          createdAt: timestamp,
-        });
-        transaction.create(locationReference, {
-          ...input.data.firstLocation,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-        transaction.create(locationSlugReference, {
-          locationId: input.locationId,
-          createdAt: timestamp,
-        });
-        transaction.create(profileReference, {
-          ...input.administratorProfile,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-        for (const event of input.auditEvents) {
-          transaction.create(
-            firestore.doc(auditLogDocumentPath(event.id)),
-            auditRecord({
-              ...event,
-              actorUid: input.actorUid,
-            }),
-          );
-        }
-      });
+        throw error;
+      }
     },
   };
 }

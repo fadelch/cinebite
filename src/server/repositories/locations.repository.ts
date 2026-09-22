@@ -1,106 +1,57 @@
 import "server-only";
 
-import { FieldValue } from "firebase-admin/firestore";
-
-import { getAdminFirestore } from "@/lib/firebase/admin";
-import { mapLocationDocument } from "@/server/firestore/mappers";
-import {
-  locationDocumentPath,
-  locationsCollectionPath,
-} from "@/server/firestore/paths";
-import { getOrganizationById } from "@/server/repositories/organizations.repository";
+import { prisma } from "@/lib/db/prisma";
+import { toLocationDomain } from "@/server/database/mappers";
 import type { Location } from "@/types/location";
 import {
   createLocationSchema,
   type CreateLocationInput,
 } from "@/validation/location";
-
-async function assertOrganizationExists(
-  organizationId: string,
-): Promise<void> {
-  const organization = await getOrganizationById(organizationId);
-
-  if (!organization) {
-    throw new Error(`Organization "${organizationId}" does not exist.`);
-  }
-}
-
-async function assertLocationSlugAvailable(
-  organizationId: string,
-  slug: string,
-): Promise<void> {
-  const snapshot = await getAdminFirestore()
-    .collection(locationsCollectionPath(organizationId))
-    .where("slug", "==", slug)
-    .limit(1)
-    .get();
-
-  if (!snapshot.empty) {
-    throw new Error(
-      `Location slug "${slug}" is already in use for this organization.`,
-    );
-  }
-}
+import { documentIdSchema } from "@/validation/shared";
 
 export async function createLocation(
-  organizationId: string,
+  organizationIdInput: string,
   input: CreateLocationInput,
 ): Promise<Location> {
+  const organizationId = documentIdSchema.parse(organizationIdInput);
   const data = createLocationSchema.parse(input);
-  await assertOrganizationExists(organizationId);
-  await assertLocationSlugAvailable(organizationId, data.slug);
-
-  const reference = getAdminFirestore()
-    .collection(locationsCollectionPath(organizationId))
-    .doc();
-  const timestamp = FieldValue.serverTimestamp();
-
-  await reference.set({
-    ...data,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
-  const location = mapLocationDocument(
-    organizationId,
-    await reference.get(),
+  return toLocationDomain(
+    await prisma.location.create({
+      data: {
+        organizationId,
+        name: data.name,
+        slug: data.slug,
+        status: data.status,
+        addressLine1: data.address.line1,
+        addressLine2: data.address.line2,
+        postalCode: data.address.postalCode,
+        city: data.city,
+        country: data.country,
+        timezone: data.timezone,
+      },
+    }),
   );
-
-  if (!location) {
-    throw new Error("Location was created but could not be read back.");
-  }
-
-  return location;
 }
 
 export async function getLocationById(
-  organizationId: string,
-  locationId: string,
+  organizationIdInput: string,
+  locationIdInput: string,
 ): Promise<Location | null> {
-  const snapshot = await getAdminFirestore()
-    .doc(locationDocumentPath(organizationId, locationId))
-    .get();
-
-  return mapLocationDocument(organizationId, snapshot);
+  const organizationId = documentIdSchema.parse(organizationIdInput);
+  const id = documentIdSchema.parse(locationIdInput);
+  const location = await prisma.location.findFirst({
+    where: { id, organizationId },
+  });
+  return location ? toLocationDomain(location) : null;
 }
 
 export async function listLocationsForOrganization(
-  organizationId: string,
+  organizationIdInput: string,
 ): Promise<Location[]> {
-  await assertOrganizationExists(organizationId);
-
-  const snapshot = await getAdminFirestore()
-    .collection(locationsCollectionPath(organizationId))
-    .orderBy("name", "asc")
-    .get();
-
-  return snapshot.docs.map((document) => {
-    const location = mapLocationDocument(organizationId, document);
-
-    if (!location) {
-      throw new Error(`Location "${document.id}" could not be mapped.`);
-    }
-
-    return location;
+  const organizationId = documentIdSchema.parse(organizationIdInput);
+  const locations = await prisma.location.findMany({
+    where: { organizationId },
+    orderBy: { name: "asc" },
   });
+  return locations.map(toLocationDomain);
 }

@@ -1,84 +1,68 @@
 import "server-only";
 
-import { getAdminFirestore } from "@/lib/firebase/admin";
-import { mapOrganizationDocument } from "@/server/firestore/mappers";
-import { listLocationsForOrganization } from "@/server/repositories/locations.repository";
-import { getOrganizationById } from "@/server/repositories/organizations.repository";
+import { prisma } from "@/lib/db/prisma";
+import { toLocationDomain, toOrganizationDomain } from "@/server/database/mappers";
 import type {
   CinemaAdministratorSummary,
   OrganizationDetail,
   SuperAdminDashboardData,
 } from "@/types/super-admin";
-import { userProfileDocumentSchema } from "@/validation/user";
+import { documentIdSchema } from "@/validation/shared";
 
 export async function listOrganizations() {
-  const snapshot = await getAdminFirestore()
-    .collection("organizations")
-    .orderBy("createdAt", "desc")
-    .get();
-
-  return snapshot.docs.map((document) => {
-    const organization = mapOrganizationDocument(document);
-
-    if (!organization) {
-      throw new Error(`Organization "${document.id}" could not be mapped.`);
-    }
-
-    return organization;
+  const organizations = await prisma.organization.findMany({
+    orderBy: { createdAt: "desc" },
   });
+  return organizations.map(toOrganizationDomain);
 }
 
 export async function getSuperAdminDashboardData(): Promise<SuperAdminDashboardData> {
-  const organizations = await listOrganizations();
+  const [totalOrganizations, activeOrganizations, suspendedOrganizations, inactiveOrganizations, recent] =
+    await prisma.$transaction([
+      prisma.organization.count(),
+      prisma.organization.count({ where: { status: "ACTIVE" } }),
+      prisma.organization.count({ where: { status: "SUSPENDED" } }),
+      prisma.organization.count({ where: { status: "INACTIVE" } }),
+      prisma.organization.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+    ]);
 
   return {
-    totalOrganizations: organizations.length,
-    activeOrganizations: organizations.filter(
-      (organization) => organization.status === "ACTIVE",
-    ).length,
-    suspendedOrganizations: organizations.filter(
-      (organization) => organization.status === "SUSPENDED",
-    ).length,
-    inactiveOrganizations: organizations.filter(
-      (organization) => organization.status === "INACTIVE",
-    ).length,
-    recentOrganizations: organizations.slice(0, 5),
+    totalOrganizations,
+    activeOrganizations,
+    suspendedOrganizations,
+    inactiveOrganizations,
+    recentOrganizations: recent.map(toOrganizationDomain),
   };
 }
 
 export async function getOrganizationDetail(
-  organizationId: string,
+  organizationIdInput: string,
 ): Promise<OrganizationDetail | null> {
-  const organization = await getOrganizationById(organizationId);
-
-  if (!organization) {
-    return null;
-  }
-
-  const [locations, userSnapshot] = await Promise.all([
-    listLocationsForOrganization(organizationId),
-    getAdminFirestore()
-      .collection("users")
-      .where("organizationId", "==", organizationId)
-      .get(),
-  ]);
-
-  const administrators = userSnapshot.docs.flatMap(
-    (document): CinemaAdministratorSummary[] => {
-      const profile = userProfileDocumentSchema.parse(document.data());
-
-      return profile.role === "CINEMA_ADMIN"
-        ? [
-            {
-              uid: document.id,
-              displayName: profile.displayName,
-              email: profile.email,
-              active: profile.active,
-            },
-          ]
-        : [];
+  const organizationId = documentIdSchema.parse(organizationIdInput);
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    include: {
+      locations: { orderBy: { name: "asc" } },
+      memberships: {
+        where: { role: "CINEMA_ADMIN" },
+        include: { user: true },
+      },
     },
+  });
+  if (!organization) return null;
+
+  const administrators: CinemaAdministratorSummary[] = organization.memberships.map(
+    ({ user }) => ({
+      uid: user.firebaseUid,
+      displayName: user.displayName,
+      email: user.email,
+      active: user.active,
+    }),
   );
 
-  return { organization, locations, administrators };
+  return {
+    organization: toOrganizationDomain(organization),
+    locations: organization.locations.map(toLocationDomain),
+    administrators,
+  };
 }

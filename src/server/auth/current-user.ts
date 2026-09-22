@@ -50,7 +50,10 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     const token = await adminAuth.verifySessionCookie(sessionCookie, true);
 
     stage = "load-user-profile";
-    const profile = await getUserProfile(token.uid);
+    const profile = await getUserProfile(
+      token.uid,
+      typeof token.organizationId === "string" ? token.organizationId : null,
+    );
 
     if (!profile?.active || !claimsMatchProfile(token, profile)) {
       console.warn("[auth/current-user] Session profile check failed.", {

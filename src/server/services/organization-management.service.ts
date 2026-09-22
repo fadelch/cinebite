@@ -1,16 +1,11 @@
 import "server-only";
 
-import { FieldValue } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 
-import { getAdminFirestore } from "@/lib/firebase/admin";
+import { isPrismaError } from "@/lib/db/errors";
+import { prisma } from "@/lib/db/prisma";
 import { getCurrentUser } from "@/server/auth/current-user";
-import { mapLocationDocument, mapOrganizationDocument } from "@/server/firestore/mappers";
-import {
-  auditLogDocumentPath,
-  locationDocumentPath,
-  locationSlugDocumentPath,
-  organizationDocumentPath,
-} from "@/server/firestore/paths";
+import { toLocationDomain, toOrganizationDomain } from "@/server/database/mappers";
 import {
   getOrganizationDetail,
   getSuperAdminDashboardData,
@@ -28,7 +23,6 @@ import type { OrganizationStatus } from "@/types/status";
 import {
   createLocationSchema,
 } from "@/validation/location";
-import { organizationDocumentSchema } from "@/validation/organization";
 import { organizationStatusChangeSchema } from "@/validation/onboarding";
 import { documentIdSchema } from "@/validation/shared";
 
@@ -123,123 +117,117 @@ export function createOrganizationManagementService(
 }
 
 function productionDependencies(): OrganizationManagementDependencies {
-  const firestore = getAdminFirestore();
-
   return {
     allocateLocationIds() {
       return {
-        locationId: firestore.collection("_ids").doc().id,
-        auditLogId: firestore.collection("auditLogs").doc().id,
+        locationId: randomUUID(),
+        auditLogId: randomUUID(),
       };
     },
     async addLocation(input) {
-      const organizationReference = firestore.doc(
-        organizationDocumentPath(input.organizationId),
-      );
-      const locationReference = firestore.doc(
-        locationDocumentPath(input.organizationId, input.locationId),
-      );
-      const slugReference = firestore.doc(
-        locationSlugDocumentPath(
-          input.organizationId,
-          input.location.slug,
-        ),
-      );
-      const auditReference = firestore.doc(
-        auditLogDocumentPath(input.auditLogId),
-      );
+      try {
+        const location = await prisma.$transaction(async (transaction) => {
+          const [organization, actor] = await Promise.all([
+            transaction.organization.findUnique({
+              where: { id: input.organizationId },
+            }),
+            transaction.user.findUnique({
+              where: { firebaseUid: input.actorUid },
+              select: { id: true },
+            }),
+          ]);
+          if (!organization) {
+            throw new ServiceError(
+              "ORGANIZATION_NOT_FOUND",
+              404,
+              "Organization not found.",
+            );
+          }
+          if (!actor) {
+            throw new ServiceError(
+              "AUTHENTICATION_REQUIRED",
+              401,
+              "Authentication is required.",
+            );
+          }
+          if (organization.status !== "ACTIVE") {
+            throw new ServiceError(
+              "ORGANIZATION_NOT_ACTIVE",
+              409,
+              "Locations can only be added to an active organization.",
+            );
+          }
 
-      await firestore.runTransaction(async (transaction) => {
-        const [organizationSnapshot, slugSnapshot] = await Promise.all([
-          transaction.get(organizationReference),
-          transaction.get(slugReference),
-        ]);
-
-        if (!organizationSnapshot.exists) {
-          throw new ServiceError(
-            "ORGANIZATION_NOT_FOUND",
-            404,
-            "Organization not found.",
-          );
-        }
-
-        const organization = organizationDocumentSchema.parse(
-          organizationSnapshot.data(),
-        );
-
-        if (organization.status !== "ACTIVE") {
-          throw new ServiceError(
-            "ORGANIZATION_NOT_ACTIVE",
-            409,
-            "Locations can only be added to an active organization.",
-          );
-        }
-
-        if (slugSnapshot.exists) {
+          const created = await transaction.location.create({
+            data: {
+              id: input.locationId,
+              organizationId: input.organizationId,
+              name: input.location.name,
+              slug: input.location.slug,
+              status: input.location.status,
+              addressLine1: input.location.address.line1,
+              addressLine2: input.location.address.line2,
+              postalCode: input.location.address.postalCode,
+              city: input.location.city,
+              country: input.location.country,
+              timezone: input.location.timezone,
+            },
+          });
+          await transaction.auditLog.create({
+            data: {
+              id: input.auditLogId,
+              actorUserId: actor.id,
+              action: input.auditAction,
+              entityType: "LOCATION",
+              entityId: input.locationId,
+              organizationId: input.organizationId,
+              locationId: input.locationId,
+              metadata: { slug: input.location.slug },
+            },
+          });
+          return created;
+        });
+        return toLocationDomain(location);
+      } catch (error) {
+        if (isPrismaError(error, "P2002")) {
           throw new ServiceError(
             "DUPLICATE_LOCATION_SLUG",
             409,
             "This location slug is already in use for the organization.",
           );
         }
-
-        const timestamp = FieldValue.serverTimestamp();
-        transaction.create(locationReference, {
-          ...input.location,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-        transaction.create(slugReference, {
-          locationId: input.locationId,
-          createdAt: timestamp,
-        });
-        transaction.create(auditReference, {
-          actorUid: input.actorUid,
-          action: input.auditAction,
-          entityType: "LOCATION",
-          entityId: input.locationId,
-          organizationId: input.organizationId,
-          metadata: { slug: input.location.slug },
-          createdAt: timestamp,
-        });
-      });
-
-      const location = mapLocationDocument(
-        input.organizationId,
-        await locationReference.get(),
-      );
-
-      if (!location) {
-        throw new Error("Location was created but could not be read back.");
+        throw error;
       }
-
-      return location;
     },
     allocateStatusAuditId() {
-      return firestore.collection("auditLogs").doc().id;
+      return randomUUID();
     },
     async updateStatus(input) {
-      const organizationReference = firestore.doc(
-        organizationDocumentPath(input.organizationId),
-      );
-      const auditReference = firestore.doc(
-        auditLogDocumentPath(input.auditLogId),
-      );
-
-      await firestore.runTransaction(async (transaction) => {
-        const snapshot = await transaction.get(organizationReference);
-
-        if (!snapshot.exists) {
+      const organization = await prisma.$transaction(async (transaction) => {
+        const [existing, actor] = await Promise.all([
+          transaction.organization.findUnique({
+            where: { id: input.organizationId },
+          }),
+          transaction.user.findUnique({
+            where: { firebaseUid: input.actorUid },
+            select: { id: true },
+          }),
+        ]);
+        if (!existing) {
           throw new ServiceError(
             "ORGANIZATION_NOT_FOUND",
             404,
             "Organization not found.",
           );
         }
-
-        const organization = organizationDocumentSchema.parse(snapshot.data());
-
-        if (organization.status === input.status) {
+        if (!actor) {
+          throw new ServiceError(
+            "AUTHENTICATION_REQUIRED",
+            401,
+            "Authentication is required.",
+          );
+        }
+        if (existing.status === input.status) {
           throw new ServiceError(
             "NO_STATUS_CHANGE",
             409,
@@ -247,34 +235,27 @@ function productionDependencies(): OrganizationManagementDependencies {
           );
         }
 
-        const timestamp = FieldValue.serverTimestamp();
-        transaction.update(organizationReference, {
-          status: input.status,
-          updatedAt: timestamp,
+        const updated = await transaction.organization.update({
+          where: { id: input.organizationId },
+          data: { status: input.status },
         });
-        transaction.create(auditReference, {
-          actorUid: input.actorUid,
-          action: input.auditAction,
-          entityType: "ORGANIZATION",
-          entityId: input.organizationId,
-          organizationId: input.organizationId,
-          metadata: {
-            previousStatus: organization.status,
-            status: input.status,
+        await transaction.auditLog.create({
+          data: {
+            id: input.auditLogId,
+            actorUserId: actor.id,
+            action: input.auditAction,
+            entityType: "ORGANIZATION",
+            entityId: input.organizationId,
+            organizationId: input.organizationId,
+            metadata: {
+              previousStatus: existing.status,
+              status: input.status,
+            },
           },
-          createdAt: timestamp,
         });
+        return updated;
       });
-
-      const organization = mapOrganizationDocument(
-        await organizationReference.get(),
-      );
-
-      if (!organization) {
-        throw new Error("Organization was updated but could not be read back.");
-      }
-
-      return organization;
+      return toOrganizationDomain(organization);
     },
   };
 }

@@ -23,6 +23,6 @@ export function claimsMatchProfile(
   return (
     token.role === profile.role &&
     (token.organizationId ?? null) === profile.organizationId &&
-    token.email === profile.email
+    token.email?.toLowerCase() === profile.email.toLowerCase()
   );
 }
