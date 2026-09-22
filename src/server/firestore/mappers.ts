@@ -1,9 +1,13 @@
 import "server-only";
 
+import type { Hall } from "@/types/hall";
 import type { Location } from "@/types/location";
 import type { Organization } from "@/types/organization";
+import type { Seat } from "@/types/seat";
+import { hallDocumentSchema } from "@/validation/hall";
 import { locationDocumentSchema } from "@/validation/location";
 import { organizationDocumentSchema } from "@/validation/organization";
+import { seatDocumentSchema } from "@/validation/seat";
 
 interface FirestoreDocumentSnapshot {
   readonly id: string;
@@ -40,5 +44,37 @@ export function mapLocationDocument(
     id: snapshot.id,
     organizationId,
     ...data,
+  };
+}
+
+export function mapHallDocument(
+  organizationId: string,
+  locationId: string,
+  snapshot: FirestoreDocumentSnapshot,
+): Hall | null {
+  if (!snapshot.exists) return null;
+
+  return {
+    id: snapshot.id,
+    organizationId,
+    locationId,
+    ...hallDocumentSchema.parse(snapshot.data()),
+  };
+}
+
+export function mapSeatDocument(
+  organizationId: string,
+  locationId: string,
+  hallId: string,
+  snapshot: FirestoreDocumentSnapshot,
+): Seat | null {
+  if (!snapshot.exists) return null;
+
+  return {
+    id: snapshot.id,
+    organizationId,
+    locationId,
+    hallId,
+    ...seatDocumentSchema.parse(snapshot.data()),
   };
 }

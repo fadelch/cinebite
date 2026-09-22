@@ -33,7 +33,7 @@ export function apiError(error: unknown) {
     );
   }
 
-  console.error("[api/super-admin] Unexpected request failure.", {
+  console.error("[api] Unexpected request failure.", {
     name:
       typeof error === "object" && error !== null && "name" in error
         ? String(error.name)

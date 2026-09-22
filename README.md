@@ -4,9 +4,94 @@ CineBite will allow cinema customers to order food and have it delivered directl
 
 ## Current phase
 
-**Phase 4 — Super Admin Dashboard and Cinema Onboarding**
+**Phase 5 — Cinema Admin Structure Management**
 
-Phase 4 turns the protected Super Admin placeholder into the CineBite SaaS control plane. A trusted `SUPER_ADMIN` can inspect organization status, onboard a cinema with its first location and `CINEMA_ADMIN`, add locations, and suspend or reactivate tenants. It intentionally does not implement cinema operations, menus, orders, halls, seats, employees, customers, or analytics beyond basic organization counts.
+Phase 5 replaces the Cinema Admin placeholder with a tenant-isolated dashboard for locations, halls, and seats. `CINEMA_ADMIN` users manage their organization's complete cinema structure. `LOCATION_MANAGER` users see and manage only permitted locations. Phase 4 Super Admin behavior remains intact.
+
+Phase 5 intentionally excludes QR codes, screenings, menus, products, customers, ordering, kitchen and delivery workflows, inventory, payments, revenue, and analytics.
+
+## Phase 5 Cinema Admin routes
+
+- `/admin`: real organization overview with accessible location, hall, and maintained seat counts.
+- `/admin/locations`: server-scoped location directory.
+- `/admin/locations/new`: `CINEMA_ADMIN`-only location creation.
+- `/admin/locations/{locationId}`: authorized location details and hall creation.
+- `/admin/locations/{locationId}/halls/{hallId}`: hall status, seat generator, seat grid, and seat status management.
+
+The shared `/admin` layout permits only `CINEMA_ADMIN` and `LOCATION_MANAGER`. Every read and mutation repeats authentication, tenant-status, role, and location authorization in the server service layer.
+
+## Phase 5 tenant data flow
+
+```text
+verified session + users/{uid} profile
+  -> trusted role and organizationId
+  -> reload ACTIVE organization
+  -> apply CINEMA_ADMIN or LOCATION_MANAGER location policy
+  -> validate browser data with Zod
+  -> parent-scoped repository operation
+  -> Firebase Admin / Firestore
+  -> mutation audit event
+```
+
+Normal tenant requests never accept `organizationId` from the browser. A create-location body contains location fields only; the service derives the parent organization from the verified session. Strict Zod objects reject extra fields such as a client-supplied foreign organization ID.
+
+### Cinema Admin and Location Manager permissions
+
+- `CINEMA_ADMIN` sees every location in its own organization and may create locations, halls, and seats.
+- `LOCATION_MANAGER` receives either explicit `locationIds` or `allLocations` from the trusted user profile. It may create halls and manage seats only inside those locations.
+- `LOCATION_MANAGER` cannot create organization-level locations in Phase 5.
+- `KITCHEN_STAFF`, `DELIVERY_STAFF`, inactive users, missing tenants, and suspended/inactive organizations are denied.
+- An unauthorized location ID is rejected before its document is read, preventing metadata leakage.
+
+### Firestore hierarchy and parent-scoped repositories
+
+```text
+organizations/{organizationId}
+  locations/{locationId}
+    halls/{hallId}
+      seats/{normalizedSeatLabel}
+```
+
+Repository reads require every parent ID, for example `getLocationHall(organizationId, locationId, hallId)` and `listHallSeats(organizationId, locationId, hallId)`. Location Managers are fetched by their assigned document paths; the browser never receives all CineBite locations for client-side filtering.
+
+### Location and hall creation
+
+Location slugs remain unique only inside one organization through `organizations/{organizationId}/locationSlugs/{slug}`. The location document, slug reservation, and audit event are created in one transaction. Different organizations may safely use the same slug.
+
+Hall IDs remain opaque Firestore IDs. Hall numbers are checked within the parent location. `seatCount` starts at zero on the server and is never accepted as authoritative browser input. Halls and locations use status changes instead of normal hard deletion so future historical references remain valid.
+
+### Seat generation and uniqueness
+
+The generator accepts a starting row, row count, seats per row, and starting number. Preview is local and performs no Firestore write. After explicit confirmation, the server validates the numbers again and creates canonical labels such as `A1`, `A2`, and `B1`; client-generated labels are never accepted.
+
+Seat document IDs are deterministic lowercase labels (`A12` becomes document `a12`) inside the hall's seat collection. This makes a label unique within one hall while allowing `A1` in other halls. Firestore batch `create` operations never overwrite an existing seat and make concurrent duplicate attempts fail.
+
+Generation limits are centralized in `src/validation/seat.ts`:
+
+- maximum rows: 26
+- maximum seats per row: 30
+- maximum seats per request: 300
+
+One generation uses at most 302 writes: 300 seat creates, one hall count update, and one audit create. This remains below Firestore's 500-write batch limit, so Phase 5 deliberately uses one atomic batch instead of chunking and risking a partially created layout.
+
+Seats use `ACTIVE` and `DISABLED`. Disabling preserves the seat document and label; reactivation updates that same identity. The seat grid shows both text and visual state and supports horizontal scrolling for larger halls.
+
+### Phase 5 audit events
+
+Phase 5 extends the existing trusted audit log with:
+
+- `LOCATION_CREATED`
+- `HALL_CREATED`
+- `HALL_STATUS_CHANGED`
+- `SEATS_GENERATED`
+- `SEAT_DISABLED`
+- `SEAT_ENABLED`
+
+Events record the verified actor UID, organization, entity and safe parent identifiers using a server timestamp. Tokens, cookies, passwords, credentials, and request secrets are never audit metadata.
+
+### Phase 5 interface and Motion
+
+Cinema Admin reuses the Phase 4 dark design tokens, panels, controls, status badges, loading skeletons, errors, and empty states. Motion for React provides restrained page, card, dialog, preview, navigation, and success transitions. Reduced-motion preferences disable nonessential movement. No additional package or environment variable was required for Phase 5.
 
 ## Phase 4 Super Admin routes
 
@@ -182,7 +267,7 @@ Authentication state-changing endpoints require the HTTP `Origin` to match the r
 - `/delivery`: `DELIVERY_STAFF` only.
 - `/unauthorized`: safe landing page for a valid session with the wrong role.
 
-Protected pages are authorization proofs only, not dashboards.
+The Cinema Admin routes are now a real structure-management dashboard. Kitchen and delivery routes remain authorization placeholders.
 
 ## First SUPER_ADMIN bootstrap
 
@@ -222,7 +307,7 @@ FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=
 ```
 
-Phase 4 adds no environment variables. Keep the private key quoted when it contains escaped `\n` characters.
+Phases 4 and 5 add no environment variables. Keep the private key quoted when it contains escaped `\n` characters.
 Copy only the raw values from the downloaded service-account JSON. An `.env.local`
 assignment is not a JSON property, so do not include the JSON key name or trailing
 comma. For example:
@@ -264,7 +349,7 @@ npm run build
 npm run dev
 ```
 
-Tests cover validation, role and suspension authorization, onboarding orchestration, trusted claim/profile intent, duplicate email and slug handling, audit intent, location scoping, and Auth cleanup after Firestore failure. Integrations are mocked; automated tests do not connect to Firebase or create production users/data.
+Tests cover validation, role and suspension authorization, onboarding orchestration, trusted claim/profile intent, duplicate email and slug handling, tenant-derived location creation, assigned-location scoping, hall authorization, canonical seat labels, generation limits, duplicate-seat protection, mutation audit intent, and Auth cleanup after Firestore failure. Integrations are mocked; automated tests do not connect to Firebase or create production users/data.
 
 ## Manual Phase 4 test
 
@@ -278,11 +363,31 @@ Tests cover validation, role and suspension authorization, onboarding orchestrat
 8. Reactivate it and confirm tenant eligibility is restored after a fresh sign-in/session.
 9. Confirm Firestore contains the organization, locations, slug registries, user profile, and audit entries, but not the setup link.
 
+## Manual Phase 5 test
+
+1. Start the app with `npm run dev` and sign in as a Phase 4-created `CINEMA_ADMIN`.
+2. Open `/admin`; confirm the organization name and structure counts match its Firestore hierarchy.
+3. Open **Locations**, add a location with a unique slug, and confirm no organization selector is shown.
+4. Open the new location, add a hall, and confirm its seat count starts at zero.
+5. Open the hall and preview rows `A` through `J` with 16 seats per row. Confirm preview makes no Firestore changes.
+6. Confirm generation, refresh the page, and verify the grid contains `A1` through `J16`.
+7. Select a seat such as `A1`; verify it visibly changes to `Off`/`DISABLED` but its document is preserved. Select it again to reactivate it.
+8. Try generating an overlapping range and confirm the whole request is rejected without overwriting existing seats.
+9. Mark the hall inactive and confirm seat generation/status controls are unavailable; reactivate it afterward.
+10. If a `LOCATION_MANAGER` test user exists, sign in and confirm only assigned locations appear. Confirm `/admin/locations/new` and its POST API reject that role.
+11. While signed in as a Location Manager, manually navigate to an unassigned location ID and confirm access is denied without revealing its details.
+12. Suspend the organization as Super Admin, sign in again as tenant staff, and confirm `/admin` and tenant APIs fail closed. Reactivate it when finished.
+13. Inspect `auditLogs` and verify the mutations above have safe events with actor and parent identifiers but no tokens or secrets.
+
+Normal Phase 5 usage does not require manually creating Firestore location, hall, or seat documents. Creating a Location Manager test account remains outside Phase 5 because employee management is not implemented yet.
+
 ## Current limitations
 
 - Invitation delivery is manual; a future phase can send the setup link through a transactional email provider.
-- The Cinema Admin, kitchen, and delivery routes remain authorization placeholders.
+- Kitchen and delivery routes remain authorization placeholders.
 - There is no staff-management UI beyond creating the first `CINEMA_ADMIN` during onboarding.
-- There are no halls, seats, menus, products, customer accounts, carts, orders, kitchen workflows, delivery workflows, inventory, payments, or operational analytics.
+- There is no UI to change a location's status; Super Admin and trusted future workflows preserve the existing status model.
+- Hall layouts are generated as row/number grids; advanced drag-and-drop floorplans and aisles are intentionally deferred.
+- There are no seat QR codes, screenings, menus, products, customer accounts, carts, orders, kitchen workflows, delivery workflows, inventory, payments, or operational analytics.
 - Organization search is an in-memory filter over the authorized server result; pagination/full-text search can be introduced when tenant volume requires it.
 - Logging out clears the current browser cookie; account-wide revocation remains reserved for explicit security/admin operations.
