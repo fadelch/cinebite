@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessLocation,
   canAccessOrganization,
+  canUseOrganization,
   getLandingPathForRole,
   hasRole,
   isRoleLandingPath,
@@ -104,6 +105,28 @@ describe("tenant authorization", () => {
     expect(canAccessLocation(inactive, "org-abc", "loc-achrafieh")).toBe(
       false,
     );
+  });
+
+  it("blocks tenant users when their organization is suspended or inactive", () => {
+    expect(canUseOrganization(baseUser, "ACTIVE")).toBe(true);
+    expect(canUseOrganization(baseUser, "SUSPENDED")).toBe(false);
+    expect(canUseOrganization(baseUser, "INACTIVE")).toBe(false);
+  });
+
+  it("restores tenant eligibility after organization reactivation", () => {
+    expect(canUseOrganization(baseUser, "SUSPENDED")).toBe(false);
+    expect(canUseOrganization(baseUser, "ACTIVE")).toBe(true);
+  });
+
+  it("allows an active SUPER_ADMIN to manage suspended organizations", () => {
+    const superAdmin = user({
+      role: "SUPER_ADMIN",
+      organizationId: null,
+      locationIds: [],
+    });
+
+    expect(canUseOrganization(superAdmin, "SUSPENDED")).toBe(true);
+    expect(canUseOrganization(superAdmin, "INACTIVE")).toBe(true);
   });
 });
 

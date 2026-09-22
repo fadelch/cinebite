@@ -2,9 +2,11 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import { canUseOrganization } from "@/lib/auth/authorization";
 import { claimsMatchProfile } from "@/lib/auth/claims";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { getAdminAuth } from "@/lib/firebase/admin";
+import { getOrganizationById } from "@/server/repositories/organizations.repository";
 import type { AuthenticatedUser } from "@/types/auth";
 import {
   getUserProfile,
@@ -14,7 +16,8 @@ import {
 type CurrentUserStage =
   | "initialize-admin"
   | "verify-session-cookie"
-  | "load-user-profile";
+  | "load-user-profile"
+  | "load-organization";
 
 function logCurrentUserFailure(stage: CurrentUserStage, error: unknown) {
   const details =
@@ -62,7 +65,24 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       return null;
     }
 
-    return toAuthenticatedUser(profile);
+    const user = toAuthenticatedUser(profile);
+
+    if (user.role !== "SUPER_ADMIN") {
+      stage = "load-organization";
+      const organization = user.organizationId
+        ? await getOrganizationById(user.organizationId)
+        : null;
+
+      if (!canUseOrganization(user, organization?.status ?? null)) {
+        console.warn("[auth/current-user] Tenant organization access denied.", {
+          organizationExists: Boolean(organization),
+          organizationOperational: organization?.status === "ACTIVE",
+        });
+        return null;
+      }
+    }
+
+    return user;
   } catch (error) {
     logCurrentUserFailure(stage, error);
     // Verification, revocation, disabled users, and malformed profiles fail closed.

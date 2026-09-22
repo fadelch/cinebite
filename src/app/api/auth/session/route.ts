@@ -5,12 +5,16 @@ import {
   SESSION_DURATION_MS,
 } from "@/lib/auth/constants";
 import { claimsMatchProfile } from "@/lib/auth/claims";
-import { getLandingPathForRole } from "@/lib/auth/authorization";
+import {
+  canUseOrganization,
+  getLandingPathForRole,
+} from "@/lib/auth/authorization";
 import { isRecentLogin } from "@/lib/auth/session";
 import { getServerEnv } from "@/lib/env.server";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { getUserProfile } from "@/server/auth/user-profile";
+import { getOrganizationById } from "@/server/repositories/organizations.repository";
 import { sessionRequestSchema } from "@/validation/auth";
 
 export const runtime = "nodejs";
@@ -20,6 +24,7 @@ type SessionStage =
   | "initialize-admin"
   | "verify-id-token"
   | "load-user-profile"
+  | "load-organization"
   | "create-session-cookie";
 
 function logSessionFailure(stage: SessionStage, error: unknown) {
@@ -86,6 +91,17 @@ export async function POST(request: Request) {
 
     if (!profile?.active || !claimsMatchProfile(token, profile)) {
       return errorResponse(403);
+    }
+
+    if (profile.role !== "SUPER_ADMIN") {
+      stage = "load-organization";
+      const organization = profile.organizationId
+        ? await getOrganizationById(profile.organizationId)
+        : null;
+
+      if (!canUseOrganization(profile, organization?.status ?? null)) {
+        return errorResponse(403);
+      }
     }
 
     stage = "create-session-cookie";
