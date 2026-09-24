@@ -49,6 +49,24 @@ enum MenuStatus {
   INACTIVE
 }
 
+enum InventoryItemStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InventoryUnit {
+  EACH
+  GRAM
+  MILLILITER
+}
+
+enum InventoryMovementType {
+  RECEIVE
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+  WASTE
+}
+
 enum AuditAction {
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
@@ -73,6 +91,19 @@ enum AuditAction {
   PRODUCT_LOCATION_ASSIGNED
   PRODUCT_LOCATION_PRICE_CHANGED
   PRODUCT_LOCATION_AVAILABILITY_CHANGED
+  INVENTORY_ITEM_CREATED
+  INVENTORY_ITEM_UPDATED
+  INVENTORY_ITEM_DISABLED
+  INVENTORY_ITEM_ENABLED
+  LOCATION_INVENTORY_CONFIGURED
+  INVENTORY_STOCK_RECEIVED
+  INVENTORY_ADJUSTMENT_IN
+  INVENTORY_ADJUSTMENT_OUT
+  INVENTORY_WASTE_RECORDED
+  INVENTORY_THRESHOLD_CHANGED
+  PRODUCT_RECIPE_COMPONENT_ADDED
+  PRODUCT_RECIPE_COMPONENT_UPDATED
+  PRODUCT_RECIPE_COMPONENT_REMOVED
 }
 
 enum AuditEntityType {
@@ -84,6 +115,10 @@ enum AuditEntityType {
   MENU_CATEGORY
   PRODUCT
   PRODUCT_LOCATION
+  INVENTORY_ITEM
+  LOCATION_INVENTORY
+  INVENTORY_MOVEMENT
+  PRODUCT_RECIPE_COMPONENT
 }
 
 model User {
@@ -98,6 +133,7 @@ model User {
 
   memberships OrganizationMembership[]
   auditLogs   AuditLog[]               @relation("AuditActor")
+  inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
 
   @@map("users")
 }
@@ -115,6 +151,10 @@ model Organization {
   auditLogs      AuditLog[]
   menuCategories MenuCategory[]
   products       Product[]
+  inventoryItems InventoryItem[]
+  locationInventories LocationInventory[]
+  inventoryMovements InventoryMovement[]
+  recipeComponents ProductRecipeComponent[]
 
   @@map("organizations")
 }
@@ -159,6 +199,7 @@ model Location {
   access           LocationAccess[]
   auditLogs        AuditLog[]
   productLocations ProductLocation[]
+  locationInventories LocationInventory[]
 
   @@unique([organizationId, slug])
   @@unique([id, organizationId])
@@ -254,6 +295,7 @@ model Product {
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   category         MenuCategory      @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
   productLocations ProductLocation[]
+  recipeComponents ProductRecipeComponent[]
 
   @@unique([organizationId, slug])
   @@unique([organizationId, sku])
@@ -281,6 +323,88 @@ model ProductLocation {
   @@index([locationId, isAvailable])
   @@index([organizationId])
   @@map("product_locations")
+}
+
+model InventoryItem {
+  id             String              @id @default(cuid())
+  organizationId String
+  name           String
+  sku            String
+  unit           InventoryUnit
+  status         InventoryItemStatus @default(ACTIVE)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  locationInventories LocationInventory[]
+  recipeComponents   ProductRecipeComponent[]
+
+  @@unique([organizationId, sku])
+  @@unique([id, organizationId])
+  @@index([organizationId, status, name])
+  @@map("inventory_items")
+}
+
+model LocationInventory {
+  id                String   @id @default(cuid())
+  organizationId    String
+  locationId        String
+  inventoryItemId   String
+  quantityOnHand    Decimal  @default(0) @db.Decimal(14, 3)
+  lowStockThreshold Decimal  @default(0) @db.Decimal(14, 3)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location      Location            @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  inventoryItem InventoryItem       @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  movements     InventoryMovement[]
+
+  @@unique([locationId, inventoryItemId])
+  @@unique([id, organizationId])
+  @@index([organizationId, locationId])
+  @@index([inventoryItemId])
+  @@map("location_inventory")
+}
+
+model InventoryMovement {
+  id                  String                @id @default(cuid())
+  organizationId      String
+  locationInventoryId String
+  type                InventoryMovementType
+  quantityDelta       Decimal               @db.Decimal(14, 3)
+  reason              String?
+  note                String?
+  actorUserId         String
+  createdAt           DateTime              @default(now())
+
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  locationInventory LocationInventory @relation(fields: [locationInventoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  actor             User              @relation("InventoryMovementActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt])
+  @@index([locationInventoryId, createdAt])
+  @@index([actorUserId])
+  @@map("inventory_movements")
+}
+
+model ProductRecipeComponent {
+  id                String   @id @default(cuid())
+  organizationId    String
+  productId         String
+  inventoryItemId   String
+  quantityRequired  Decimal  @db.Decimal(14, 3)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  product       Product       @relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([productId, inventoryItemId])
+  @@index([organizationId, productId])
+  @@index([inventoryItemId])
+  @@map("product_recipe_components")
 }
 
 model AuditLog {

@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const schema = readFileSync(resolve(process.cwd(), "prisma/schema.prisma"), "utf8");
+const phase8Migration = readFileSync(
+  resolve(process.cwd(), "prisma/migrations/20260925120000_phase_8_inventory_management/migration.sql"),
+  "utf8",
+);
 
 describe("Prisma relational constraints", () => {
   it.each([
@@ -54,5 +58,29 @@ describe("Prisma relational constraints", () => {
     expect(schema).toMatch(/model ProductLocation[\s\S]*?@@unique\(\[productId, locationId\]\)/);
     expect(schema).toContain("@relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)");
     expect(schema).toContain("@relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)");
+  });
+
+  it("enforces Phase 8 tenant-safe inventory and recipe relations", () => {
+    expect(schema).toMatch(/model InventoryItem[\s\S]*?@@unique\(\[organizationId, sku\]\)/);
+    expect(schema).toMatch(/model LocationInventory[\s\S]*?quantityOnHand\s+Decimal[\s\S]*?@db\.Decimal\(14, 3\)/);
+    expect(schema).toMatch(/model LocationInventory[\s\S]*?@@unique\(\[locationId, inventoryItemId\]\)/);
+    expect(schema).toMatch(/model ProductRecipeComponent[\s\S]*?@@unique\(\[productId, inventoryItemId\]\)/);
+    expect(schema).toContain("@relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)");
+    expect(schema).toContain("@relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)");
+  });
+
+  it("adds database checks for nonnegative stock, signed movements, and positive recipes", () => {
+    expect(phase8Migration).toContain('CHECK ("quantityOnHand" >= 0)');
+    expect(phase8Migration).toContain('CHECK ("lowStockThreshold" >= 0)');
+    expect(phase8Migration).toContain('CHECK ("quantityRequired" > 0)');
+    expect(phase8Migration).toContain('"inventory_movements_sign_check"');
+  });
+
+  it("keeps inventory movement history immutable at the schema and migration boundary", () => {
+    const movementModel = schema.match(/model InventoryMovement\s*{[\s\S]*?\n}/)?.[0];
+    expect(movementModel).toBeDefined();
+    expect(movementModel).not.toContain("updatedAt");
+    expect(phase8Migration).not.toMatch(/ON DELETE CASCADE/);
+    expect(phase8Migration).not.toMatch(/CREATE TRIGGER|UPDATE "inventory_movements"|DELETE FROM "inventory_movements"/);
   });
 });
