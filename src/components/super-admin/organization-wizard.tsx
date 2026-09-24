@@ -15,6 +15,7 @@ import type {
   OrganizationWizardData,
   WizardErrors,
 } from "@/components/super-admin/organization-wizard.types";
+import { useNotifications } from "@/components/ui/notification-provider";
 import { slugify } from "@/lib/super-admin/slug";
 import { createLocationSchema } from "@/validation/location";
 import { createOrganizationSchema } from "@/validation/organization";
@@ -48,6 +49,7 @@ interface OnboardingSuccess {
 
 export function OrganizationWizard() {
   const reduceMotion = useReducedMotion();
+  const notifications = useNotifications();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [data, setData] = useState(INITIAL_DATA);
@@ -55,7 +57,6 @@ export function OrganizationWizard() {
   const [organizationSlugEdited, setOrganizationSlugEdited] = useState(false);
   const [locationSlugEdited, setLocationSlugEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
   const [success, setSuccess] = useState<OnboardingSuccess | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -119,7 +120,6 @@ export function OrganizationWizard() {
 
   function goBack() {
     setErrors({});
-    setRequestError(null);
     setDirection(-1);
     setStep((current) => Math.max(current - 1, 0));
   }
@@ -166,12 +166,11 @@ export function OrganizationWizard() {
 
     if (!result.success) {
       setErrors(issuesToErrors(result.error.issues));
-      setRequestError("Please review the onboarding information.");
+      notifications.error("Please review the onboarding information.");
       return;
     }
 
     setSubmitting(true);
-    setRequestError(null);
 
     try {
       const response = await fetch("/api/super-admin/organizations", {
@@ -208,8 +207,9 @@ export function OrganizationWizard() {
       }
 
       setSuccess(body as OnboardingSuccess);
+      notifications.success("Organization and administrator created successfully.");
     } catch (error) {
-      setRequestError(
+      notifications.error(
         error instanceof Error
           ? error.message
           : "The organization could not be created.",
@@ -223,6 +223,7 @@ export function OrganizationWizard() {
     if (!success) return;
     await navigator.clipboard.writeText(success.setupLink);
     setCopied(true);
+    notifications.success("Setup link copied.");
   }
 
   if (success) {
@@ -377,11 +378,6 @@ export function OrganizationWizard() {
             Back
           </button>
           <div className="ml-auto text-right">
-            {requestError ? (
-              <p role="alert" className="mb-2 text-sm text-red-300">
-                {requestError}
-              </p>
-            ) : null}
             {step < STEPS.length - 1 ? (
               <button
                 type="button"

@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
 import { isRoleLandingPath } from "@/lib/auth/authorization";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { loginSchema } from "@/validation/auth";
@@ -17,13 +18,12 @@ const GENERIC_AUTH_ERROR = "Invalid email or password.";
 
 export function LoginForm() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const notifications = useNotifications();
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
 
     const formData = new FormData(event.currentTarget);
     const parsed = loginSchema.safeParse({
@@ -32,7 +32,7 @@ export function LoginForm() {
     });
 
     if (!parsed.success) {
-      setError(GENERIC_AUTH_ERROR);
+      notifications.error(GENERIC_AUTH_ERROR);
       return;
     }
 
@@ -68,11 +68,12 @@ export function LoginForm() {
       }
 
       await signOut(firebaseAuth);
+      notifications.success("Signed in successfully.");
       router.replace(data.landingPath);
       router.refresh();
     } catch {
       await signOut(firebaseAuth).catch(() => undefined);
-      setError(GENERIC_AUTH_ERROR);
+      notifications.error(GENERIC_AUTH_ERROR);
       setSubmitting(false);
     }
   }
@@ -117,11 +118,6 @@ export function LoginForm() {
           </button>
         </div>
       </div>
-      {error ? (
-        <p role="alert" className="text-sm text-red-300">
-          {error}
-        </p>
-      ) : null}
       <button
         type="submit"
         disabled={submitting}

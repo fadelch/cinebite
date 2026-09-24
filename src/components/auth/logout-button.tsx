@@ -3,14 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
+
 export function LogoutButton() {
   const router = useRouter();
+  const notifications = useNotifications();
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function logout() {
     setSubmitting(true);
-    setError(null);
 
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
@@ -19,10 +20,11 @@ export function LogoutButton() {
         throw new Error("Logout failed.");
       }
 
+      notifications.success("Signed out successfully.");
       router.replace("/login");
       router.refresh();
     } catch {
-      setError("Unable to sign out. Please try again.");
+      notifications.error("Unable to sign out. Please try again.");
       setSubmitting(false);
     }
   }
@@ -37,11 +39,6 @@ export function LogoutButton() {
       >
         {submitting ? "Signing out…" : "Sign out"}
       </button>
-      {error ? (
-        <p role="alert" className="mt-2 max-w-52 text-xs text-red-300">
-          {error}
-        </p>
-      ) : null}
     </div>
   );
 }

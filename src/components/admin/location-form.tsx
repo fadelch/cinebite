@@ -4,21 +4,21 @@ import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
 import { slugify } from "@/lib/super-admin/slug";
 
 export function LocationForm() {
   const router = useRouter();
+  const notifications = useNotifications();
   const reduceMotion = useReducedMotion();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
     const form = new FormData(event.currentTarget);
     const line2 = String(form.get("line2") ?? "").trim();
     const postalCode = String(form.get("postalCode") ?? "").trim();
@@ -50,9 +50,14 @@ export function LocationForm() {
             : "The location could not be created.",
         );
       }
+      notifications.success("Location created successfully.");
       router.push("/admin");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The location could not be created.");
+      notifications.error(
+        reason instanceof Error
+          ? reason.message
+          : "The location could not be created.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -85,7 +90,6 @@ export function LocationForm() {
         <Field label="Country code"><input name="country" className="cb-field uppercase" defaultValue="LB" maxLength={2} required /></Field>
         <Field label="Timezone"><input name="timezone" className="cb-field font-mono text-sm" defaultValue="Asia/Beirut" required /></Field>
       </fieldset>
-      {error ? <p role="alert" className="mt-5 text-sm text-red-300">{error}</p> : null}
       <div className="mt-7 flex flex-wrap justify-end gap-3">
         <button type="button" className="cb-button-secondary" onClick={() => router.back()} disabled={submitting}>Cancel</button>
         <button type="submit" className="cb-button-primary" disabled={submitting}>{submitting ? "Creating…" : "Create location"}</button>

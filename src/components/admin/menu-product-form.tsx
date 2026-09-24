@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 
 import { CurrencyCodeOptions } from "@/components/admin/currency-code-options";
+import { useNotifications } from "@/components/ui/notification-provider";
 import { slugify } from "@/lib/super-admin/slug";
 import type { MenuCategoryDto } from "@/types/menu";
 
@@ -12,14 +13,15 @@ type LocationOption = { id: string; name: string; status: string };
 
 export function MenuProductForm({ categories, locations }: { categories: MenuCategoryDto[]; locations: LocationOption[] }) {
   const router = useRouter(); const reduceMotion = useReducedMotion();
+  const notifications = useNotifications();
   const [name, setName] = useState(""); const [slug, setSlug] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [selectedImageName, setSelectedImageName] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError(null);
+    event.preventDefault(); setBusy(true);
     const values = new FormData(event.currentTarget);
     const payload = {
       name, slug, categoryId: String(values.get("categoryId")), description: String(values.get("description")), sku: String(values.get("sku") || "") || null,
@@ -30,8 +32,9 @@ export function MenuProductForm({ categories, locations }: { categories: MenuCat
     try {
       const response = await fetch("/api/admin/menu/products", { method: "POST", body }); const json: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(productResponseMessage(json));
+      notifications.success("Product created successfully.");
       router.push("/admin");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "The product could not be created."); setBusy(false); }
+    } catch (reason) { notifications.error(reason instanceof Error ? reason.message : "The product could not be created."); setBusy(false); }
   }
 
   if (!categories.length) return <div className="cb-panel mt-7 p-8 text-center text-zinc-400">Create an active menu category before adding products.</div>;
@@ -55,7 +58,7 @@ export function MenuProductForm({ categories, locations }: { categories: MenuCat
       </div>
     </fieldset>
     <fieldset disabled={busy} className="cb-panel p-5 sm:p-7"><legend className="px-2 font-semibold text-zinc-100">Location offers</legend><p className="mb-5 text-sm text-zinc-500">Select only locations that sell this product. Choose a suggested currency or type any three-letter code manually.</p><div className="space-y-3">{locations.map((location) => <div key={location.id} className="grid items-center gap-3 rounded-xl border border-zinc-800 p-4 sm:grid-cols-[1fr_9rem_7rem_auto]"><label className="flex items-center gap-3 text-sm font-medium text-zinc-200"><input type="checkbox" checked={Boolean(selected[location.id])} onChange={(event) => setSelected((current) => ({ ...current, [location.id]: event.target.checked }))} />{location.name}</label><input aria-label={`${location.name} price`} name={`price-${location.id}`} className="cb-field" defaultValue="0.00" inputMode="decimal" disabled={!selected[location.id]} required={selected[location.id]} /><input aria-label={`${location.name} currency code`} name={`currency-${location.id}`} list="new-product-currency-codes" className="cb-field uppercase" defaultValue="USD" maxLength={3} pattern="[A-Za-z]{3}" autoCapitalize="characters" spellCheck={false} disabled={!selected[location.id]} required={selected[location.id]} title="Choose a suggested currency or type any three-letter currency code." /><label className="flex items-center gap-2 text-sm text-zinc-400"><input name={`available-${location.id}`} type="checkbox" defaultChecked disabled={!selected[location.id]} /> Available</label></div>)}</div><CurrencyCodeOptions id="new-product-currency-codes" /></fieldset>
-    {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}<div className="flex justify-end gap-3"><button type="button" className="cb-button-secondary" disabled={busy} onClick={() => router.back()}>Cancel</button><button className="cb-button-primary" disabled={busy}>{busy ? "Creating product…" : "Create product"}</button></div>
+    <div className="flex justify-end gap-3"><button type="button" className="cb-button-secondary" disabled={busy} onClick={() => router.back()}>Cancel</button><button className="cb-button-primary" disabled={busy}>{busy ? "Creating product…" : "Create product"}</button></div>
   </motion.form>;
 }
 
