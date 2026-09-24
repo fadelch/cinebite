@@ -189,28 +189,30 @@ export function HallManagement({
           <div className="cb-panel px-6 py-12 text-center"><h3 className="font-semibold text-zinc-100">No seats have been configured</h3><p className="mt-2 text-sm text-zinc-500">Use the generator above to preview and create the first seating layout.</p></div>
         ) : (
           <div className="cb-panel overflow-x-auto p-5 sm:p-7">
-            <div className="mx-auto mb-8 min-w-max max-w-3xl rounded-t-[50%] border-t-4 border-amber-300/50 pt-3 text-center text-[0.65rem] tracking-[0.32em] text-zinc-600 uppercase">Screen</div>
-            <div className="min-w-max space-y-2" aria-label="Hall seating layout">
-              {rows.map(([row, rowSeats]) => (
-                <div key={row} className="flex items-center gap-3">
-                  <span className="w-7 text-center font-mono text-xs text-zinc-600" aria-hidden="true">{row}</span>
-                  <div className="flex gap-2">
-                    {rowSeats.map((seat) => (
-                      <button
-                        key={seat.id}
-                        type="button"
-                        onClick={() => toggleSeat(seat)}
-                        disabled={changingSeat === seat.id || !structureActive}
-                        aria-label={`${seat.label}, ${seat.status.toLowerCase()}. Activate to ${seat.status === "ACTIVE" ? "disable" : "reactivate"}.`}
-                        className={`flex h-11 w-12 flex-col items-center justify-center rounded-lg border font-mono text-[0.7rem] transition-colors ${seat.status === "ACTIVE" ? "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200 hover:bg-emerald-400/[0.15]" : "border-zinc-700 bg-zinc-900 text-zinc-500 line-through hover:border-amber-400/30"}`}
-                      >
-                        <span>{seat.label}</span>
-                        <span className="text-[0.5rem] no-underline">{seat.status === "ACTIVE" ? "On" : "Off"}</span>
-                      </button>
-                    ))}
+            <div className="mx-auto w-max min-w-max">
+              <div className="mb-8 rounded-t-[50%] border-t-4 border-amber-300/50 pt-3 text-center text-[0.65rem] tracking-[0.32em] text-zinc-600 uppercase">Screen</div>
+              <div className="space-y-2" aria-label="Hall seating layout">
+                {rows.map(([row, rowSeats]) => (
+                  <div key={row} className="flex items-center gap-3">
+                    <span className="w-7 text-center font-mono text-xs text-zinc-600" aria-hidden="true">{row}</span>
+                    <div className="flex gap-2">
+                      {rowSeats.map((seat) => (
+                        <button
+                          key={seat.id}
+                          type="button"
+                          onClick={() => toggleSeat(seat)}
+                          disabled={changingSeat === seat.id || !structureActive}
+                          aria-label={`${seat.label}, ${seat.status.toLowerCase()}. Activate to ${seat.status === "ACTIVE" ? "disable" : "reactivate"}.`}
+                          className={`flex h-11 w-12 flex-col items-center justify-center rounded-lg border font-mono text-[0.7rem] transition-colors ${seat.status === "ACTIVE" ? "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200 hover:bg-emerald-400/[0.15]" : "border-zinc-700 bg-zinc-900 text-zinc-500 line-through hover:border-amber-400/30"}`}
+                        >
+                          <span>{seat.label}</span>
+                          <span className="text-[0.5rem] no-underline">{seat.status === "ACTIVE" ? "On" : "Off"}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
