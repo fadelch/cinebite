@@ -1,12 +1,15 @@
 import sharp from "sharp";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/firebase/admin", () => ({ getAdminStorageBucket: vi.fn() }));
 
-import { createProductImagePath, MAX_PRODUCT_IMAGE_BYTES, normalizeProductImage } from "@/server/media/product-image";
+import { getAdminStorageBucket } from "@/lib/firebase/admin";
+import { createProductImagePath, MAX_PRODUCT_IMAGE_BYTES, normalizeProductImage, storeProductImage } from "@/server/media/product-image";
 
 describe("product image safety", () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it("creates a server-generated, tenant-organized WebP path", () => {
     const first = createProductImagePath("org-1", "product-1");
     const second = createProductImagePath("org-1", "product-1");
@@ -36,5 +39,19 @@ describe("product image safety", () => {
     const oversized = { size: MAX_PRODUCT_IMAGE_BYTES + 1, arrayBuffer: vi.fn() } as unknown as File;
     await expect(normalizeProductImage(oversized)).rejects.toMatchObject({ code: "IMAGE_UPLOAD_INVALID" });
     expect(oversized.arrayBuffer).not.toHaveBeenCalled();
+  });
+
+  it("returns an actionable service error when Firebase Storage is unavailable", async () => {
+    const png = await sharp({ create: { width: 10, height: 10, channels: 3, background: "#f4b942" } }).png().toBuffer();
+    const storageObject = {
+      save: vi.fn().mockRejectedValue(Object.assign(new Error("missing bucket"), { code: 404 })),
+      delete: vi.fn().mockRejectedValue(Object.assign(new Error("missing bucket"), { code: 404 })),
+    };
+    vi.mocked(getAdminStorageBucket).mockReturnValue({
+      file: vi.fn().mockReturnValue(storageObject),
+    } as never);
+
+    await expect(storeProductImage("org-1", "product-1", new File([png], "product.png")))
+      .rejects.toMatchObject({ code: "IMAGE_STORAGE_UNAVAILABLE", status: 503 });
   });
 });

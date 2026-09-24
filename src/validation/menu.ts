@@ -31,13 +31,18 @@ export const menuCategoryUpdateSchema = menuCategoryInputSchema.partial().refine
   "At least one category field must be provided.",
 );
 
-export const priceSchema = z.string().trim().regex(
-  /^(?:0|[1-9]\d{0,5})(?:\.\d{1,2})?$/,
-  "Price must be between 0 and 999999.99 with at most two decimals.",
-).transform((value) => {
-  const [whole, decimal = ""] = value.split(".");
-  return `${whole}.${decimal.padEnd(2, "0")}`;
-});
+export const priceSchema = z.string().trim()
+  .max(20, "Price must be between 0 and 999999.99.")
+  .regex(/^\d+(?:\.\d{1,2})?$/, "Price must use digits with at most two decimal places.")
+  .transform((value) => {
+    const [rawWhole, decimal = ""] = value.split(".");
+    const whole = rawWhole.replace(/^0+(?=\d)/, "");
+    return `${whole}.${decimal.padEnd(2, "0")}`;
+  })
+  .refine(
+    (value) => BigInt(value.replace(".", "")) <= BigInt("99999999"),
+    "Price must be between 0 and 999999.99.",
+  );
 
 export const currencyCodeSchema = z.string().trim().toUpperCase().regex(
   /^[A-Z]{3}$/,

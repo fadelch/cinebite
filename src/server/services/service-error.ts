@@ -24,7 +24,8 @@ export type ServiceErrorCode =
   | "DUPLICATE_PRODUCT_SLUG"
   | "DUPLICATE_PRODUCT_SKU"
   | "PRODUCT_LOCATION_CONFLICT"
-  | "IMAGE_UPLOAD_INVALID";
+  | "IMAGE_UPLOAD_INVALID"
+  | "IMAGE_STORAGE_UNAVAILABLE";
 
 export class ServiceError extends Error {
   constructor(

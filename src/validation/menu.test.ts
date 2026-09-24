@@ -11,6 +11,8 @@ describe("Phase 7 menu validation", () => {
   it("normalizes Decimal-safe price strings without Number conversion", () => {
     expect(priceSchema.parse("5")).toBe("5.00");
     expect(priceSchema.parse("5.5")).toBe("5.50");
+    expect(priceSchema.parse("04.00")).toBe("4.00");
+    expect(priceSchema.parse("000.5")).toBe("0.50");
     expect(priceSchema.parse("999999.99")).toBe("999999.99");
   });
 

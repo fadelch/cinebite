@@ -46,17 +46,36 @@ export async function storeProductImage(
   const contents = await normalizeProductImage(file);
   const storagePath = createProductImagePath(organizationId, productId);
   const token = randomUUID();
-  const object = getAdminStorageBucket().file(storagePath);
-  await object.save(contents, {
-    resumable: false,
-    metadata: {
-      contentType: "image/webp",
-      cacheControl: "public,max-age=31536000,immutable",
-      metadata: { firebaseStorageDownloadTokens: token },
-    },
-    validation: "crc32c",
-  });
-  return { storagePath, url: await getDownloadURL(object) };
+  try {
+    const object = getAdminStorageBucket().file(storagePath);
+    try {
+      await object.save(contents, {
+        resumable: false,
+        metadata: {
+          contentType: "image/webp",
+          cacheControl: "public,max-age=31536000,immutable",
+          metadata: { firebaseStorageDownloadTokens: token },
+        },
+        validation: "crc32c",
+      });
+      return { storagePath, url: await getDownloadURL(object) };
+    } catch (error) {
+      await object.delete({ ignoreNotFound: true }).catch(() => undefined);
+      throw error;
+    }
+  } catch (error) {
+    console.error("[menu/media] Product image storage failed.", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      code: typeof error === "object" && error !== null && "code" in error
+        ? String(error.code)
+        : undefined,
+    });
+    throw new ServiceError(
+      "IMAGE_STORAGE_UNAVAILABLE",
+      503,
+      "Product image storage is not available yet. Create the product without an image, then add one after Firebase Storage is configured.",
+    );
+  }
 }
 
 export async function deleteProductImage(
