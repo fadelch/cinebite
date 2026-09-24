@@ -36,6 +36,7 @@ export interface LegacyFirestoreSource {
   seats: LegacySeatDocument[];
   users: LegacyDocument[];
   auditLogs: LegacyDocument[];
+  warnings?: string[];
 }
 
 const safeMetadataValueSchema = z.union([
@@ -507,6 +508,7 @@ export interface MigrationRunReport {
   sourceCounts: MigrationCounts;
   postgresCounts: MigrationCounts | null;
   alreadyApplied: boolean;
+  warnings: string[];
 }
 
 export function createMigrationRunner(dependencies: {
@@ -524,6 +526,7 @@ export function createMigrationRunner(dependencies: {
         sourceCounts,
         postgresCounts: null,
         alreadyApplied: false,
+        warnings: source.warnings ?? [],
       };
     }
 
@@ -538,6 +541,7 @@ export function createMigrationRunner(dependencies: {
       sourceCounts,
       postgresCounts: result.counts,
       alreadyApplied: result.alreadyApplied,
+      warnings: source.warnings ?? [],
     };
   };
 }

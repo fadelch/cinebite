@@ -55,6 +55,8 @@ npm run migrate:firestore-postgres
 
 The default mode reads Firestore, validates every document and reference, builds the relational plan, and reports source counts. It performs zero PostgreSQL writes. Fix every validation error before continuing.
 
+Firebase Authentication remains the identity authority. During extraction, every Firestore user UID must exist in Firebase Auth. The migration uses the Auth identity's normalized email and disabled state, and reports a warning when legacy Firestore profile values differ. A legacy Firebase identity with no email is preserved as inactive using a deterministic non-routable `example.invalid` address so historical relations and counts remain intact. The migration never edits the Firestore profile.
+
 Validate especially:
 
 - organization, location, hall, and seat hierarchy;

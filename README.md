@@ -180,6 +180,8 @@ npm run migrate:firestore-postgres
 
 It reads Firestore, performs strict schema/reference/uniqueness validation, maps profiles into users/memberships/location access, reports counts, and performs zero PostgreSQL writes.
 
+User UIDs must resolve to Firebase Authentication identities. Because Firebase remains the identity provider, migration uses the Auth identity's normalized email and disabled state and warns when a legacy Firestore profile is stale. A legacy identity with no Auth email is preserved as an inactive archival user with a deterministic non-routable `example.invalid` address. Firestore is never modified.
+
 After reviewing the report, deliberate application requires the exact flag:
 
 ```bash

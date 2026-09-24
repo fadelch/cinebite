@@ -48,6 +48,9 @@ async function main(): Promise<void> {
 
     console.log(`Migration mode: ${report.mode}`);
     printCounts(report.sourceCounts, report.postgresCounts);
+    for (const warning of report.warnings) {
+      console.warn(`Warning: ${warning}`);
+    }
 
     if (report.mode === "DRY_RUN") {
       console.log("Dry run completed. PostgreSQL writes: 0.");
