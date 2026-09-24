@@ -1,14 +1,14 @@
 # CineBite
 
-CineBite is a multi-tenant cinema food-service application. Phase 6 replaces Firestore as the authoritative business-data store with Neon PostgreSQL and Prisma while retaining Firebase Authentication.
+CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and Prisma are the authoritative business-data layer, Firebase Authentication provides identity, and Firebase Storage holds normalized product images.
 
 ## Current phase
 
-**Phase 6 - Neon PostgreSQL + Prisma**
+**Phase 7 - Cinema Menu Management**
 
-This phase establishes the relational foundation for users, organizations, memberships, locations, location access, halls, seats, and audit logs. It includes a safe Firestore-to-PostgreSQL migration and cuts all normal Phase 1-5 business repositories over to Prisma.
+This phase adds organization menu categories and products, location-specific prices and availability, protected media upload, audit events, bounded catalog queries, and a reusable future customer-menu query on top of the Phase 6 relational foundation.
 
-Phase 6 does not implement movies, screenings, QR ordering, menus, products, inventory, customer ordering, orders, payments, kitchen/delivery workflow, or analytics.
+Phase 7 does not implement inventory, movies, screenings, QR ordering, customer ordering, orders, payments, kitchen/delivery workflow, discounts, or business analytics.
 
 ## Architecture
 
@@ -46,6 +46,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 FIREBASE_ADMIN_PROJECT_ID=
 FIREBASE_ADMIN_CLIENT_EMAIL=
 FIREBASE_ADMIN_PRIVATE_KEY=
+FIREBASE_STORAGE_BUCKET=
 
 DATABASE_URL=
 DIRECT_URL=
@@ -54,6 +55,8 @@ DIRECT_URL=
 `DATABASE_URL` is the Neon pooled connection used by the running application through `PrismaNeon`. Pooling is appropriate for concurrent and serverless runtime traffic.
 
 `DIRECT_URL` is the Neon direct connection loaded by `prisma.config.ts` for controlled Prisma CLI and migration operations. It is not prefixed with `NEXT_PUBLIC_` and must not enter browser bundles.
+
+`FIREBASE_STORAGE_BUCKET` is the server-only Firebase Admin bucket name. The public bucket name is also used by the strict Next Image remote pattern; neither value is a credential. Service-account credentials stay server-only.
 
 ## Prisma layout
 
@@ -117,6 +120,61 @@ Belongs to one hall. Its compound primary key `[hallId, id]` preserves legacy Fi
 ### AuditLog
 
 Stores trusted security/business events with action/entity enums, safe JSON metadata, and indexed organization/location/hall timelines. Actor and hierarchy references are nullable with `SET NULL`, so historical records remain readable if a referenced entity is later removed. Secrets are never valid audit metadata.
+
+### MenuCategory
+
+Represents an organization-wide grouping such as Popcorn or Drinks. Its opaque ID is the primary key, `organizationId` is a restrictive foreign key, `[organizationId, slug]` is unique, and `[id, organizationId]` supports tenant-safe product references. `ACTIVE`/`INACTIVE` provides history-safe disabling; `sortOrder` provides accessible deterministic ordering without drag-and-drop.
+
+### Product
+
+Represents the organization-wide identity of a sellable item: name, slug, description, optional normalized SKU, media metadata, status, and ordering. It references Organization and MenuCategory. The composite category relation includes `organizationId`, so PostgreSQL rejects a category from another tenant. Slug and non-null SKU are unique within an organization; PostgreSQL permits multiple null SKUs.
+
+### ProductLocation
+
+Represents one product offer at one physical location. It stores exact `Decimal(12,2)` price, a normalized three-letter currency code, and `isAvailable`. `[productId, locationId]` is unique. Both composite foreign keys include `organizationId`, so product and location must belong to the same tenant. Product status controls the global catalog while availability controls one location; normal workflows preserve rows and toggle availability instead of destroying history.
+
+## Phase 7 menu architecture
+
+The browser sends no trusted organization ID or storage path. A verified Firebase session resolves to the current PostgreSQL membership, the organization must be active, and every query uses that trusted organization scope. `CINEMA_ADMIN` can manage categories, products, all organization location offers, and media. `LOCATION_MANAGER` can view the shared catalog but can update only price, currency, and availability for `allLocations` or explicit PostgreSQL `LocationAccess` rows. Kitchen and delivery roles have no menu-administration access.
+
+Money enters APIs as a validated decimal string, is normalized to two decimal places without JavaScript floating-point arithmetic, and is passed to Prisma/PostgreSQL Decimal. The application and migration enforce `0.00` through `999999.99`. Currency is trimmed, uppercased, and validated as exactly three ASCII letters, allowing USD, LBP, EUR, and other ISO-style codes without hard-coding one currency.
+
+Category and product writes use Zod plus database unique constraints. Friendly conflicts replace raw Prisma errors. Product creation commits Product, ProductLocation assignments, and audit events in one transaction. Product listings are bounded to 24 rows by default and support search/category/status/location filters.
+
+`getMenuForLocation` is a reusable server query for a later customer experience. It requires trusted tenant/location context and returns only active categories and active products assigned to that active location, optionally excluding unavailable offers. It returns exact price strings and currencies. Phase 7 deliberately exposes no public menu or ordering route.
+
+## Product image flow
+
+Images follow: authenticated browser → CineBite API → PostgreSQL authorization → content validation/Sharp normalization → Firebase Admin Storage. JPEG, PNG, and WebP content up to 5 MB is accepted; SVG, HTML, unknown binary data, and oversized files are rejected. Sharp detects decoded format, auto-orients, constrains dimensions to 1200×1200 without upscaling, strips unnecessary metadata by default, and emits quality-82 WebP.
+
+The server creates `organizations/{organizationId}/products/{productId}/{uuid}.webp`; original filenames and browser paths are never trusted. PostgreSQL stores the path and a stable Firebase download-token URL, not a short-lived signed URL. The object token is not an Admin credential. Next Image accepts only the configured Firebase bucket route.
+
+Replacement uploads the new object first, commits new metadata plus an audit event, and then removes the prior managed object. If the database change fails, the new unused upload is deleted as compensation. Removal clears PostgreSQL and records the event before best-effort cleanup. Cleanup validates the exact tenant/product prefix.
+
+Audit events cover category create/update/enable/disable, product create/update/enable/disable, image update/removal, location assignment, price changes, and availability changes. Metadata contains safe IDs and state—not image bytes, download tokens, credentials, cookies, or database URLs.
+
+The Phase 7 migration is `20260924140000_phase_7_menu_management`. It creates the three models, enums, composite keys, indexes, foreign keys, and checks for price, currency, and non-negative ordering. Apply reviewed migrations with `npm run prisma:migrate:deploy`; do not use `prisma db push` for production.
+
+## Phase 7 manual test
+
+1. Deploy the Phase 7 Prisma migration and set `FIREBASE_STORAGE_BUCKET`.
+2. Sign in as `CINEMA_ADMIN` and open `/admin/menu/categories`.
+3. Create `Popcorn` and `Drinks`; verify duplicate slugs show a friendly conflict.
+4. Open `/admin/menu/products/new` and create `Large Popcorn` with a JPEG/PNG/WebP image.
+5. Assign Achrafieh at `5.00 USD` and Dbayeh at `5.50 USD`, both available.
+6. Confirm the list/detail image, exact prices, category, SKU/status, and assigned count.
+7. Set Dbayeh unavailable and confirm the organization product remains `ACTIVE`.
+8. Edit the description/order and replace, then remove, the image.
+9. Sign in as `LOCATION_MANAGER`; verify product identity/media/category controls are read-only.
+10. Change price/availability for an authorized location.
+11. Attempt the API operation for an unauthorized location and verify `403`.
+12. Verify category/product/location/media audit events contain no secrets.
+
+## Phase 7 test safety and limitations
+
+Unit tests mock current-user, repository, and Firebase Storage behavior; normal tests never connect to production Neon or upload to the production bucket. Image tests process in-memory buffers only. Assignment removal is intentionally absent; setting unavailable preserves history. There is no stock quantity, ordering, payment, analytics, or public customer menu.
+
+Phase 8 should add inventory as a separate location/product concern: stock levels, append-only movements, receiving/adjustment workflows, transaction-safe reservation/deduction, and low-stock policy. It should reuse Product/ProductLocation IDs and must not overload catalog status or availability with quantity semantics.
 
 ## Constraints and indexes
 
@@ -238,3 +296,4 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
 - Advanced cinema layouts and all menu/order/payment/operations features are deferred to later phases.
+- Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.

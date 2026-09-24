@@ -44,6 +44,11 @@ enum SeatStatus {
   DISABLED
 }
 
+enum MenuStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum AuditAction {
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
@@ -55,6 +60,19 @@ enum AuditAction {
   SEATS_GENERATED
   SEAT_DISABLED
   SEAT_ENABLED
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DISABLED
+  CATEGORY_ENABLED
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_DISABLED
+  PRODUCT_ENABLED
+  PRODUCT_IMAGE_UPDATED
+  PRODUCT_IMAGE_REMOVED
+  PRODUCT_LOCATION_ASSIGNED
+  PRODUCT_LOCATION_PRICE_CHANGED
+  PRODUCT_LOCATION_AVAILABILITY_CHANGED
 }
 
 enum AuditEntityType {
@@ -63,6 +81,9 @@ enum AuditEntityType {
   USER
   HALL
   SEAT
+  MENU_CATEGORY
+  PRODUCT
+  PRODUCT_LOCATION
 }
 
 model User {
@@ -89,9 +110,11 @@ model Organization {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
-  memberships OrganizationMembership[]
-  locations   Location[]
-  auditLogs   AuditLog[]
+  memberships    OrganizationMembership[]
+  locations      Location[]
+  auditLogs      AuditLog[]
+  menuCategories MenuCategory[]
+  products       Product[]
 
   @@map("organizations")
 }
@@ -131,10 +154,11 @@ model Location {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  halls        Hall[]
-  access       LocationAccess[]
-  auditLogs    AuditLog[]
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  halls            Hall[]
+  access           LocationAccess[]
+  auditLogs        AuditLog[]
+  productLocations ProductLocation[]
 
   @@unique([organizationId, slug])
   @@unique([id, organizationId])
@@ -190,6 +214,73 @@ model Seat {
   @@unique([hallId, label])
   @@index([hallId])
   @@map("seats")
+}
+
+model MenuCategory {
+  id             String     @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  description    String?
+  status         MenuStatus @default(ACTIVE)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  products     Product[]
+
+  @@unique([organizationId, slug])
+  @@unique([id, organizationId])
+  @@index([organizationId, status, sortOrder])
+  @@map("menu_categories")
+}
+
+model Product {
+  id               String     @id @default(cuid())
+  organizationId   String
+  categoryId       String
+  name             String
+  slug             String
+  description      String
+  sku              String?
+  imageStoragePath String?
+  imageUrl         String?
+  status           MenuStatus @default(ACTIVE)
+  sortOrder        Int        @default(0)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  category         MenuCategory      @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  productLocations ProductLocation[]
+
+  @@unique([organizationId, slug])
+  @@unique([organizationId, sku])
+  @@unique([id, organizationId])
+  @@index([organizationId, status, updatedAt])
+  @@index([categoryId, status, sortOrder])
+  @@map("products")
+}
+
+model ProductLocation {
+  id             String   @id @default(cuid())
+  productId      String
+  locationId     String
+  organizationId String
+  price          Decimal  @db.Decimal(12, 2)
+  currencyCode   String   @db.Char(3)
+  isAvailable    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  location Location @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([productId, locationId])
+  @@index([locationId, isAvailable])
+  @@index([organizationId])
+  @@map("product_locations")
 }
 
 model AuditLog {

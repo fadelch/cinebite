@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
 import type { toHallDto, toSeatDto } from "@/lib/tenant-admin/dto";
 import { generateSeatLayout, seatRowOrdinal } from "@/lib/tenant-admin/seats";
 import { SEAT_GENERATION_LIMITS } from "@/validation/seat";
@@ -36,11 +37,10 @@ export function HallManagement({
   locationActive: boolean;
 }) {
   const router = useRouter();
+  const notifications = useNotifications();
   const reduceMotion = useReducedMotion();
   const [generator, setGenerator] = useState(initialGenerator);
   const [preview, setPreview] = useState<ReturnType<typeof generateSeatLayout> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [changingSeat, setChangingSeat] = useState<string | null>(null);
   const rows = useMemo(() => {
@@ -52,24 +52,20 @@ export function HallManagement({
   function updateGenerator<K extends keyof GeneratorInput>(key: K, value: GeneratorInput[K]) {
     setGenerator((current) => ({ ...current, [key]: value }));
     setPreview(null);
-    setError(null);
   }
 
   function buildPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
       setPreview(generateSeatLayout(generator));
-      setError(null);
     } catch (reason) {
       setPreview(null);
-      setError(validationMessage(reason));
+      notifications.error(validationMessage(reason));
     }
   }
 
   async function confirmGeneration() {
     setSubmitting(true);
-    setError(null);
-    setSuccess(null);
     try {
       const response = await fetch(`/api/admin/locations/${locationId}/halls/${hall.id}/seats/generate`, {
         method: "POST",
@@ -78,12 +74,12 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The seats could not be generated."));
-      const count = typeof body === "object" && body && "count" in body && typeof body.count === "number" ? body.count : preview?.total;
-      setSuccess(`${count ?? "The"} seats were generated successfully.`);
-      setPreview(null);
-      router.refresh();
+      notifications.success("Seats generated successfully.");
+      router.push("/admin");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The seats could not be generated.");
+      notifications.error(
+        reason instanceof Error ? reason.message : "The seats could not be generated.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -92,7 +88,6 @@ export function HallManagement({
   async function toggleHallStatus() {
     const status = hall.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     setSubmitting(true);
-    setError(null);
     try {
       const response = await fetch(`/api/admin/locations/${locationId}/halls/${hall.id}/status`, {
         method: "PATCH",
@@ -101,10 +96,16 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The hall status could not be changed."));
-      setSuccess(status === "ACTIVE" ? "Hall reactivated." : "Hall marked inactive.");
-      router.refresh();
+      notifications.success(
+        status === "ACTIVE" ? "Hall reactivated successfully." : "Hall marked inactive.",
+      );
+      router.push("/admin");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The hall status could not be changed.");
+      notifications.error(
+        reason instanceof Error
+          ? reason.message
+          : "The hall status could not be changed.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +114,6 @@ export function HallManagement({
   async function toggleSeat(seat: SeatDto) {
     const status = seat.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
     setChangingSeat(seat.id);
-    setError(null);
     try {
       const response = await fetch(`/api/admin/locations/${locationId}/halls/${hall.id}/seats/${seat.id}/status`, {
         method: "PATCH",
@@ -122,10 +122,16 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The seat status could not be changed."));
-      setSuccess(`${seat.label} is now ${status.toLowerCase()}.`);
-      router.refresh();
+      notifications.success(
+        status === "ACTIVE" ? `${seat.label} reactivated.` : `${seat.label} disabled.`,
+      );
+      router.push("/admin");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The seat status could not be changed.");
+      notifications.error(
+        reason instanceof Error
+          ? reason.message
+          : "The seat status could not be changed.",
+      );
     } finally {
       setChangingSeat(null);
     }
@@ -141,13 +147,6 @@ export function HallManagement({
           {hall.status === "ACTIVE" ? "Mark hall inactive" : "Reactivate hall"}
         </button>
       </div>
-
-      {success ? (
-        <motion.p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-200" initial={reduceMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
-          {success}
-        </motion.p>
-      ) : null}
-      {error ? <p role="alert" className="rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200">{error}</p> : null}
 
       <section className="cb-panel p-5 sm:p-6">
         <div>
@@ -189,28 +188,30 @@ export function HallManagement({
           <div className="cb-panel px-6 py-12 text-center"><h3 className="font-semibold text-zinc-100">No seats have been configured</h3><p className="mt-2 text-sm text-zinc-500">Use the generator above to preview and create the first seating layout.</p></div>
         ) : (
           <div className="cb-panel overflow-x-auto p-5 sm:p-7">
-            <div className="mx-auto mb-8 min-w-max max-w-3xl rounded-t-[50%] border-t-4 border-amber-300/50 pt-3 text-center text-[0.65rem] tracking-[0.32em] text-zinc-600 uppercase">Screen</div>
-            <div className="min-w-max space-y-2" aria-label="Hall seating layout">
-              {rows.map(([row, rowSeats]) => (
-                <div key={row} className="flex items-center gap-3">
-                  <span className="w-7 text-center font-mono text-xs text-zinc-600" aria-hidden="true">{row}</span>
-                  <div className="flex gap-2">
-                    {rowSeats.map((seat) => (
-                      <button
-                        key={seat.id}
-                        type="button"
-                        onClick={() => toggleSeat(seat)}
-                        disabled={changingSeat === seat.id || !structureActive}
-                        aria-label={`${seat.label}, ${seat.status.toLowerCase()}. Activate to ${seat.status === "ACTIVE" ? "disable" : "reactivate"}.`}
-                        className={`flex h-11 w-12 flex-col items-center justify-center rounded-lg border font-mono text-[0.7rem] transition-colors ${seat.status === "ACTIVE" ? "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200 hover:bg-emerald-400/[0.15]" : "border-zinc-700 bg-zinc-900 text-zinc-500 line-through hover:border-amber-400/30"}`}
-                      >
-                        <span>{seat.label}</span>
-                        <span className="text-[0.5rem] no-underline">{seat.status === "ACTIVE" ? "On" : "Off"}</span>
-                      </button>
-                    ))}
+            <div className="mx-auto w-max min-w-max">
+              <div className="mb-8 rounded-t-[50%] border-t-4 border-amber-300/50 pt-3 text-center text-[0.65rem] tracking-[0.32em] text-zinc-600 uppercase">Screen</div>
+              <div className="space-y-2" aria-label="Hall seating layout">
+                {rows.map(([row, rowSeats]) => (
+                  <div key={row} className="flex items-center gap-3">
+                    <span className="w-7 text-center font-mono text-xs text-zinc-600" aria-hidden="true">{row}</span>
+                    <div className="flex gap-2">
+                      {rowSeats.map((seat) => (
+                        <button
+                          key={seat.id}
+                          type="button"
+                          onClick={() => toggleSeat(seat)}
+                          disabled={changingSeat === seat.id || !structureActive}
+                          aria-label={`${seat.label}, ${seat.status.toLowerCase()}. Activate to ${seat.status === "ACTIVE" ? "disable" : "reactivate"}.`}
+                          className={`flex h-11 w-12 flex-col items-center justify-center rounded-lg border font-mono text-[0.7rem] transition-colors ${seat.status === "ACTIVE" ? "border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-200 hover:bg-emerald-400/[0.15]" : "border-zinc-700 bg-zinc-900 text-zinc-500 line-through hover:border-amber-400/30"}`}
+                        >
+                          <span>{seat.label}</span>
+                          <span className="text-[0.5rem] no-underline">{seat.status === "ACTIVE" ? "On" : "Off"}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}

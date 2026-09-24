@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { EmptyState } from "@/components/super-admin/empty-state";
 import { StatusBadge } from "@/components/super-admin/status-badge";
+import { useNotifications } from "@/components/ui/notification-provider";
 import type { toHallDto } from "@/lib/tenant-admin/dto";
 
 type HallDto = ReturnType<typeof toHallDto>;
@@ -21,11 +22,11 @@ export function LocationHalls({
   halls: HallDto[];
 }) {
   const router = useRouter();
+  const notifications = useNotifications();
   const reduceMotion = useReducedMotion();
   const dialog = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && dialog.current && !dialog.current.open) dialog.current.showModal();
@@ -34,13 +35,11 @@ export function LocationHalls({
   function close() {
     dialog.current?.close();
     setOpen(false);
-    setError(null);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch(`/api/admin/locations/${locationId}/halls`, {
@@ -57,9 +56,12 @@ export function LocationHalls({
         throw new Error(typeof body === "object" && body && "error" in body && typeof body.error === "string" ? body.error : "The hall could not be created.");
       }
       close();
-      router.refresh();
+      notifications.success("Hall created successfully.");
+      router.push("/admin");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The hall could not be created.");
+      notifications.error(
+        reason instanceof Error ? reason.message : "The hall could not be created.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -127,7 +129,6 @@ export function LocationHalls({
             <label className="block text-sm font-medium text-zinc-300">Hall name<input name="name" className="cb-field mt-2" placeholder="Grand Hall" required autoFocus /></label>
             <label className="block text-sm font-medium text-zinc-300">Hall number<input name="number" type="number" min={1} max={10000} className="cb-field mt-2" required /></label>
           </fieldset>
-          {error ? <p role="alert" className="px-6 pb-4 text-sm text-red-300">{error}</p> : null}
           <div className="flex justify-end gap-3 border-t border-[var(--cb-border)] px-6 py-4">
             <button type="button" className="cb-button-secondary" onClick={close} disabled={submitting}>Cancel</button>
             <button type="submit" className="cb-button-primary" disabled={submitting}>{submitting ? "Creating…" : "Create hall"}</button>

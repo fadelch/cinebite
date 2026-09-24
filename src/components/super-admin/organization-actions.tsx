@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
 import { slugify } from "@/lib/super-admin/slug";
 import type { OrganizationStatus } from "@/types/status";
 
@@ -21,12 +22,11 @@ export function OrganizationActions({
   status,
 }: OrganizationActionsProps) {
   const router = useRouter();
+  const notifications = useNotifications();
   const reduceMotion = useReducedMotion();
   const dialogReference = useRef<HTMLDialogElement>(null);
   const [dialog, setDialog] = useState<DialogName>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [locationName, setLocationName] = useState("");
   const [locationSlug, setLocationSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -41,12 +41,9 @@ export function OrganizationActions({
   function closeDialog() {
     dialogReference.current?.close();
     setDialog(null);
-    setError(null);
   }
 
   function openDialog(name: Exclude<DialogName, null>) {
-    setError(null);
-    setSuccess(null);
     setDialog(name);
   }
 
@@ -63,7 +60,6 @@ export function OrganizationActions({
   async function submitLocation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
-    setError(null);
 
     const formData = new FormData(event.currentTarget);
     const line2 = String(formData.get("line2") ?? "").trim();
@@ -96,11 +92,11 @@ export function OrganizationActions({
         throw new Error(await responseError(response));
       }
 
-      setSuccess("Location added successfully.");
+      notifications.success("Location added successfully.");
       closeDialog();
       router.refresh();
     } catch (reason) {
-      setError(
+      notifications.error(
         reason instanceof Error
           ? reason.message
           : "The location could not be added.",
@@ -113,7 +109,6 @@ export function OrganizationActions({
   async function changeStatus() {
     const nextStatus = status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     setSubmitting(true);
-    setError(null);
 
     try {
       const response = await fetch(
@@ -129,7 +124,7 @@ export function OrganizationActions({
         throw new Error(await responseError(response));
       }
 
-      setSuccess(
+      notifications.success(
         nextStatus === "ACTIVE"
           ? "Organization reactivated."
           : "Organization suspended.",
@@ -137,7 +132,7 @@ export function OrganizationActions({
       closeDialog();
       router.refresh();
     } catch (reason) {
-      setError(
+      notifications.error(
         reason instanceof Error
           ? reason.message
           : "The status could not be changed.",
@@ -173,17 +168,6 @@ export function OrganizationActions({
           {status === "ACTIVE" ? "Suspend organization" : "Reactivate"}
         </button>
       </div>
-      {success ? (
-        <motion.p
-          role="status"
-          className="mt-3 text-sm text-emerald-300"
-          initial={reduceMotion ? false : { opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {success}
-        </motion.p>
-      ) : null}
-
       <dialog
         ref={dialogReference}
         onClose={() => setDialog(null)}
@@ -257,11 +241,6 @@ export function OrganizationActions({
                     required
                   />
                 </DialogField>
-                {error ? (
-                  <p role="alert" className="text-sm text-red-300">
-                    {error}
-                  </p>
-                ) : null}
               </div>
               <DialogFooter
                 onCancel={closeDialog}
@@ -286,11 +265,6 @@ export function OrganizationActions({
                 <p className="text-sm leading-6 text-zinc-300">
                   Confirm the status change for <strong>{organizationName}</strong>.
                 </p>
-                {error ? (
-                  <p role="alert" className="mt-4 text-sm text-red-300">
-                    {error}
-                  </p>
-                ) : null}
               </div>
               <div className="flex justify-end gap-3 border-t border-[var(--cb-border)] px-6 py-4">
                 <button

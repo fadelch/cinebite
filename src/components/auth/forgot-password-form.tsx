@@ -3,6 +3,7 @@
 import { sendPasswordResetEmail } from "firebase/auth";
 import { useState, type FormEvent } from "react";
 
+import { useNotifications } from "@/components/ui/notification-provider";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { forgotPasswordSchema } from "@/validation/auth";
 
@@ -10,12 +11,11 @@ const GENERIC_RESPONSE =
   "If an account exists for this email, a password reset message has been sent.";
 
 export function ForgotPasswordForm() {
-  const [message, setMessage] = useState<string | null>(null);
+  const notifications = useNotifications();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setMessage(null);
 
     const formData = new FormData(event.currentTarget);
     const parsed = forgotPasswordSchema.safeParse({
@@ -23,7 +23,7 @@ export function ForgotPasswordForm() {
     });
 
     if (!parsed.success) {
-      setMessage("Enter a valid email address.");
+      notifications.error("Enter a valid email address.");
       return;
     }
 
@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
       // The response deliberately does not reveal whether an account exists.
     }
 
-    setMessage(GENERIC_RESPONSE);
+    notifications.success(GENERIC_RESPONSE);
     setSubmitting(false);
   }
 
@@ -55,11 +55,6 @@ export function ForgotPasswordForm() {
           placeholder="staff@example.com"
         />
       </div>
-      {message ? (
-        <p role="status" className="text-sm leading-6 text-zinc-300">
-          {message}
-        </p>
-      ) : null}
       <button
         type="submit"
         disabled={submitting}
