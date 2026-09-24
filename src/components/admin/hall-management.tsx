@@ -40,7 +40,6 @@ export function HallManagement({
   const [generator, setGenerator] = useState(initialGenerator);
   const [preview, setPreview] = useState<ReturnType<typeof generateSeatLayout> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [changingSeat, setChangingSeat] = useState<string | null>(null);
   const rows = useMemo(() => {
@@ -69,7 +68,6 @@ export function HallManagement({
   async function confirmGeneration() {
     setSubmitting(true);
     setError(null);
-    setSuccess(null);
     try {
       const response = await fetch(`/api/admin/locations/${locationId}/halls/${hall.id}/seats/generate`, {
         method: "POST",
@@ -78,10 +76,7 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The seats could not be generated."));
-      const count = typeof body === "object" && body && "count" in body && typeof body.count === "number" ? body.count : preview?.total;
-      setSuccess(`${count ?? "The"} seats were generated successfully.`);
-      setPreview(null);
-      router.refresh();
+      router.push("/admin");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The seats could not be generated.");
     } finally {
@@ -101,8 +96,7 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The hall status could not be changed."));
-      setSuccess(status === "ACTIVE" ? "Hall reactivated." : "Hall marked inactive.");
-      router.refresh();
+      router.push("/admin");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The hall status could not be changed.");
     } finally {
@@ -122,8 +116,7 @@ export function HallManagement({
       });
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(responseMessage(body, "The seat status could not be changed."));
-      setSuccess(`${seat.label} is now ${status.toLowerCase()}.`);
-      router.refresh();
+      router.push("/admin");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The seat status could not be changed.");
     } finally {
@@ -142,11 +135,6 @@ export function HallManagement({
         </button>
       </div>
 
-      {success ? (
-        <motion.p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-200" initial={reduceMotion ? false : { opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
-          {success}
-        </motion.p>
-      ) : null}
       {error ? <p role="alert" className="rounded-xl border border-red-400/20 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200">{error}</p> : null}
 
       <section className="cb-panel p-5 sm:p-6">

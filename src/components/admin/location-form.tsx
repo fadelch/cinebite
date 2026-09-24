@@ -50,11 +50,7 @@ export function LocationForm() {
             : "The location could not be created.",
         );
       }
-      const locationId = typeof body === "object" && body && "location" in body &&
-        typeof body.location === "object" && body.location && "id" in body.location &&
-        typeof body.location.id === "string" ? body.location.id : null;
-      router.push(locationId ? `/admin/locations/${locationId}` : "/admin/locations");
-      router.refresh();
+      router.push("/admin");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The location could not be created.");
     } finally {

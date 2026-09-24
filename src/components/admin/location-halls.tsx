@@ -57,7 +57,7 @@ export function LocationHalls({
         throw new Error(typeof body === "object" && body && "error" in body && typeof body.error === "string" ? body.error : "The hall could not be created.");
       }
       close();
-      router.refresh();
+      router.push("/admin");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "The hall could not be created.");
     } finally {

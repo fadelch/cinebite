@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { slugify } from "@/lib/super-admin/slug";
@@ -12,6 +13,7 @@ async function readError(response: Response) {
 }
 
 export function MenuCategoryManager({ initialCategories, canEdit }: { initialCategories: MenuCategoryDto[]; canEdit: boolean }) {
+  const router = useRouter();
   const [categories, setCategories] = useState(initialCategories);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -29,6 +31,7 @@ export function MenuCategoryManager({ initialCategories, canEdit }: { initialCat
       const body = await response.json() as { category: MenuCategoryDto };
       setCategories((current) => [...current, body.category].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)));
       setName(""); setSlug(""); event.currentTarget.reset();
+      router.push("/admin");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The category could not be saved."); }
     finally { setBusy(null); }
   }
@@ -40,6 +43,7 @@ export function MenuCategoryManager({ initialCategories, canEdit }: { initialCat
       if (!response.ok) throw new Error(await readError(response));
       const body = await response.json() as { category: MenuCategoryDto };
       setCategories((current) => current.map((item) => item.id === category.id ? body.category : item).sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)));
+      router.push("/admin");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The category could not be saved."); }
     finally { setBusy(null); }
   }

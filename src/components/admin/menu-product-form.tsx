@@ -30,8 +30,7 @@ export function MenuProductForm({ categories, locations }: { categories: MenuCat
     try {
       const response = await fetch("/api/admin/menu/products", { method: "POST", body }); const json: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(productResponseMessage(json));
-      const id = typeof json === "object" && json && "product" in json && typeof json.product === "object" && json.product && "id" in json.product ? String(json.product.id) : "";
-      router.push(id ? `/admin/menu/products/${id}` : "/admin/menu/products"); router.refresh();
+      router.push("/admin");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The product could not be created."); setBusy(false); }
   }
 
