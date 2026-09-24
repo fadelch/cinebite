@@ -5,6 +5,18 @@ import { documentIdSchema, slugSchema } from "@/validation/shared";
 export const menuStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 const sortOrderSchema = z.coerce.number().int().min(0).max(10_000);
 const nameSchema = z.string().trim().min(2).max(100);
+const skuSchema = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") return value;
+    const normalized = value.trim().toUpperCase().replace(/\s+/g, "-");
+    return normalized || null;
+  },
+  z.string()
+    .max(40, "SKU must contain at most 40 characters.")
+    .regex(/^[A-Z0-9._-]+$/, "SKU may use letters, numbers, periods, underscores, and hyphens only.")
+    .nullable(),
+);
 
 export const menuCategoryInputSchema = z.object({
   name: nameSchema,
@@ -44,8 +56,7 @@ const productIdentity = z.object({
   slug: slugSchema,
   categoryId: documentIdSchema,
   description: z.string().trim().min(1).max(2_000),
-  sku: z.string().trim().toUpperCase().max(40).regex(/^[A-Z0-9._-]+$/).nullable().optional()
-    .transform((value) => value || null),
+  sku: skuSchema,
   status: menuStatusSchema.default("ACTIVE"),
   sortOrder: sortOrderSchema.default(0),
 });

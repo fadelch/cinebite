@@ -32,6 +32,10 @@ describe("Phase 7 menu validation", () => {
       name: "Large Popcorn", slug: "large-popcorn", categoryId: "cat-1",
       description: "Fresh popcorn", sku: " pop-large ", locations: [],
     }).sku).toBe("POP-LARGE");
+    expect(productCreateSchema.parse({
+      name: "Large Popcorn", slug: "large-popcorn", categoryId: "cat-1",
+      description: "Fresh popcorn", sku: " large popcorn ", locations: [],
+    }).sku).toBe("LARGE-POPCORN");
     expect(menuCategoryInputSchema.parse({ name: "Popcorn", slug: "popcorn", description: "" }).description).toBeNull();
   });
 
