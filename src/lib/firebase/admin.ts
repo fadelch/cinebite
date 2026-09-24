@@ -9,6 +9,7 @@ import {
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 import { getServerEnv } from "@/lib/env.server";
 
@@ -39,4 +40,9 @@ export function getAdminAuth() {
 
 export function getAdminFirestore() {
   return getFirestore(getAdminApp());
+}
+
+export function getAdminStorageBucket() {
+  const env = getServerEnv();
+  return getStorage(getAdminApp()).bucket(env.FIREBASE_STORAGE_BUCKET);
 }

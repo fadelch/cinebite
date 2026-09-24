@@ -45,4 +45,14 @@ describe("Prisma relational constraints", () => {
   it("contains no password, token, or session credential columns", () => {
     expect(schema).not.toMatch(/password|passwordHash|idToken|sessionCookie/i);
   });
+
+  it("enforces Phase 7 tenant-safe catalog and exact money relations", () => {
+    expect(schema).toMatch(/model MenuCategory[\s\S]*?@@unique\(\[organizationId, slug\]\)/);
+    expect(schema).toMatch(/model Product[\s\S]*?@@unique\(\[organizationId, slug\]\)/);
+    expect(schema).toMatch(/model Product[\s\S]*?@@unique\(\[organizationId, sku\]\)/);
+    expect(schema).toMatch(/model ProductLocation[\s\S]*?price\s+Decimal\s+@db\.Decimal\(12, 2\)/);
+    expect(schema).toMatch(/model ProductLocation[\s\S]*?@@unique\(\[productId, locationId\]\)/);
+    expect(schema).toContain("@relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)");
+    expect(schema).toContain("@relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)");
+  });
 });

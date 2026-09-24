@@ -17,7 +17,14 @@ export type ServiceErrorCode =
   | "DUPLICATE_SEAT"
   | "SEAT_NOT_FOUND"
   | "NO_STATUS_CHANGE"
-  | "ONBOARDING_FAILED";
+  | "ONBOARDING_FAILED"
+  | "CATEGORY_NOT_FOUND"
+  | "DUPLICATE_CATEGORY_SLUG"
+  | "PRODUCT_NOT_FOUND"
+  | "DUPLICATE_PRODUCT_SLUG"
+  | "DUPLICATE_PRODUCT_SKU"
+  | "PRODUCT_LOCATION_CONFLICT"
+  | "IMAGE_UPLOAD_INVALID";
 
 export class ServiceError extends Error {
   constructor(

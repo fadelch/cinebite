@@ -12,6 +12,7 @@ import type { TenantShellContext } from "@/types/tenant-admin";
 const navigation = [
   { href: "/admin", label: "Overview", exact: true },
   { href: "/admin/locations", label: "Locations", exact: false },
+  { href: "/admin/menu", label: "Menu", exact: false },
 ] as const;
 
 export function AdminShell({
