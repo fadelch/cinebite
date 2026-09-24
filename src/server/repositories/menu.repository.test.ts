@@ -11,7 +11,7 @@ const { prismaMock } = vi.hoisted(() => ({ prismaMock: {
 } }));
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
 
-import { createMenuCategoryRecord, getMenuForLocationRecord, listMenuCategories, listMenuProducts, upsertProductLocationRecord } from "@/server/repositories/menu.repository";
+import { createMenuCategoryRecord, createMenuProductRecord, getMenuForLocationRecord, listMenuCategories, listMenuProducts, upsertProductLocationRecord } from "@/server/repositories/menu.repository";
 
 describe("menu repository tenant and availability queries", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -54,6 +54,38 @@ describe("menu repository tenant and availability queries", () => {
     prismaMock.$transaction.mockImplementation(async (operation: unknown) => (operation as (client: typeof tx) => unknown)(tx));
     await createMenuCategoryRecord("firebase-1", "org-1", "cat-1", { name: "Popcorn", slug: "popcorn", description: null, status: "ACTIVE", sortOrder: 0 });
     expect(tx.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ action: "CATEGORY_CREATED", entityType: "MENU_CATEGORY", entityId: "cat-1", organizationId: "org-1" }) });
+  });
+
+  it("creates location offers through the tenant-safe composite location relation", async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ id: "user-1" });
+    const tx = {
+      menuCategory: { findFirst: vi.fn().mockResolvedValue({ id: "cat-1" }) },
+      location: { count: vi.fn().mockResolvedValue(1) },
+      product: { create: vi.fn().mockResolvedValue({
+        id: "product-1", categoryId: "cat-1", name: "Large Popcorn", slug: "large-popcorn",
+        description: "Fresh", sku: "LARGE-POPCORN", imageUrl: null, status: "ACTIVE",
+        sortOrder: 1, updatedAt: new Date(0), category: { name: "Popcorn" },
+        productLocations: [{ id: "offer-1", locationId: "loc-1", price: { toFixed: () => "4.00" }, currencyCode: "USD", isAvailable: true, location: { name: "Achrafieh" } }],
+      }) },
+      auditLog: { createMany: vi.fn().mockResolvedValue({ count: 2 }) },
+    };
+    prismaMock.$transaction.mockImplementation(async (operation: unknown) => (operation as (client: typeof tx) => unknown)(tx));
+
+    await createMenuProductRecord("firebase-1", "org-1", "product-1", {
+      name: "Large Popcorn", slug: "large-popcorn", categoryId: "cat-1", description: "Fresh",
+      sku: "LARGE-POPCORN", status: "ACTIVE", sortOrder: 1,
+      locations: [{ locationId: "loc-1", price: "4.00", currencyCode: "USD", isAvailable: true }],
+    });
+
+    expect(tx.product.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        organizationId: "org-1",
+        productLocations: { create: [{
+          price: "4.00", currencyCode: "USD", isAvailable: true,
+          location: { connect: { id_organizationId: { id: "loc-1", organizationId: "org-1" } } },
+        }] },
+      }),
+    }));
   });
 
   it("audits price and availability transitions without floating-point conversion", async () => {

@@ -199,7 +199,16 @@ export async function createMenuProductRecord(actorUid: string, organizationId: 
           id, organizationId, categoryId: input.categoryId, name: input.name, slug: input.slug,
           description: input.description, sku: input.sku, status: input.status, sortOrder: input.sortOrder,
           imageStoragePath: image?.storagePath, imageUrl: image?.url,
-          productLocations: { create: input.locations.map((entry) => ({ organizationId, ...entry })) },
+          productLocations: {
+            create: input.locations.map(({ locationId, ...offer }) => ({
+              ...offer,
+              location: {
+                connect: {
+                  id_organizationId: { id: locationId, organizationId },
+                },
+              },
+            })),
+          },
         },
         include: productInclude,
       });
