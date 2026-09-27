@@ -2,11 +2,11 @@
 
 Phase 9 adds an organization Movie catalog, secure poster handling, location-timezone-aware Screening scheduling, PostgreSQL-enforced Hall overlap protection, computed upcoming/live/ended state, cancellation history, location authorization, and internal active Hall/Seat resolution for a later secure QR-ordering phase.
 
-Actual application screenshots could not be captured automatically during implementation because the local database had not yet received the Phase 9 migration and no authenticated, non-sensitive demo browser session was available. Do not fabricate screenshots. After deploying the migration to a safe development/staging database, capture the following real UI with demo-only data.
+The Phase 9 migration and safe demo dataset are available. Run `npm run dev` to refresh the idempotent demo schedule before Next.js starts. Actual screenshots could not be captured in the implementation environment because no authenticated browser automation session was available. Do not fabricate screenshots; capture the following real UI from the signed-in application.
 
 ## Suggested demo data
 
-- Organization: `CineBite Demo`
+- Organization: `CineBite Demo Cinemas`
 - Location: `Demo Beirut`
 - Timezone: `Asia/Beirut`
 - Halls: `Hall 1`, `Hall 2`

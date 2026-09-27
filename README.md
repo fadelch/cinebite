@@ -221,6 +221,8 @@ Posters reuse Phase 7 raster validation, Sharp normalization, Firebase Admin upl
 
 Apply the reviewed migration with `npm run prisma:migrate:deploy`; never reset or use production `db push`. See [the Phase 9 manual test guide](docs/phase-9-screenings-manual-test.md) and [LinkedIn capture guide](linkedin/phase-9/README.md).
 
+For the repository's safe `cinebite-demo-cinemas` organization, `npm run dev` runs the idempotent `seed:phase9-demo` task before Next.js. It refreshes only Phase 9 demo Movies, Locations, Halls, Seats, Screenings, and safe audit metadata so the current schedule is visible immediately. Use `npm run dev:app` to start Next.js without refreshing demo data. The seed skips safely unless the organization slug is exactly `cinebite-demo-cinemas`.
+
 ## Phase 7 menu architecture
 
 The browser sends no trusted organization ID or storage path. A verified Firebase session resolves to the current PostgreSQL membership, the organization must be active, and every query uses that trusted organization scope. `CINEMA_ADMIN` can manage categories, products, all organization location offers, and media. `LOCATION_MANAGER` can view the shared catalog but can update only price, currency, and availability for `allLocations` or explicit PostgreSQL `LocationAccess` rows. Kitchen and delivery roles have no menu-administration access.
