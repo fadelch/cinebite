@@ -1,0 +1,1 @@
+export default function MoviesLoading() { return <div aria-label="Loading movies" className="animate-pulse space-y-7"><div className="h-9 w-64 rounded-lg bg-zinc-800" /><div className="h-20 rounded-2xl bg-zinc-900" /><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="h-48 rounded-2xl bg-zinc-900" />)}</div></div>; }

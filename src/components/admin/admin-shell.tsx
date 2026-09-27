@@ -14,6 +14,8 @@ const navigation = [
   { href: "/admin/locations", label: "Locations", exact: false },
   { href: "/admin/menu", label: "Menu", exact: false },
   { href: "/admin/inventory", label: "Inventory", exact: false },
+  { href: "/admin/movies", label: "Movies", exact: false },
+  { href: "/admin/screenings", label: "Screenings", exact: false },
 ] as const;
 
 export function AdminShell({

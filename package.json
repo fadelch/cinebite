@@ -16,6 +16,7 @@
     "migrate:firestore-postgres": "tsx --conditions=react-server --env-file=.env.local scripts/migrate-firestore-postgres.ts"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-neon": "^7.10.0",
     "@prisma/client": "^7.10.0",
