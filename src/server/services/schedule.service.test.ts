@@ -17,10 +17,10 @@ vi.mock("@/server/repositories/screenings.repository", () => ({
 import { getCurrentUser } from "@/server/auth/current-user";
 import { createMovieRecord } from "@/server/repositories/movies.repository";
 import { getOrganizationById } from "@/server/repositories/organizations.repository";
-import { createScreeningRecord, listScheduleLocationsRecord } from "@/server/repositories/screenings.repository";
+import { createScreeningRecord, getScheduleStatsRecord, listScheduleLocationsRecord, listScreeningsRecord } from "@/server/repositories/screenings.repository";
 import { createMovie } from "@/server/services/movie.service";
 import { assertScheduleLocationAccess, requireMovieEditor, requireScheduleActor } from "@/server/services/schedule-access.service";
-import { createScreening } from "@/server/services/screening.service";
+import { createScreening, getSchedule } from "@/server/services/screening.service";
 import type { AuthenticatedUser } from "@/types/auth";
 
 const admin: AuthenticatedUser = { uid: "admin", email: "admin@example.com", displayName: "Admin", role: "CINEMA_ADMIN", organizationId: "org-1", locationIds: [], allLocations: true, active: true };
@@ -32,6 +32,8 @@ describe("Phase 9 movie and schedule authorization", () => {
     vi.clearAllMocks();
     vi.mocked(getOrganizationById).mockResolvedValue({ id: "org-1", status: "ACTIVE" } as never);
     vi.mocked(listScheduleLocationsRecord).mockResolvedValue([location] as never);
+    vi.mocked(listScreeningsRecord).mockResolvedValue({ screenings: [], total: 0, page: 1, pageSize: 30 } as never);
+    vi.mocked(getScheduleStatsRecord).mockResolvedValue({ liveNow: 0, upcomingToday: 0, cancelledToday: 0 });
   });
 
   it("allows Cinema Admin movie creation in the authenticated tenant", async () => {
@@ -60,6 +62,17 @@ describe("Phase 9 movie and schedule authorization", () => {
     vi.mocked(getCurrentUser).mockResolvedValue(admin);
     await expect(createScreening({ locationId: "loc-1", hallId: "hall-1", movieId: "movie-1", startsAtLocal: "2026-10-05T20:30", endsAtLocal: "2026-10-05T19:30" })).rejects.toMatchObject({ code: "SCREENING_TIME_INVALID" });
     expect(createScreeningRecord).not.toHaveBeenCalled();
+  });
+
+  it("returns all upcoming and live screenings without a date boundary in management mode", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(admin);
+    const result = await getSchedule({ state: "MANAGEABLE" });
+    expect(listScreeningsRecord).toHaveBeenCalledWith(expect.objectContaining({
+      state: "MANAGEABLE",
+      dateStart: undefined,
+      dateEnd: undefined,
+    }));
+    expect(result.showManageableAcrossDates).toBe(true);
   });
 
   it("denies unauthorized location, kitchen, delivery, inactive, and anonymous actors", () => {

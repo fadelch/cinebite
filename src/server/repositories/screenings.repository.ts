@@ -65,7 +65,7 @@ export async function listScreeningsRecord(input: {
   locationId?: string;
   hallId?: string;
   movieId?: string;
-  state?: ScreeningTemporalState;
+  state?: ScreeningTemporalState | "MANAGEABLE";
   dateStart?: Date;
   dateEnd?: Date;
   page: number;
@@ -73,7 +73,8 @@ export async function listScreeningsRecord(input: {
   now?: Date;
 }) {
   const now = input.now ?? new Date();
-  const temporal = input.state === "CANCELLED" ? { status: "CANCELLED" as const }
+  const temporal = input.state === "MANAGEABLE" ? { status: "SCHEDULED" as const, endsAt: { gt: now } }
+    : input.state === "CANCELLED" ? { status: "CANCELLED" as const }
     : input.state === "UPCOMING" ? { status: "SCHEDULED" as const, startsAt: { gt: now } }
     : input.state === "LIVE" ? { status: "SCHEDULED" as const, startsAt: { lte: now }, endsAt: { gt: now } }
     : input.state === "ENDED" ? { status: "SCHEDULED" as const, endsAt: { lte: now } }

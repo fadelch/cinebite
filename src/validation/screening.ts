@@ -52,7 +52,7 @@ export const scheduleListQuerySchema = z.object({
   locationId: optionalQueryField(documentIdSchema),
   hallId: optionalQueryField(documentIdSchema),
   movieId: optionalQueryField(documentIdSchema),
-  state: optionalQueryField(z.enum(["UPCOMING", "LIVE", "ENDED", "CANCELLED"])),
+  state: optionalQueryField(z.enum(["MANAGEABLE", "UPCOMING", "LIVE", "ENDED", "CANCELLED"])),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(30),
 });
