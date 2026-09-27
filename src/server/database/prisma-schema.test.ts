@@ -8,6 +8,10 @@ const phase8Migration = readFileSync(
   resolve(process.cwd(), "prisma/migrations/20260925120000_phase_8_inventory_management/migration.sql"),
   "utf8",
 );
+const phase9Migration = readFileSync(
+  resolve(process.cwd(), "prisma/migrations/20260927120000_phase_9_movie_screening_system/migration.sql"),
+  "utf8",
+);
 
 describe("Prisma relational constraints", () => {
   it.each([
@@ -82,5 +86,22 @@ describe("Prisma relational constraints", () => {
     expect(movementModel).not.toContain("updatedAt");
     expect(phase8Migration).not.toMatch(/ON DELETE CASCADE/);
     expect(phase8Migration).not.toMatch(/CREATE TRIGGER|UPDATE "inventory_movements"|DELETE FROM "inventory_movements"/);
+  });
+
+  it("defines Phase 9 movie and screening relationships and query indexes", () => {
+    expect(schema).toMatch(/model Movie[\s\S]*?@@unique\(\[organizationId, slug\]\)/);
+    expect(schema).toMatch(/model Movie[\s\S]*?@@index\(\[organizationId, status, title\]\)/);
+    expect(schema).toMatch(/model Screening[\s\S]*?startsAt\s+DateTime\s+@db\.Timestamptz\(3\)/);
+    expect(schema).toMatch(/model Screening[\s\S]*?@@index\(\[hallId, status, startsAt\]\)/);
+    expect(schema).toMatch(/model Screening[\s\S]*?@@index\(\[movieId, startsAt\]\)/);
+  });
+
+  it("enforces duration, time ordering, and concurrent hall-overlap protection in PostgreSQL", () => {
+    expect(phase9Migration).toContain('CHECK ("durationMinutes" >= 1 AND "durationMinutes" <= 600)');
+    expect(phase9Migration).toContain('CHECK ("endsAt" > "startsAt")');
+    expect(phase9Migration).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist");
+    expect(phase9Migration).toContain('CONSTRAINT "screenings_no_scheduled_hall_overlap"');
+    expect(phase9Migration).toContain("tstzrange(\"startsAt\", \"endsAt\", '[)') WITH &&");
+    expect(phase9Migration).toContain('WHERE ("status" = \'SCHEDULED\')');
   });
 });

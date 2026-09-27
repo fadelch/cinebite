@@ -1,14 +1,14 @@
 # CineBite
 
-CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and Prisma are the authoritative business-data layer, Firebase Authentication provides identity, and Firebase Storage holds normalized product images.
+CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and Prisma are the authoritative business-data layer, Firebase Authentication provides identity, and Firebase Storage holds normalized product and movie media.
 
 ## Current phase
 
-**Phase 8 - Inventory Management**
+**Phase 9 - Movies & Screenings**
 
-This phase adds a tenant-safe inventory catalog, per-location stock and thresholds, atomic stock receipts/adjustments/waste, immutable movement history, product recipes, and reusable projected/effective availability logic on top of the Phase 7 menu system.
+This phase adds an organization Movie catalog, timezone-safe per-Hall Screening schedule, database-enforced overlap protection, computed upcoming/live/ended state, cancellation history, and reusable active Hall/Seat resolution on top of the Phase 8 cinema and inventory foundation.
 
-Phase 8 does not implement ordering, automatic stock deduction, reservations, transfers, suppliers, payments, movies, screenings, QR ordering, kitchen/delivery workflow, or revenue analytics.
+Phase 9 does not implement QR generation/verification, customer sessions, ordering, inventory reservation/deduction, payments, ticket sales/reservation, kitchen/delivery queues, or revenue analytics.
 
 ## Architecture
 
@@ -71,6 +71,8 @@ prisma/
       migration.sql
     20260925120000_phase_8_inventory_management/
       migration.sql
+    20260927120000_phase_9_movie_screening_system/
+      migration.sql
 prisma.config.ts
 src/
   generated/prisma/                # generated locally, ignored by Git
@@ -88,6 +90,7 @@ scripts/
 docs/
   firestore-to-postgres-migration.md
   phase-8-inventory-manual-test.md
+  phase-9-screenings-manual-test.md
 ```
 
 Prisma Client is generated into `src/generated/prisma` using the current `prisma-client` generator. The directory is ignored because it is reproducible through `npm install`/`npm run prisma:generate`.
@@ -182,6 +185,42 @@ The admin routes are `/admin/inventory`, `/admin/inventory/items`, `/admin/inven
 
 Apply the reviewed Phase 8 migration with `npm run prisma:migrate:deploy`. Never use a destructive reset or production `db push`. See [the Phase 8 manual test guide](docs/phase-8-inventory-manual-test.md) for role, stock, recipe, history, mobile, and audit verification.
 
+## Phase 9 movie and screening architecture
+
+A `Movie` is reusable organization content: title, runtime, synopsis, language, content rating, lifecycle status, and normalized poster. A `Screening` is one scheduled showing that connects a Movie to a Hall for an exact `[startsAt, endsAt)` interval. Hall resolves Location and Organization, so Screening deliberately avoids duplicating organization/location columns.
+
+### Movie
+
+Movie uses an opaque primary key and a restrictive Organization foreign key. `[organizationId, slug]` is unique, `[id, organizationId]` supports tenant-safe lookups, and `[organizationId, status, title]` supports bounded catalog search. Runtime is an integer from 1 through 600 minutes in both Zod and PostgreSQL. Movies use `ACTIVE`/`INACTIVE` rather than deletion. Inactive Movies remain visible to historical Screenings but cannot be newly scheduled.
+
+### Screening and temporal state
+
+Screening uses an opaque primary key with restrictive Movie and Hall foreign keys. PostgreSQL stores `startsAt` and `endsAt` as `TIMESTAMPTZ(3)`, requires `endsAt > startsAt`, and indexes `[hallId, status, startsAt]` plus `[movieId, startsAt]`. Only administrative `SCHEDULED` or `CANCELLED` state is persisted. `UPCOMING`, `LIVE`, and `ENDED` are computed from an injected/current clock: start is inclusive and end is exclusive. Cancellation overrides time and preserves history.
+
+### Location timezone strategy
+
+The selected Location timezone is authoritative. Forms submit local date-time strings, the server loads the trusted Location, and `@js-temporal/polyfill` interprets them using its IANA timezone with DST disambiguation set to `reject`. Nonexistent and ambiguous local times return a friendly validation failure instead of silently shifting. PostgreSQL stores the resulting instant; display converts it back through the Location timezone. Duration suggestions add elapsed minutes to the instant and correctly cross midnight or DST.
+
+### Overlap and concurrency protection
+
+The application performs a friendly overlap query using strict interval comparisons, but PostgreSQL is the final concurrency authority. The Phase 9 migration enables `btree_gist` and adds a partial GiST exclusion constraint combining equal `hallId` with overlapping `tstzrange(startsAt, endsAt, '[)')` values for `SCHEDULED` rows. Concurrent overlapping requests cannot both commit. Exact adjacency, different Halls/Locations, and cancelled rows remain valid. The named constraint is mapped to a safe `409` response.
+
+### Authorization and editing
+
+`CINEMA_ADMIN` manages Movies and Screenings across its active organization. `LOCATION_MANAGER` views the shared Movie catalog and creates/edits/cancels Screenings only for `allLocations` or explicit LocationAccess rows; it cannot mutate global Movie metadata. Kitchen and delivery roles have no schedule administration access. Creation verifies the trusted organization, active Movie, active Hall, active Location, Hall-to-Location relationship, location permission, time order, and overlap. Upcoming Screenings may be fully edited; live core fields and ended history are read-only. Scheduled upcoming/live Screenings may be cancelled, while ended records remain historical.
+
+### Active Hall and Seat resolution
+
+`getActiveScreeningForHall(hallId, now)` returns only a scheduled row satisfying `startsAt <= now < endsAt`; the exclusion constraint guarantees at most one. `resolveActiveScreeningForSeat(hallId, seatId, now)` uses CineBite’s compound Seat identity and returns safe Organization, Location, Hall, Seat, Screening, and Movie context. With no live Screening it returns explicit `NO_ACTIVE_SCREENING`; it never guesses a future or previous showing. These functions are internal preparation for Phase 10 and are not public QR APIs.
+
+### UI, media, audit, and persistence
+
+The admin routes are `/admin/movies`, `/admin/movies/new`, `/admin/movies/[movieId]`, `/admin/screenings`, `/admin/screenings/new`, and `/admin/screenings/[screeningId]`. Server Components fetch trusted data; small Client Components handle forms, Motion, and notifications. Schedules use responsive lists rather than a desktop-only calendar, include textual state labels, and honor reduced motion.
+
+Posters reuse Phase 7 raster validation, Sharp normalization, Firebase Admin upload, stable download URL, server-generated `organizations/{organizationId}/movies/{movieId}/{uuid}.webp` paths, replacement cleanup, and compensation. PostgreSQL remains authoritative for Movie/Screening data; Firestore receives no Phase 9 writes. AuditLog records Movie create/update/enable/disable/poster and Screening create/update/cancel events without secrets.
+
+Apply the reviewed migration with `npm run prisma:migrate:deploy`; never reset or use production `db push`. See [the Phase 9 manual test guide](docs/phase-9-screenings-manual-test.md) and [LinkedIn capture guide](linkedin/phase-9/README.md).
+
 ## Phase 7 menu architecture
 
 The browser sends no trusted organization ID or storage path. A verified Firebase session resolves to the current PostgreSQL membership, the organization must be active, and every query uses that trusted organization scope. `CINEMA_ADMIN` can manage categories, products, all organization location offers, and media. `LOCATION_MANAGER` can view the shared catalog but can update only price, currency, and availability for `allLocations` or explicit PostgreSQL `LocationAccess` rows. Kitchen and delivery roles have no menu-administration access.
@@ -223,7 +262,7 @@ The Phase 7 migration is `20260924140000_phase_7_menu_management`. It creates th
 
 Unit tests mock current-user, repository, and Firebase Storage behavior; normal tests never connect to production Neon or upload to the production bucket. Image tests process in-memory buffers only. Assignment removal is intentionally absent; setting unavailable preserves history. There is no stock quantity, ordering, payment, analytics, or public customer menu.
 
-Phase 8 now implements inventory as a separate location/product concern without overloading catalog status or manual availability. Its automated tests use mocked persistence and never connect to production Neon. A future Phase 9 may build customer ordering and transaction-safe order consumption/reservation on the centralized stock boundary; that behavior is intentionally not part of this phase.
+Phase 8 implements inventory as a separate location/product concern without overloading catalog status or manual availability. Phase 9 adds time context through Movies and Screenings without starting customer ordering. A future Phase 10 may use the active Seat/Screening resolver for signed QR entry, anonymous customer sessions, and a location/screening-bound menu; none of that behavior is part of Phase 9.
 
 ## Constraints and indexes
 

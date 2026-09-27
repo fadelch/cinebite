@@ -67,6 +67,16 @@ enum InventoryMovementType {
   WASTE
 }
 
+enum MovieStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ScreeningStatus {
+  SCHEDULED
+  CANCELLED
+}
+
 enum AuditAction {
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
@@ -104,6 +114,15 @@ enum AuditAction {
   PRODUCT_RECIPE_COMPONENT_ADDED
   PRODUCT_RECIPE_COMPONENT_UPDATED
   PRODUCT_RECIPE_COMPONENT_REMOVED
+  MOVIE_CREATED
+  MOVIE_UPDATED
+  MOVIE_ENABLED
+  MOVIE_DISABLED
+  MOVIE_POSTER_UPDATED
+  MOVIE_POSTER_REMOVED
+  SCREENING_CREATED
+  SCREENING_UPDATED
+  SCREENING_CANCELLED
 }
 
 enum AuditEntityType {
@@ -119,6 +138,8 @@ enum AuditEntityType {
   LOCATION_INVENTORY
   INVENTORY_MOVEMENT
   PRODUCT_RECIPE_COMPONENT
+  MOVIE
+  SCREENING
 }
 
 model User {
@@ -155,6 +176,7 @@ model Organization {
   locationInventories LocationInventory[]
   inventoryMovements InventoryMovement[]
   recipeComponents ProductRecipeComponent[]
+  movies          Movie[]
 
   @@map("organizations")
 }
@@ -233,6 +255,7 @@ model Hall {
   location  Location   @relation(fields: [locationId], references: [id], onDelete: Restrict)
   seats     Seat[]
   auditLogs AuditLog[]
+  screenings Screening[]
 
   @@unique([locationId, number])
   @@index([locationId])
@@ -405,6 +428,48 @@ model ProductRecipeComponent {
   @@index([organizationId, productId])
   @@index([inventoryItemId])
   @@map("product_recipe_components")
+}
+
+model Movie {
+  id                String      @id @default(cuid())
+  organizationId    String
+  title             String
+  slug              String
+  synopsis          String?
+  durationMinutes   Int
+  language          String?
+  contentRating     String?
+  status            MovieStatus @default(ACTIVE)
+  posterStoragePath String?
+  posterUrl         String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  screenings   Screening[]
+
+  @@unique([organizationId, slug])
+  @@unique([id, organizationId])
+  @@index([organizationId, status, title])
+  @@map("movies")
+}
+
+model Screening {
+  id        String          @id @default(cuid())
+  movieId   String
+  hallId    String
+  startsAt  DateTime        @db.Timestamptz(3)
+  endsAt    DateTime        @db.Timestamptz(3)
+  status    ScreeningStatus @default(SCHEDULED)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  hall  Hall  @relation(fields: [hallId], references: [id], onDelete: Restrict)
+
+  @@index([hallId, status, startsAt])
+  @@index([movieId, startsAt])
+  @@map("screenings")
 }
 
 model AuditLog {
