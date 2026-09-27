@@ -9,7 +9,7 @@ const database = vi.hoisted(() => {
   };
   return {
     prisma: {
-      user: { findUnique: vi.fn() }, screening: { findFirst: vi.fn() }, seat: { findUnique: vi.fn() }, $transaction: vi.fn(),
+      user: { findUnique: vi.fn() }, screening: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() }, seat: { findUnique: vi.fn() }, $transaction: vi.fn(),
     },
     transaction,
   };
@@ -20,7 +20,7 @@ vi.mock("@/lib/db/prisma", () => ({ prisma: database.prisma }));
 
 import {
   cancelScreeningRecord, createScreeningRecord, getActiveScreeningForHallRecord, resolveActiveScreeningForSeatRecord,
-  updateScreeningRecord,
+  listScreeningsRecord, updateScreeningRecord,
 } from "@/server/repositories/screenings.repository";
 
 const startsAt = new Date("2026-10-05T17:00:00.000Z");
@@ -109,6 +109,25 @@ describe("screening repository integrity and concurrency boundaries", () => {
     const now = new Date("2026-10-05T17:00:00.000Z");
     await getActiveScreeningForHallRecord("hall-1", now);
     expect(database.prisma.screening.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { hallId: "hall-1", status: "SCHEDULED", startsAt: { lte: now }, endsAt: { gt: now } } }));
+  });
+
+  it("lists upcoming and live screenings across all dates for the management view", async () => {
+    const now = new Date("2026-10-05T17:30:00.000Z");
+    database.prisma.$transaction.mockResolvedValueOnce([[], 0]);
+    await listScreeningsRecord({
+      organizationId: "org-1",
+      permittedIds: null,
+      locationId: "loc-1",
+      state: "MANAGEABLE",
+      page: 1,
+      pageSize: 30,
+      now,
+    });
+    expect(database.prisma.screening.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: "SCHEDULED", endsAt: { gt: now } }),
+    }));
+    const call = database.prisma.screening.findMany.mock.calls[0]?.[0];
+    expect(call?.where).not.toHaveProperty("startsAt");
   });
 
   it("cancels an upcoming or live Screening, preserves it, and audits the transition", async () => {

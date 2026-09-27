@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run seed:phase9-demo && next dev",
+    "dev:app": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -12,6 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "seed:phase9-demo": "tsx --conditions=react-server --env-file=.env.local scripts/seed-phase-9-demo.ts",
     "bootstrap:super-admin": "tsx --conditions=react-server --env-file=.env.local scripts/bootstrap-super-admin.ts",
     "migrate:firestore-postgres": "tsx --conditions=react-server --env-file=.env.local scripts/migrate-firestore-postgres.ts"
   },

@@ -43,7 +43,8 @@ export async function getSchedule(queryInput: unknown) {
   const permittedIds = schedulePermittedLocationIds(actor);
   const locations = await listScheduleLocationsRecord(organization.id, permittedIds);
   const locationId = query.locationId ?? locations[0]?.id;
-  if (!locationId) return { locations, selectedLocationId: null, date: query.date ?? "", screenings: [], total: 0, page: 1, pageSize: query.pageSize };
+  const showManageableAcrossDates = query.state === "MANAGEABLE";
+  if (!locationId) return { locations, selectedLocationId: null, date: query.date ?? "", screenings: [], total: 0, page: 1, pageSize: query.pageSize, showManageableAcrossDates };
   assertScheduleLocationAccess(actor, locationId);
   const location = locations.find((candidate) => candidate.id === locationId);
   if (!location) throw new ServiceError("LOCATION_NOT_FOUND", 404, "Location not found.");
@@ -52,12 +53,14 @@ export async function getSchedule(queryInput: unknown) {
   const [result, stats] = await Promise.all([
     listScreeningsRecord({
       organizationId: organization.id, permittedIds, locationId, hallId: query.hallId,
-      movieId: query.movieId, state: query.state, dateStart: bounds.start, dateEnd: bounds.end,
+      movieId: query.movieId, state: query.state,
+      dateStart: showManageableAcrossDates ? undefined : bounds.start,
+      dateEnd: showManageableAcrossDates ? undefined : bounds.end,
       page: query.page, pageSize: query.pageSize,
     }),
     getScheduleStatsRecord({ organizationId: organization.id, locationId, dateStart: bounds.start, dateEnd: bounds.end }),
   ]);
-  return { ...result, ...stats, locations, selectedLocationId: locationId, date };
+  return { ...result, ...stats, locations, selectedLocationId: locationId, date, showManageableAcrossDates };
 }
 
 export async function getScreening(screeningIdInput: string) {

@@ -29,5 +29,8 @@ describe("movie and screening validation", () => {
       page: 1,
       pageSize: 24,
     });
+    expect(scheduleListQuerySchema.parse({ state: "MANAGEABLE" })).toMatchObject({
+      state: "MANAGEABLE",
+    });
   });
 });
