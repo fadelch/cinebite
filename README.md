@@ -4,11 +4,11 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 ## Current phase
 
-**Phase 7 - Cinema Menu Management**
+**Phase 8 - Inventory Management**
 
-This phase adds organization menu categories and products, location-specific prices and availability, protected media upload, audit events, bounded catalog queries, and a reusable future customer-menu query on top of the Phase 6 relational foundation.
+This phase adds a tenant-safe inventory catalog, per-location stock and thresholds, atomic stock receipts/adjustments/waste, immutable movement history, product recipes, and reusable projected/effective availability logic on top of the Phase 7 menu system.
 
-Phase 7 does not implement inventory, movies, screenings, QR ordering, customer ordering, orders, payments, kitchen/delivery workflow, discounts, or business analytics.
+Phase 8 does not implement ordering, automatic stock deduction, reservations, transfers, suppliers, payments, movies, screenings, QR ordering, kitchen/delivery workflow, or revenue analytics.
 
 ## Architecture
 
@@ -67,6 +67,10 @@ prisma/
     migration_lock.toml
     20260922160000_initial_postgresql_cutover/
       migration.sql
+    20260924140000_phase_7_menu_management/
+      migration.sql
+    20260925120000_phase_8_inventory_management/
+      migration.sql
 prisma.config.ts
 src/
   generated/prisma/                # generated locally, ignored by Git
@@ -83,6 +87,7 @@ scripts/
   bootstrap-super-admin.ts          # Firebase identity + PostgreSQL role
 docs/
   firestore-to-postgres-migration.md
+  phase-8-inventory-manual-test.md
 ```
 
 Prisma Client is generated into `src/generated/prisma` using the current `prisma-client` generator. The directory is ignored because it is reproducible through `npm install`/`npm run prisma:generate`.
@@ -133,6 +138,50 @@ Represents the organization-wide identity of a sellable item: name, slug, descri
 
 Represents one product offer at one physical location. It stores exact `Decimal(12,2)` price, a normalized three-letter currency code, and `isAvailable`. `[productId, locationId]` is unique. Both composite foreign keys include `organizationId`, so product and location must belong to the same tenant. Product status controls the global catalog while availability controls one location; normal workflows preserve rows and toggle availability instead of destroying history.
 
+## Phase 8 inventory architecture
+
+A `Product` is what a customer can buy, while an `InventoryItem` is a canonical resource the cinema stores or consumes. For example, Large Popcorn is a Product whose recipe can consume 150 GRAM of Popcorn Kernels and 1 EACH Large Cup. This separation avoids pretending that a sellable menu entry and a physical stock unit are the same thing.
+
+### InventoryItem
+
+The opaque `id` is the primary key. `organizationId` is a restrictive foreign key and `[organizationId, sku]` is unique, so two tenants may reuse a SKU while one tenant cannot. `[id, organizationId]` supports tenant-safe composite relations. `[organizationId, status, name]` indexes bounded catalog searches. Items use `ACTIVE`/`INACTIVE`; they are not normally deleted. Units are restricted to `EACH`, `GRAM`, and `MILLILITER`, preventing aliases such as G/KG/KILOGRAM from entering authoritative data. A unit may change only before the item has stock or recipe usage; later conversion requires a deliberate future workflow.
+
+### LocationInventory
+
+The opaque `id` is the primary key. It links an organization, location, and item using composite foreign keys that require all three to share a tenant. `[locationId, inventoryItemId]` is unique, `[id, organizationId]` supports tenant-safe movement references, and organization/location plus item indexes support stock pages. `quantityOnHand` and `lowStockThreshold` are `Decimal(14,3)` with database checks preventing negative values. Configuration always starts at `0.000`; initial stock must be a visible movement.
+
+### InventoryMovement
+
+The opaque `id` is the primary key. It references the tenant-safe LocationInventory row and the acting PostgreSQL User. Organization/time, location-inventory/time, and actor indexes support history queries. The row has no `updatedAt`, and the application exposes no edit/delete route. `RECEIVE` and `ADJUSTMENT_IN` store positive deltas; `ADJUSTMENT_OUT` and `WASTE` store negative deltas. Database checks require a nonzero delta with the correct sign. Corrections are new movements so the operational history remains traceable.
+
+### ProductRecipeComponent
+
+The opaque `id` is the primary key. Tenant-safe composite foreign keys connect Product and InventoryItem through the same `organizationId`. `[productId, inventoryItemId]` prevents duplicate components; organization/product and item indexes support recipe and impact queries. `quantityRequired` is `Decimal(14,3)` and must be greater than zero. Only active inventory items can be newly attached.
+
+### Stock changes and concurrency
+
+All quantity mutations enter one stock service. It resolves the actor and organization from the verified server session, validates IDs and decimal-string input with Zod, applies the location permission, then calls one repository transaction. Incoming movements use an atomic database increment. Outgoing movements use one conditional atomic decrement whose predicate requires `quantityOnHand >= requested quantity`; if the affected-row count is not one, the operation fails with “Insufficient stock for this adjustment.” The quantity update, InventoryMovement insert, and AuditLog insert occur inside the same Prisma transaction. This avoids JavaScript read/calculate/write races, lost updates, orphan movement rows, and normal negative stock.
+
+Authoritative quantities cross API and component boundaries as normalized strings with exactly three decimal places. Prisma Decimal handles database changes, and projected availability uses integer thousandths rather than JavaScript floating point. A valid input such as `004.5` becomes `4.500`.
+
+Stock status is computed, never stored: zero is `OUT_OF_STOCK`; a positive quantity at or below the threshold is `LOW_STOCK`; anything higher is `IN_STOCK`. This leaves one authoritative quantity and avoids stale status columns.
+
+### Recipes and availability
+
+Projected sellable units are computed from current location stock. For every recipe component, CineBite calculates `floor(quantityOnHand / quantityRequired)` and uses the smallest result. A product with no recipe is explicitly `NOT_TRACKED`, so introducing Phase 8 does not hide existing menu products.
+
+Effective availability requires an active Product, a manually available ProductLocation, and inventory that is either sufficient or not tracked. Stock code never mutates `ProductLocation.isAvailable`: manual operational choices and physical stock remain independent. Consequently, running out of stock makes effective availability false, while receiving enough stock restores it automatically without requiring a second manual toggle.
+
+### Permissions, isolation, and audit
+
+`CINEMA_ADMIN` can manage item definitions, recipes, and stock throughout its own organization. `LOCATION_MANAGER` can view the shared item catalog and manage stock/thresholds only for `allLocations` or explicit LocationAccess rows; it cannot change global item or recipe definitions. Kitchen and delivery roles have no Phase 8 inventory permission. Every check is server-side. The browser never supplies a trusted organization ID, and repositories scope every query with the authenticated organization.
+
+InventoryMovement is the operational quantity ledger. AuditLog is the administrative/security record. Item lifecycle, location configuration, receipts, adjustments, waste, thresholds, and recipe changes create safe audit events without secrets. Phase 8 writes no inventory data to Firestore; PostgreSQL remains authoritative, Firebase Authentication remains identity, and Firebase Storage retains its existing media role.
+
+The admin routes are `/admin/inventory`, `/admin/inventory/items`, `/admin/inventory/locations/[locationId]`, and `/admin/inventory/movements`; recipes appear on product detail pages. Lists are bounded and filterable, forms remain practical at phone widths, text labels accompany every color status, focus indicators are visible, and Motion respects reduced-motion preferences.
+
+Apply the reviewed Phase 8 migration with `npm run prisma:migrate:deploy`. Never use a destructive reset or production `db push`. See [the Phase 8 manual test guide](docs/phase-8-inventory-manual-test.md) for role, stock, recipe, history, mobile, and audit verification.
+
 ## Phase 7 menu architecture
 
 The browser sends no trusted organization ID or storage path. A verified Firebase session resolves to the current PostgreSQL membership, the organization must be active, and every query uses that trusted organization scope. `CINEMA_ADMIN` can manage categories, products, all organization location offers, and media. `LOCATION_MANAGER` can view the shared catalog but can update only price, currency, and availability for `allLocations` or explicit PostgreSQL `LocationAccess` rows. Kitchen and delivery roles have no menu-administration access.
@@ -174,7 +223,7 @@ The Phase 7 migration is `20260924140000_phase_7_menu_management`. It creates th
 
 Unit tests mock current-user, repository, and Firebase Storage behavior; normal tests never connect to production Neon or upload to the production bucket. Image tests process in-memory buffers only. Assignment removal is intentionally absent; setting unavailable preserves history. There is no stock quantity, ordering, payment, analytics, or public customer menu.
 
-Phase 8 should add inventory as a separate location/product concern: stock levels, append-only movements, receiving/adjustment workflows, transaction-safe reservation/deduction, and low-stock policy. It should reuse Product/ProductLocation IDs and must not overload catalog status or availability with quantity semantics.
+Phase 8 now implements inventory as a separate location/product concern without overloading catalog status or manual availability. Its automated tests use mocked persistence and never connect to production Neon. A future Phase 9 may build customer ordering and transaction-safe order consumption/reservation on the centralized stock boundary; that behavior is intentionally not part of this phase.
 
 ## Constraints and indexes
 

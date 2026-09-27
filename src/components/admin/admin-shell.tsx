@@ -13,6 +13,7 @@ const navigation = [
   { href: "/admin", label: "Overview", exact: true },
   { href: "/admin/locations", label: "Locations", exact: false },
   { href: "/admin/menu", label: "Menu", exact: false },
+  { href: "/admin/inventory", label: "Inventory", exact: false },
 ] as const;
 
 export function AdminShell({
