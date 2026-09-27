@@ -3,6 +3,10 @@ import { z } from "zod";
 import { documentIdSchema, slugSchema } from "@/validation/shared";
 
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional().transform((value) => value || null);
+const optionalQueryField = <T extends z.ZodType>(schema: T) => z.preprocess(
+  (value) => value === "" || value === null ? undefined : value,
+  schema.optional(),
+);
 const localDateTimeSchema = z.string().trim().regex(
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
   "Use a complete local date and time.",
@@ -25,7 +29,7 @@ export const movieUpdateSchema = movieInputSchema.partial().refine(
 
 export const movieListQuerySchema = z.object({
   search: z.string().trim().max(100).default(""),
-  status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
+  status: optionalQueryField(z.enum(["ACTIVE", "INACTIVE"])),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });
@@ -44,11 +48,11 @@ export const screeningUpdateSchema = screeningInputSchema.partial().refine(
 );
 
 export const scheduleListQuerySchema = z.object({
-  date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  locationId: documentIdSchema.optional(),
-  hallId: documentIdSchema.optional(),
-  movieId: documentIdSchema.optional(),
-  state: z.enum(["UPCOMING", "LIVE", "ENDED", "CANCELLED"]).optional(),
+  date: optionalQueryField(z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  locationId: optionalQueryField(documentIdSchema),
+  hallId: optionalQueryField(documentIdSchema),
+  movieId: optionalQueryField(documentIdSchema),
+  state: optionalQueryField(z.enum(["UPCOMING", "LIVE", "ENDED", "CANCELLED"])),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(30),
 });
