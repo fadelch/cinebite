@@ -8,7 +8,17 @@ import { getCurrentUser } from "@/server/auth/current-user";
 
 export const metadata: Metadata = { title: "Staff login | CineBite" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+
+  if ("email" in query || "password" in query) {
+    redirect("/login");
+  }
+
   const user = await getCurrentUser();
 
   if (user) {

@@ -1,5 +1,15 @@
 import type { NextConfig } from "next";
 
+function configuredDevOriginHosts(): string[] {
+  const configuredOrigin = process.env.CINEBITE_APP_ORIGIN?.trim();
+  if (!configuredOrigin) return [];
+  try {
+    return [new URL(configuredOrigin).hostname];
+  } catch {
+    return [];
+  }
+}
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -10,6 +20,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: configuredDevOriginHosts(),
   images: {
     remotePatterns: [
       {
