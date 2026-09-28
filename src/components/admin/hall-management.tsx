@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
@@ -38,7 +38,6 @@ export function HallManagement({
 }) {
   const router = useRouter();
   const notifications = useNotifications();
-  const reduceMotion = useReducedMotion();
   const [generator, setGenerator] = useState(initialGenerator);
   const [preview, setPreview] = useState<ReturnType<typeof generateSeatLayout> | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -166,7 +165,7 @@ export function HallManagement({
 
         <AnimatePresence mode="wait">
           {preview ? (
-            <motion.div key="preview" className="mt-6 rounded-2xl border border-amber-400/15 bg-amber-400/[0.04] p-4" initial={reduceMotion ? false : { opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0 }}>
+            <motion.div key="preview" className="mt-6 rounded-2xl border border-amber-400/15 bg-amber-400/[0.04] p-4" initial={false} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0 }}>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div><h3 className="font-medium text-amber-100">Preview: {preview.total} seats</h3><p className="mt-1 text-xs text-zinc-500">{preview.seats[0]?.label} through {preview.seats.at(-1)?.label}</p></div>
                 <button type="button" className="cb-button-primary" onClick={confirmGeneration} disabled={submitting}>{submitting ? "Generating…" : "Confirm generation"}</button>

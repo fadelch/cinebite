@@ -21,6 +21,9 @@ export default async function AdminHallPage({ params }: { params: Promise<{ loca
         <div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold text-zinc-50">{detail.hall.name}</h1><StatusBadge status={detail.hall.status} /></div>
         <p className="mt-3 text-sm text-zinc-500">{detail.location.name} · {detail.seats.length} seats</p>
       </header>
+      <div className="mt-5 flex justify-end">
+        <Link href={`/admin/locations/${locationId}/halls/${hallId}/qr`} className="cb-button-secondary">Manage seat QR codes</Link>
+      </div>
       <HallManagement locationId={detail.location.id} locationActive={detail.location.status === "ACTIVE"} hall={toHallDto(detail.hall)} seats={detail.seats.map(toSeatDto)} />
     </PageTransition>
   );

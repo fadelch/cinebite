@@ -65,7 +65,7 @@ export function ScreeningScheduleList({ screenings }: { screenings: ScreeningDto
       {screenings.map((screening, index) => (
         <motion.article
           key={screening.id}
-          initial={reduceMotion ? false : { opacity: 0, x: -6 }}
+          initial={false}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: reduceMotion ? 0 : index * 0.025 }}
           className="cb-panel grid gap-4 p-4 sm:grid-cols-[4rem_minmax(0,1fr)] sm:items-center sm:p-5 lg:grid-cols-[4rem_minmax(0,1fr)_auto]"

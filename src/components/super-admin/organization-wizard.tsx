@@ -230,7 +230,7 @@ export function OrganizationWizard() {
     return (
       <motion.section
         className="cb-panel p-6 sm:p-8"
-        initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
+        initial={false}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: reduceMotion ? 0 : 0.25 }}
       >
@@ -315,9 +315,7 @@ export function OrganizationWizard() {
             <motion.div
               key={step}
               custom={direction}
-              initial={
-                reduceMotion ? false : { opacity: 0, x: direction * 18 }
-              }
+              initial={false}
               animate={{ opacity: 1, x: 0 }}
               exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -18 }}
               transition={{ duration: reduceMotion ? 0 : 0.2 }}

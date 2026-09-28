@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 
@@ -12,7 +12,7 @@ import type { MenuCategoryDto } from "@/types/menu";
 type LocationOption = { id: string; name: string; status: string };
 
 export function MenuProductForm({ categories, locations }: { categories: MenuCategoryDto[]; locations: LocationOption[] }) {
-  const router = useRouter(); const reduceMotion = useReducedMotion();
+  const router = useRouter();
   const notifications = useNotifications();
   const [name, setName] = useState(""); const [slug, setSlug] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -38,7 +38,7 @@ export function MenuProductForm({ categories, locations }: { categories: MenuCat
   }
 
   if (!categories.length) return <div className="cb-panel mt-7 p-8 text-center text-zinc-400">Create an active menu category before adding products.</div>;
-  return <motion.form onSubmit={submit} className="mt-7 space-y-6" initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+  return <motion.form onSubmit={submit} className="mt-7 space-y-6" initial={false} animate={{ opacity: 1, y: 0 }}>
     <fieldset disabled={busy} className="cb-panel grid gap-5 p-5 sm:grid-cols-2 sm:p-7">
       <legend className="px-2 font-semibold text-zinc-100">Product identity</legend>
       <Field label="Name"><input className="cb-field" value={name} required onChange={(event) => { setName(event.target.value); setSlug(slugify(event.target.value)); }} /></Field>

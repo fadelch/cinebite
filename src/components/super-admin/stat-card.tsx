@@ -28,7 +28,7 @@ export function StatCard({
   return (
     <motion.article
       className="cb-panel relative overflow-hidden p-5 sm:p-6"
-      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{
         duration: reduceMotion ? 0 : 0.28,

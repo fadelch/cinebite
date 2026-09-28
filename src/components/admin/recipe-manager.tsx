@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -16,7 +16,7 @@ async function apiError(response: Response) {
 export function RecipeManager({ productId, components, items, canEdit }: {
   productId: string; components: RecipeComponentDto[]; items: InventoryItemDto[]; canEdit: boolean;
 }) {
-  const router = useRouter(); const notifications = useNotifications(); const reduceMotion = useReducedMotion();
+  const router = useRouter(); const notifications = useNotifications();
   const [busy, setBusy] = useState(false);
   const available = items.filter((item) => !components.some((component) => component.inventoryItemId === item.id));
 
@@ -57,7 +57,7 @@ export function RecipeManager({ productId, components, items, canEdit }: {
       <label className="text-sm text-zinc-300">Quantity required<input name="quantityRequired" inputMode="decimal" className="cb-field mt-2" placeholder="1.000" required /></label>
       <button disabled={busy} className="cb-button-primary self-end">Add component</button>
     </form> : null}
-    <div className="mt-4 grid gap-3 lg:grid-cols-2"><AnimatePresence initial={false}>{components.map((component) => <motion.article key={component.id} layout initial={reduceMotion ? false : { opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="cb-panel p-5">
+    <div className="mt-4 grid gap-3 lg:grid-cols-2"><AnimatePresence initial={false}>{components.map((component) => <motion.article key={component.id} layout initial={false} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="cb-panel p-5">
       <div className="flex items-start justify-between gap-3"><div><h3 className="font-medium text-zinc-100">{component.itemName}</h3><p className="mt-1 font-mono text-xs text-zinc-500">{component.sku}</p></div><span className="text-sm text-zinc-300">{formatInventoryQuantity(component.quantityRequired)} {inventoryUnitLabel[component.unit]}</span></div>
       {canEdit ? <form onSubmit={(event) => update(component, event)} className="mt-4 flex flex-col gap-3 sm:flex-row"><input aria-label={`Quantity of ${component.itemName}`} name="quantityRequired" defaultValue={component.quantityRequired} inputMode="decimal" className="cb-field" required /><button disabled={busy} className="cb-button-secondary shrink-0">Save</button><button type="button" disabled={busy} onClick={() => void remove(component)} className="cb-button-danger shrink-0">Remove</button></form> : null}
     </motion.article>)}</AnimatePresence></div>

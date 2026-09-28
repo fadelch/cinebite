@@ -16,7 +16,7 @@ export function LocationCards({ locations }: { locations: LocationDto[] }) {
         <motion.article
           key={location.id}
           className="cb-panel flex min-h-56 flex-col p-5"
-          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.22, delay: reduceMotion ? 0 : index * 0.04 }}
         >
