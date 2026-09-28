@@ -77,6 +77,16 @@ enum ScreeningStatus {
   CANCELLED
 }
 
+enum SeatQrStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum CustomerSessionStatus {
+  ACTIVE
+  REVOKED
+}
+
 enum AuditAction {
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
@@ -123,6 +133,9 @@ enum AuditAction {
   SCREENING_CREATED
   SCREENING_UPDATED
   SCREENING_CANCELLED
+  SEAT_QR_GENERATED
+  SEAT_QR_ROTATED
+  SEAT_QR_REVOKED
 }
 
 enum AuditEntityType {
@@ -140,6 +153,7 @@ enum AuditEntityType {
   PRODUCT_RECIPE_COMPONENT
   MOVIE
   SCREENING
+  SEAT_QR_CODE
 }
 
 model User {
@@ -152,9 +166,9 @@ model User {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  memberships OrganizationMembership[]
-  auditLogs   AuditLog[]               @relation("AuditActor")
-  inventoryMovements InventoryMovement[] @relation("InventoryMovementActor")
+  memberships        OrganizationMembership[]
+  auditLogs          AuditLog[]               @relation("AuditActor")
+  inventoryMovements InventoryMovement[]      @relation("InventoryMovementActor")
 
   @@map("users")
 }
@@ -167,16 +181,16 @@ model Organization {
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
-  memberships    OrganizationMembership[]
-  locations      Location[]
-  auditLogs      AuditLog[]
-  menuCategories MenuCategory[]
-  products       Product[]
-  inventoryItems InventoryItem[]
+  memberships         OrganizationMembership[]
+  locations           Location[]
+  auditLogs           AuditLog[]
+  menuCategories      MenuCategory[]
+  products            Product[]
+  inventoryItems      InventoryItem[]
   locationInventories LocationInventory[]
-  inventoryMovements InventoryMovement[]
-  recipeComponents ProductRecipeComponent[]
-  movies          Movie[]
+  inventoryMovements  InventoryMovement[]
+  recipeComponents    ProductRecipeComponent[]
+  movies              Movie[]
 
   @@map("organizations")
 }
@@ -216,11 +230,11 @@ model Location {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  halls            Hall[]
-  access           LocationAccess[]
-  auditLogs        AuditLog[]
-  productLocations ProductLocation[]
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  halls               Hall[]
+  access              LocationAccess[]
+  auditLogs           AuditLog[]
+  productLocations    ProductLocation[]
   locationInventories LocationInventory[]
 
   @@unique([organizationId, slug])
@@ -252,9 +266,9 @@ model Hall {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  location  Location   @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  seats     Seat[]
-  auditLogs AuditLog[]
+  location   Location    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  seats      Seat[]
+  auditLogs  AuditLog[]
   screenings Screening[]
 
   @@unique([locationId, number])
@@ -272,7 +286,9 @@ model Seat {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  hall Hall @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  hall             Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  qrCode           SeatQrCode?
+  customerSessions CustomerSession[]
 
   @@id([hallId, id])
   @@unique([hallId, label])
@@ -315,8 +331,8 @@ model Product {
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  category         MenuCategory      @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization     Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  category         MenuCategory             @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
   productLocations ProductLocation[]
   recipeComponents ProductRecipeComponent[]
 
@@ -358,9 +374,9 @@ model InventoryItem {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  organization       Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization        Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   locationInventories LocationInventory[]
-  recipeComponents   ProductRecipeComponent[]
+  recipeComponents    ProductRecipeComponent[]
 
   @@unique([organizationId, sku])
   @@unique([id, organizationId])
@@ -412,13 +428,13 @@ model InventoryMovement {
 }
 
 model ProductRecipeComponent {
-  id                String   @id @default(cuid())
-  organizationId    String
-  productId         String
-  inventoryItemId   String
-  quantityRequired  Decimal  @db.Decimal(14, 3)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id @default(cuid())
+  organizationId   String
+  productId        String
+  inventoryItemId  String
+  quantityRequired Decimal  @db.Decimal(14, 3)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   product       Product       @relation(fields: [productId, organizationId], references: [id, organizationId], onDelete: Restrict)
@@ -464,12 +480,56 @@ model Screening {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  movie Movie @relation(fields: [movieId], references: [id], onDelete: Restrict)
-  hall  Hall  @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  movie            Movie             @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  hall             Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  customerSessions CustomerSession[]
 
   @@index([hallId, status, startsAt])
   @@index([movieId, startsAt])
   @@map("screenings")
+}
+
+model SeatQrCode {
+  id                 String       @id @default(cuid())
+  hallId             String
+  seatId             String
+  tokenHash          String       @unique @db.Char(64)
+  version            Int          @default(1)
+  status             SeatQrStatus @default(ACTIVE)
+  qrImageStoragePath String?
+  qrImageData        Bytes?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  rotatedAt          DateTime?
+  revokedAt          DateTime?
+
+  seat Seat @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
+
+  @@unique([hallId, seatId])
+  @@index([status, updatedAt])
+  @@map("seat_qr_codes")
+}
+
+model CustomerSession {
+  id          String                @id @default(cuid())
+  tokenHash   String                @unique @db.Char(64)
+  hallId      String
+  seatId      String
+  screeningId String
+  status      CustomerSessionStatus @default(ACTIVE)
+  expiresAt   DateTime              @db.Timestamptz(3)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  lastSeenAt  DateTime?
+  revokedAt   DateTime?
+
+  seat      Seat      @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
+  screening Screening @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+
+  @@index([tokenHash, status])
+  @@index([hallId, seatId, screeningId, status])
+  @@index([expiresAt])
+  @@map("customer_sessions")
 }
 
 model AuditLog {

@@ -175,7 +175,7 @@ export function OrganizationActions({
         className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-2xl border border-[var(--cb-border-strong)] bg-[#141417] p-0 text-zinc-100 shadow-2xl backdrop:bg-black/75"
       >
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
+          initial={false}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: reduceMotion ? 0 : 0.18 }}
         >

@@ -25,8 +25,7 @@
 .DS_Store
 *.pem
 /linkedin/*
-!/linkedin/phase-9/
-!/linkedin/phase-9/**
+!/linkedin/*.png
 
 # debug
 npm-debug.log*

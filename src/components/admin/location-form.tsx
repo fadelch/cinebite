@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -10,7 +10,6 @@ import { slugify } from "@/lib/super-admin/slug";
 export function LocationForm() {
   const router = useRouter();
   const notifications = useNotifications();
-  const reduceMotion = useReducedMotion();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -67,7 +66,7 @@ export function LocationForm() {
     <motion.form
       onSubmit={submit}
       className="cb-panel mt-8 p-5 sm:p-7"
-      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
     >
       <fieldset disabled={submitting} className="grid gap-5 sm:grid-cols-2">

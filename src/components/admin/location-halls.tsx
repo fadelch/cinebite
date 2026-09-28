@@ -96,7 +96,7 @@ export function LocationHalls({
             <motion.article
               key={hall.id}
               className="cb-panel p-5"
-              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              initial={false}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.2, delay: reduceMotion ? 0 : index * 0.04 }}
             >
@@ -120,7 +120,7 @@ export function LocationHalls({
         onCancel={() => setOpen(false)}
         className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-[var(--cb-border-strong)] bg-[#141417] p-0 text-zinc-100 shadow-2xl backdrop:bg-black/75"
       >
-        <motion.form onSubmit={submit} initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+        <motion.form onSubmit={submit} initial={false} animate={{ opacity: 1, scale: 1 }}>
           <div className="flex items-start justify-between gap-5 border-b border-[var(--cb-border)] px-6 py-5">
             <div><h2 className="text-lg font-semibold">Add hall</h2><p className="mt-1 text-sm text-zinc-500">Create an auditorium with an empty seating layout.</p></div>
             <button type="button" onClick={close} aria-label="Close dialog" className="flex size-9 items-center justify-center rounded-lg border border-zinc-800 text-zinc-400">×</button>

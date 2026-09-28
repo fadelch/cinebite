@@ -52,7 +52,7 @@ export type ActiveScreeningResolution =
       organization: { id: string; name: string };
       location: { id: string; name: string; timezone: string };
       hall: { id: string; name: string; number: number };
-      seat?: { id: string; label: string; row: string; number: number };
+      seat: { id: string; label: string; row: string; number: number };
       screening: { id: string; startsAt: string; endsAt: string; temporalState: "LIVE" };
       movie: { id: string; title: string; durationMinutes: number; posterUrl: string | null };
     };
