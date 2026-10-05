@@ -48,7 +48,14 @@ export type ServiceErrorCode =
   | "SEAT_QR_STORAGE_UNAVAILABLE"
   | "NO_ACTIVE_SCREENING"
   | "CUSTOMER_SESSION_INVALID"
-  | "CUSTOMER_SESSION_EXPIRED";
+  | "CUSTOMER_SESSION_EXPIRED"
+  | "CART_EMPTY"
+  | "CART_INVALID"
+  | "PRODUCT_UNAVAILABLE"
+  | "PRICE_CHANGED"
+  | "MIXED_CURRENCY"
+  | "ORDER_NOT_FOUND"
+  | "CHECKOUT_CONFLICT";
 
 export class ServiceError extends Error {
   constructor(

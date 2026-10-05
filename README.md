@@ -373,6 +373,18 @@ npm run dev
 
 Tests mock persistence and never modify a configured Neon database or Firestore project. They cover database invariants, authorization and suspension behavior, tenant/location isolation, onboarding orchestration and Firebase cleanup, repository writes/audits, seat generation/status changes, migration mapping, dry-run no-write behavior, validation, and conflict reporting.
 
+## Phase 11: customer cart and secure order creation
+
+Phase 11 extends the verified Phase 10 `CustomerSession` into a PostgreSQL-backed ordering flow. Each session owns at most one reusable `Cart`; `CartItem` enforces one row per Product and a quantity from 1 through 20. A zero quantity is a remove intent and never persists as an invalid row. Browser state is only a UX cache: every cart read and mutation resolves the HttpOnly guest cookie, revalidates the live Screening and operational Seat/Hall/Location/Organization, and derives the tenant and location on the server.
+
+Cart additions do not reserve inventory. This avoids abandoned carts locking concession stock. The server verifies Product, Category, ProductLocation, manual availability, location price, and Phase 8 effective availability when an item is added, then repeats every check at checkout. Cart responses reload the current `ProductLocation` price and calculate line totals/subtotal with exact integer cents. The stored reviewed-price fields are server-written review markers—not client prices—and let checkout return `PRICE_CHANGED`, refresh those markers, and require a deliberate second submission rather than silently charging a changed amount. Mixed-currency carts are rejected; CineBite performs no foreign-exchange conversion.
+
+Checkout accepts only an idempotency key and optional note. Seat, Screening, Location, Organization, price, currency, subtotal, and total are derived from trusted relations. A unique `(customerSessionId, idempotencyKey)` constraint makes retries return the original Order. A successful serializable transaction creates the `PLACED` Order and immutable OrderItem/context snapshots, aggregates shared recipe requirements, performs guarded `quantityOnHand >= required` decrements, creates immutable `ORDER_CONSUMPTION` movements, writes a safe `ORDER_PLACED` audit event, and clears Cart items. Any failure rolls everything back. Guarded updates and serializable retries ensure two last-stock checkouts cannot produce negative inventory. Products with no recipe retain the Phase 8 `NOT_TRACKED` behavior and create no invented stock movement.
+
+`PLACED` means only that CineBite accepted the order; it does not claim payment or fulfillment. Payment, Kitchen preparation, delivery, discounts, refunds, and additional operational states remain separate future domains. Cinema Admins and location-scoped Location Managers receive read-only order views, while customer order confirmation requires the same owning CustomerSession.
+
+Phase 11 evidence and its screenshot guide are in [`linkedin/phase-11`](linkedin/phase-11/README.md). The reproducible capture script uses safe demo data, performs real checkout assertions, and captures the production build without browser chrome, developer indicators, credentials, QR codes, or session tokens.
+
 ## Vercel preparation
 
 Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Firebase configuration in the appropriate Vercel environment settings. Do not put database URLs in `vercel.json`. Run `npm run prisma:migrate:deploy` through a controlled deployment workflow before starting application code that requires the new schema. This repository does not deploy or migrate production automatically.
@@ -385,5 +397,5 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
-- Advanced cinema layouts and all menu/order/payment/operations features are deferred to later phases.
+- Payment, Kitchen fulfillment, delivery, refunds, discounts, promotions, and ticketing remain deferred to later phases.
 - Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.

@@ -2,7 +2,9 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 
 import { EndSessionButton } from "@/components/customer/end-session-button";
+import { MenuOrderControls, StickyCartLink } from "@/components/customer/menu-order-controls";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
+import { getCustomerCart } from "@/server/services/cart.service";
 import { getCustomerMenu } from "@/server/services/customer-menu.service";
 import type { CustomerMenuContext } from "@/types/customer-menu";
 
@@ -20,6 +22,7 @@ export default async function CustomerMenuPage() {
   const token = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
   const menu = await loadMenu(token);
   if (!menu) return <SessionEnded />;
+  const cart = await getCustomerCart(token);
   return (
     <main className="min-h-screen bg-[#09090b] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/95 px-4 py-4 backdrop-blur">
@@ -48,7 +51,7 @@ export default async function CustomerMenuPage() {
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">{product.description}</p>
                     <div className="mt-auto flex items-end justify-between gap-2 pt-3">
                       <p className="text-base font-bold text-amber-300">{formatPrice(product.price, product.currencyCode)}</p>
-                      {product.availability === "OUT_OF_STOCK" ? <span className="rounded-full bg-red-400/10 px-2 py-1 text-[0.62rem] font-semibold text-red-300">OUT OF STOCK</span> : <span className="text-[0.62rem] font-medium text-emerald-400">AVAILABLE</span>}
+                      <MenuOrderControls productSlug={product.slug} initialQuantity={cart.items.find((item) => item.productSlug === product.slug)?.quantity ?? 0} disabled={product.availability === "OUT_OF_STOCK"} />
                     </div>
                   </div>
                 </article>
@@ -56,8 +59,9 @@ export default async function CustomerMenuPage() {
             </div>
           </section>
         )) : <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center"><h2 className="font-semibold text-white">Menu coming soon</h2><p className="mt-2 text-sm text-zinc-500">There are no available products for this cinema location yet.</p></section>}
-        <p className="text-center text-xs leading-5 text-zinc-600">Prices and availability come directly from this cinema location. Ordering will be added in the next phase.</p>
+        <p className="text-center text-xs leading-5 text-zinc-600">Prices and availability are checked again securely when you place the order.</p>
       </div>
+      <StickyCartLink itemCount={cart.itemCount} subtotal={cart.subtotal} currencyCode={cart.currencyCode} />
     </main>
   );
 }

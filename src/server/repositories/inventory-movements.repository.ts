@@ -20,7 +20,7 @@ const movementInclude = {
 function movementDto(row: {
   id: string; locationInventoryId: string; type: InventoryMovementType;
   quantityDelta: { toFixed(value: number): string }; reason: string | null; note: string | null; createdAt: Date;
-  actor: { displayName: string };
+  actor: { displayName: string } | null;
   locationInventory: { locationId: string; location: { name: string }; inventoryItem: { id: string; name: string; unit: "EACH" | "GRAM" | "MILLILITER" } };
 }): InventoryMovementDto {
   return {
@@ -29,7 +29,7 @@ function movementDto(row: {
     inventoryItemId: row.locationInventory.inventoryItem.id, itemName: row.locationInventory.inventoryItem.name,
     unit: row.locationInventory.inventoryItem.unit, type: row.type,
     quantityDelta: row.quantityDelta.toFixed(3), reason: row.reason, note: row.note,
-    actorDisplayName: row.actor.displayName, createdAt: row.createdAt.toISOString(),
+    actorDisplayName: row.actor?.displayName ?? "Customer order", createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -42,7 +42,7 @@ const auditAction = {
 
 export async function applyStockMovementRecord(input: {
   actorUid: string; organizationId: string; locationId: string; locationInventoryId: string;
-  movementId: string; type: InventoryMovementType; quantity: string; reason: string | null; note: string | null;
+  movementId: string; type: Exclude<InventoryMovementType, "ORDER_CONSUMPTION">; quantity: string; reason: string | null; note: string | null;
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   return prisma.$transaction(async (tx) => {

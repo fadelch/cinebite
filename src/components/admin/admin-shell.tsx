@@ -16,6 +16,7 @@ const navigation = [
   { href: "/admin/inventory", label: "Inventory", exact: false },
   { href: "/admin/movies", label: "Movies", exact: false },
   { href: "/admin/screenings", label: "Screenings", exact: false },
+  { href: "/admin/orders", label: "Orders", exact: false },
 ] as const;
 
 export function AdminShell({

@@ -1,6 +1,6 @@
 export type InventoryUnit = "EACH" | "GRAM" | "MILLILITER";
 export type InventoryItemStatus = "ACTIVE" | "INACTIVE";
-export type InventoryMovementType = "RECEIVE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "WASTE";
+export type InventoryMovementType = "RECEIVE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "WASTE" | "ORDER_CONSUMPTION";
 export type StockStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
 
 export interface InventoryItemDto {
