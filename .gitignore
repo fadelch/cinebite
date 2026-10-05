@@ -26,6 +26,10 @@
 *.pem
 /linkedin/*
 !/linkedin/*.png
+!/linkedin/phase-11/
+/linkedin/phase-11/*
+!/linkedin/phase-11/*.png
+!/linkedin/phase-11/README.md
 
 # debug
 npm-debug.log*

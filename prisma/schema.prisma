@@ -65,6 +65,7 @@ enum InventoryMovementType {
   ADJUSTMENT_IN
   ADJUSTMENT_OUT
   WASTE
+  ORDER_CONSUMPTION
 }
 
 enum MovieStatus {
@@ -85,6 +86,10 @@ enum SeatQrStatus {
 enum CustomerSessionStatus {
   ACTIVE
   REVOKED
+}
+
+enum OrderStatus {
+  PLACED
 }
 
 enum AuditAction {
@@ -136,6 +141,7 @@ enum AuditAction {
   SEAT_QR_GENERATED
   SEAT_QR_ROTATED
   SEAT_QR_REVOKED
+  ORDER_PLACED
 }
 
 enum AuditEntityType {
@@ -154,6 +160,7 @@ enum AuditEntityType {
   MOVIE
   SCREENING
   SEAT_QR_CODE
+  ORDER
 }
 
 model User {
@@ -191,6 +198,7 @@ model Organization {
   inventoryMovements  InventoryMovement[]
   recipeComponents    ProductRecipeComponent[]
   movies              Movie[]
+  orders              Order[]
 
   @@map("organizations")
 }
@@ -236,6 +244,7 @@ model Location {
   auditLogs           AuditLog[]
   productLocations    ProductLocation[]
   locationInventories LocationInventory[]
+  orders              Order[]
 
   @@unique([organizationId, slug])
   @@unique([id, organizationId])
@@ -270,6 +279,7 @@ model Hall {
   seats      Seat[]
   auditLogs  AuditLog[]
   screenings Screening[]
+  orders     Order[]
 
   @@unique([locationId, number])
   @@index([locationId])
@@ -289,6 +299,7 @@ model Seat {
   hall             Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
   qrCode           SeatQrCode?
   customerSessions CustomerSession[]
+  orders           Order[]
 
   @@id([hallId, id])
   @@unique([hallId, label])
@@ -335,6 +346,8 @@ model Product {
   category         MenuCategory             @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
   productLocations ProductLocation[]
   recipeComponents ProductRecipeComponent[]
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
 
   @@unique([organizationId, slug])
   @@unique([organizationId, sku])
@@ -414,16 +427,19 @@ model InventoryMovement {
   quantityDelta       Decimal               @db.Decimal(14, 3)
   reason              String?
   note                String?
-  actorUserId         String
+  actorUserId         String?
+  orderId             String?
   createdAt           DateTime              @default(now())
 
   organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   locationInventory LocationInventory @relation(fields: [locationInventoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  actor             User              @relation("InventoryMovementActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  actor             User?             @relation("InventoryMovementActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  order             Order?            @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, createdAt])
   @@index([locationInventoryId, createdAt])
   @@index([actorUserId])
+  @@index([orderId])
   @@map("inventory_movements")
 }
 
@@ -483,6 +499,7 @@ model Screening {
   movie            Movie             @relation(fields: [movieId], references: [id], onDelete: Restrict)
   hall             Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
   customerSessions CustomerSession[]
+  orders           Order[]
 
   @@index([hallId, status, startsAt])
   @@index([movieId, startsAt])
@@ -525,11 +542,102 @@ model CustomerSession {
 
   seat      Seat      @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
   screening Screening @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  cart      Cart?
+  orders    Order[]
 
   @@index([tokenHash, status])
   @@index([hallId, seatId, screeningId, status])
   @@index([expiresAt])
   @@map("customer_sessions")
+}
+
+model Cart {
+  id                String   @id @default(cuid())
+  customerSessionId String   @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  customerSession CustomerSession @relation(fields: [customerSessionId], references: [id], onDelete: Restrict)
+  items           CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id                   String   @id @default(cuid())
+  cartId               String
+  productId            String
+  quantity             Int
+  reviewedUnitPrice    Decimal  @db.Decimal(12, 2)
+  reviewedCurrencyCode String   @db.Char(3)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([cartId, productId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+model Order {
+  id                   String      @id @default(cuid())
+  publicOrderCode      String      @unique
+  customerSessionId    String
+  organizationId       String
+  locationId           String
+  hallId               String
+  seatId               String
+  screeningId          String
+  status               OrderStatus @default(PLACED)
+  currencyCode         String      @db.Char(3)
+  subtotal             Decimal     @db.Decimal(12, 2)
+  total                Decimal     @db.Decimal(12, 2)
+  customerNote         String?
+  idempotencyKey       String
+  locationNameSnapshot String
+  hallNameSnapshot     String
+  seatLabelSnapshot    String
+  movieTitleSnapshot   String
+  screeningStartsAt    DateTime    @db.Timestamptz(3)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  customerSession    CustomerSession     @relation(fields: [customerSessionId], references: [id], onDelete: Restrict)
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location           Location            @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  hall               Hall                @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  seat               Seat                @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
+  screening          Screening           @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  items              OrderItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([customerSessionId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([locationId, createdAt])
+  @@index([screeningId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                   String   @id @default(cuid())
+  orderId              String
+  productId            String
+  productNameSnapshot  String
+  productImageSnapshot String?
+  unitPrice            Decimal  @db.Decimal(12, 2)
+  currencyCode         String   @db.Char(3)
+  quantity             Int
+  lineTotal            Decimal  @db.Decimal(12, 2)
+  createdAt            DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
 }
 
 model AuditLog {

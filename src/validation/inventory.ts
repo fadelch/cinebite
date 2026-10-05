@@ -76,7 +76,7 @@ export const stockMovementInputSchema = z
 export const inventoryMovementListQuerySchema = z.object({
   locationId: z.string().trim().min(1).max(128).optional(),
   inventoryItemId: z.string().trim().min(1).max(128).optional(),
-  type: z.enum(["RECEIVE", "ADJUSTMENT_IN", "ADJUSTMENT_OUT", "WASTE"]).optional(),
+  type: z.enum(["RECEIVE", "ADJUSTMENT_IN", "ADJUSTMENT_OUT", "WASTE", "ORDER_CONSUMPTION"]).optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),

@@ -21,4 +21,5 @@ export const movementTypeLabel: Record<InventoryMovementType, string> = {
   ADJUSTMENT_IN: "Adjustment in",
   ADJUSTMENT_OUT: "Adjustment out",
   WASTE: "Waste",
+  ORDER_CONSUMPTION: "Customer order",
 };
