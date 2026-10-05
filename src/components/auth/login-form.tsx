@@ -7,7 +7,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { useNotifications } from "@/components/ui/notification-provider";
 import { isRoleLandingPath } from "@/lib/auth/authorization";
@@ -19,16 +19,17 @@ const GENERIC_AUTH_ERROR = "Invalid email or password.";
 export function LoginForm() {
   const router = useRouter();
   const notifications = useNotifications();
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
     const parsed = loginSchema.safeParse({
-      email: formData.get("email"),
-      password: formData.get("password"),
+      email: emailRef.current?.value,
+      password: passwordRef.current?.value,
     });
 
     if (!parsed.success) {
@@ -79,14 +80,14 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+    <form action="/login" method="post" onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div>
         <label htmlFor="email" className="block text-sm text-zinc-300">
           Email
         </label>
         <input
           id="email"
-          name="email"
+          ref={emailRef}
           type="email"
           autoComplete="email"
           required
@@ -101,7 +102,7 @@ export function LoginForm() {
         <div className="relative mt-2">
           <input
             id="password"
-            name="password"
+            ref={passwordRef}
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             required

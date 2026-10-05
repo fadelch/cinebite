@@ -29,7 +29,7 @@ The browser/integration harness used demo records, never printed credentials, an
 | AC Audit log | PASS | Automated assertions and database inspection cover generated/rotated/revoked events without raw credentials. |
 | AD Firestore | PASS | Source inspection confirms PostgreSQL repositories and no Phase 10 Firestore business writes. |
 | AE Mobile | PASS | Real 390 x 844 scan and customer-menu pages were captured after API session creation; layout, price, out-of-stock state, and exit control were visually inspected. |
-| AF LinkedIn evidence | PASS | Images were visually inspected: application UI only, no browser chrome/desktop/dev overlay, QR graphics blurred, and no raw credential/session/secret visible. |
+| AF LinkedIn evidence | PASS | Images were visually inspected: application UI only, no browser chrome/desktop/dev overlay, no raw credential/session/secret visible, and every clear demo QR shown was rotated before publication. |
 
 ## Totals
 
@@ -48,4 +48,4 @@ The browser/integration harness used demo records, never printed credentials, an
 
 ## LinkedIn evidence
 
-The root `linkedin` folder contains full application-page captures for earlier portfolio views plus Phase 8 inventory, Phase 9 screenings, and Phase 10 QR/session/menu functionality. Files 04 and 05 replace the earlier cropped versions with full-page captures. The QR management image deliberately blurs QR patterns so the visual cannot be used as an operational credential.
+The root `linkedin` folder contains full application-page captures for earlier portfolio views plus Phase 8 inventory, Phase 9 screenings, and Phase 10 QR/session/menu functionality. Files 04 and 05 replace the earlier cropped versions with full-page captures. The QR management image uses clear demo QR patterns, but every visible credential was rotated immediately after capture and is permanently invalid.
