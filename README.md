@@ -385,6 +385,43 @@ Checkout accepts only an idempotency key and optional note. Seat, Screening, Loc
 
 Phase 11 evidence and its screenshot guide are in [`linkedin/phase-11`](linkedin/phase-11/README.md). The reproducible capture script uses safe demo data, performs real checkout assertions, and captures the production build without browser chrome, developer indicators, credentials, QR codes, or session tokens.
 
+## Phase 12: kitchen operations
+
+Phase 12 extends the existing order rather than rebuilding checkout:
+
+`PLACED → ACCEPTED → PREPARING → READY`
+
+READY means preparation complete, not paid or delivered. `/kitchen` provides a dark, responsive queue, oldest-first cards, authorized location selection, status/date/hall/code filters, and read-only tickets with an operational timeline. The customer confirmation page now refreshes progress automatically. `/admin/orders` adds scoped history filters and pagination.
+
+Staff Firebase sessions authenticate identity; active PostgreSQL users, memberships, and location grants authorize every read/action. Kitchen Staff and Location Managers operate only their granted locations, while Cinema Admins operate their own organization. Delivery Staff and anonymous customers cannot transition orders. Customer status reads still require the valid owning Phase 10 session; a public order code is never authorization.
+
+Each transition uses one Serializable PostgreSQL transaction: reload current staff grants, conditionally update the expected order state, append one `OrderStatusEvent`, and append one safe `AuditLog`. A racing or repeated request receives a friendly conflict, not duplicate history. Event timestamps come from the database. A unique `(orderId, toStatus)` constraint and an append-only database trigger protect the timeline. New checkout creates its initial CUSTOMER PLACED event in the existing atomic transaction; the migration backfills one SYSTEM PLACED event for each older order using its historical UTC creation time.
+
+Kitchen actions never change stock, consumption movements, items, quantities, prices, or seating. Phase 11 already consumed inventory. Orders remain independently processable after customer-session expiry or screening end/cancellation; a screening warning is displayed, with no automatic refund, cancellation, or restock. Customer viewing remains subject to its original session eligibility.
+
+Kitchen and customer clients poll protected, uncached APIs approximately every five seconds plus request latency. Polling pauses in hidden tabs, cancels superseded requests, rejects stale responses, and cleans up on unmount. This works with Next.js/Vercel without adding WebSocket infrastructure or exposing Neon to browsers. Queue pages contain at most 25 orders **per status**; admin history contains 30 orders per page. Location dates and timeline times use the existing Phase 9 timezone utilities. Motion is restrained and respects reduced-motion preferences; dialogs use native focus/keyboard behavior.
+
+Deploy the migration before running the new code:
+
+```bash
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run prisma:validate
+npm test
+npm run lint
+npm run build
+```
+
+The explicit manual evidence scenario requires configured Neon/Firebase demo access, a production build, and installed Chrome:
+
+```bash
+npx tsx --conditions=react-server --env-file=.env.local scripts/verify-phase-12.ts --demo
+```
+
+It creates only isolated `phase12-evidence-*` business fixtures, uses example.com test staff identities, and disables those identities afterward. It is **not** part of automated unit tests or CI. It writes actual integration outcomes to `docs/phase-12-integration-results.json` and captures application-only images in [`linkedin/phase-12`](linkedin/phase-12/README.md). Demo orders/events remain available as evidence; repeated runs create new demonstration orders and consume only their isolated demo stock.
+
+See the [59-point Phase 12 architecture guide](docs/phase-12-architecture.md) for file structure, decisions, behavior, and examples. Phase 13 is not implemented: delivery possession, courier assignment, delivery authorization, and delivered states require their own reviewed design. Payment, refunds, customer cancellation, and restocking are also outside this phase.
+
 ## Vercel preparation
 
 Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Firebase configuration in the appropriate Vercel environment settings. Do not put database URLs in `vercel.json`. Run `npm run prisma:migrate:deploy` through a controlled deployment workflow before starting application code that requires the new schema. This repository does not deploy or migrate production automatically.
@@ -397,5 +434,5 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
-- Payment, Kitchen fulfillment, delivery, refunds, discounts, promotions, and ticketing remain deferred to later phases.
+- Payment, delivery, refunds, discounts, promotions, and ticketing remain deferred to later phases. Phase 12 now covers Kitchen preparation through READY.
 - Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.

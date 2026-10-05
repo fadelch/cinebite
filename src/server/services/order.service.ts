@@ -1,12 +1,14 @@
 import "server-only";
 
 import { getCurrentUser } from "@/server/auth/current-user";
-import { getAdminOrderRecord, getCustomerOrderRecord, listAdminOrdersRecord, placeOrderRecord } from "@/server/repositories/order.repository";
+import { getAdminOrderRecord, getCustomerOrderRecord, placeOrderRecord } from "@/server/repositories/order.repository";
+import { listAdminOrderHistoryRecord, listKitchenLocationsRecord } from "@/server/repositories/kitchen.repository";
 import { validateCustomerSession } from "@/server/services/customer-session.service";
 import { requireScheduleActor, schedulePermittedLocationIds } from "@/server/services/schedule-access.service";
 import { ServiceError } from "@/server/services/service-error";
 import { checkoutSchema, orderCodeSchema } from "@/validation/order";
 import { documentIdSchema } from "@/validation/shared";
+import { orderQueueQuerySchema } from "@/validation/kitchen";
 
 export async function placeCustomerOrder(rawToken: string | undefined, input: unknown, now = new Date()) {
   const parsed = checkoutSchema.parse(input);
@@ -22,9 +24,11 @@ export async function getCustomerOrder(rawToken: string | undefined, publicCodeI
   return order;
 }
 
-export async function listAdminOrders() {
+export async function listAdminOrders(input: unknown = {}) {
   const actor = requireScheduleActor(await getCurrentUser());
-  return listAdminOrdersRecord(actor.organizationId, schedulePermittedLocationIds(actor));
+  const query = orderQueueQuerySchema.parse(input);
+  const [result, locations] = await Promise.all([listAdminOrderHistoryRecord(actor, query), listKitchenLocationsRecord(actor)]);
+  return { ...result, locations, query };
 }
 
 export async function getAdminOrder(orderIdInput: string) {

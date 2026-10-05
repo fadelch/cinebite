@@ -55,7 +55,9 @@ export type ServiceErrorCode =
   | "PRICE_CHANGED"
   | "MIXED_CURRENCY"
   | "ORDER_NOT_FOUND"
-  | "CHECKOUT_CONFLICT";
+  | "CHECKOUT_CONFLICT"
+  | "INVALID_ORDER_TRANSITION"
+  | "STALE_ORDER_STATE";
 
 export class ServiceError extends Error {
   constructor(

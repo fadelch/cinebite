@@ -90,6 +90,15 @@ enum CustomerSessionStatus {
 
 enum OrderStatus {
   PLACED
+  ACCEPTED
+  PREPARING
+  READY
+}
+
+enum OrderStatusActorType {
+  CUSTOMER
+  STAFF
+  SYSTEM
 }
 
 enum AuditAction {
@@ -142,6 +151,9 @@ enum AuditAction {
   SEAT_QR_ROTATED
   SEAT_QR_REVOKED
   ORDER_PLACED
+  ORDER_ACCEPTED
+  ORDER_PREPARING_STARTED
+  ORDER_MARKED_READY
 }
 
 enum AuditEntityType {
@@ -176,6 +188,7 @@ model User {
   memberships        OrganizationMembership[]
   auditLogs          AuditLog[]               @relation("AuditActor")
   inventoryMovements InventoryMovement[]      @relation("InventoryMovementActor")
+  orderStatusEvents  OrderStatusEvent[]
 
   @@map("users")
 }
@@ -612,12 +625,32 @@ model Order {
   screening          Screening           @relation(fields: [screeningId], references: [id], onDelete: Restrict)
   items              OrderItem[]
   inventoryMovements InventoryMovement[]
+  statusEvents       OrderStatusEvent[]
 
   @@unique([customerSessionId, idempotencyKey])
   @@index([organizationId, createdAt])
   @@index([locationId, createdAt])
   @@index([screeningId, createdAt])
+  @@index([locationId, status, createdAt])
   @@map("orders")
+}
+
+model OrderStatusEvent {
+  id          String               @id @default(cuid())
+  orderId     String
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  actorType   OrderStatusActorType
+  actorUserId String?
+  createdAt   DateTime             @default(now()) @db.Timestamptz(3)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, toStatus])
+  @@index([orderId, createdAt])
+  @@index([actorUserId])
+  @@map("order_status_events")
 }
 
 model OrderItem {

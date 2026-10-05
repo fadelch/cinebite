@@ -30,6 +30,10 @@
 /linkedin/phase-11/*
 !/linkedin/phase-11/*.png
 !/linkedin/phase-11/README.md
+!/linkedin/phase-12/
+/linkedin/phase-12/*
+!/linkedin/phase-12/*.png
+!/linkedin/phase-12/README.md
 
 # debug
 npm-debug.log*
