@@ -9,14 +9,14 @@ const database = vi.hoisted(() => {
     inventoryMovement: { create: vi.fn() },
     auditLog: { create: vi.fn() },
   };
-  return { prisma: { $transaction: vi.fn() }, transaction };
+  return { prisma: { $transaction: vi.fn(), order: { findFirst: vi.fn() } }, transaction };
 });
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/prisma", () => ({ prisma: database.prisma }));
 
 import { Prisma } from "@/generated/prisma/client";
-import { placeOrderRecord } from "@/server/repositories/order.repository";
+import { getCustomerOrderRecord, placeOrderRecord } from "@/server/repositories/order.repository";
 
 const now = new Date("2026-10-05T12:00:00.000Z");
 const decimal = (value: string) => new Prisma.Decimal(value);
@@ -55,12 +55,29 @@ describe("secure order transaction", () => {
     database.transaction.order.findUnique.mockResolvedValue(null);
   });
 
+  it("requires both owning customer session and public code on status reads", async () => {
+    database.prisma.order.findFirst.mockResolvedValue(null);
+    expect(await getCustomerOrderRecord("owning-session", "CB-12AB34CD56")).toBeNull();
+    expect(database.prisma.order.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { customerSessionId: "owning-session", publicOrderCode: "CB-12AB34CD56" } }));
+  });
+
   it("replays an existing same-key order before touching cart or stock", async () => {
     database.transaction.order.findUnique.mockResolvedValue(orderRow());
     const result = await placeOrderRecord({ customerSessionId: "session-a7", idempotencyKey: "same-key-123456789", customerNote: null, now });
     expect(result).toMatchObject({ replayed: true, order: { publicOrderCode: "CB-12AB34CD56", total: "5.00" } });
     expect(database.transaction.customerSession.findUnique).not.toHaveBeenCalled();
     expect(database.transaction.locationInventory.updateMany).not.toHaveBeenCalled();
+    expect(database.transaction.order.create).not.toHaveBeenCalled();
+  });
+
+  it("creates the initial CUSTOMER PLACED event inside checkout, without a client timestamp", async () => {
+    database.transaction.customerSession.findUnique.mockResolvedValue(liveSession([{ price: "5.00" }]));
+    database.transaction.order.create.mockResolvedValue(orderRow());
+    await placeOrderRecord({ customerSessionId: "session-a7", idempotencyKey: "initial-event-123456", customerNote: null, now });
+    const event = database.transaction.order.create.mock.calls[0][0].data.statusEvents.create;
+    expect(event).toEqual({ id: expect.any(String), toStatus: "PLACED", actorType: "CUSTOMER" });
+    expect(database.transaction.cartItem.deleteMany).toHaveBeenCalledOnce();
+    expect(database.transaction.inventoryMovement.create).not.toHaveBeenCalled();
   });
 
   it("commits new server review prices then requires another checkout", async () => {

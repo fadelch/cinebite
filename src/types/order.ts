@@ -1,3 +1,13 @@
+export type OrderStatus = "PLACED" | "ACCEPTED" | "PREPARING" | "READY";
+
+export interface OrderStatusHistoryEntry {
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  actorType: "CUSTOMER" | "STAFF" | "SYSTEM";
+  createdAt: string;
+  actorDisplayName?: string;
+}
+
 export interface CartLine {
   productSlug: string;
   productName: string;
@@ -27,7 +37,7 @@ export interface OrderLine {
 
 export interface CustomerOrder {
   publicOrderCode: string;
-  status: "PLACED";
+  status: OrderStatus;
   currencyCode: string;
   subtotal: string;
   total: string;
@@ -39,8 +49,28 @@ export interface CustomerOrder {
   screeningStartsAt: string;
   createdAt: string;
   items: OrderLine[];
+  timezone: string;
+  history: OrderStatusHistoryEntry[];
 }
 
 export interface AdminOrderSummary extends CustomerOrder {
   id: string;
+}
+
+export interface KitchenOrder extends CustomerOrder {
+  screeningWarning: string | null;
+}
+
+export interface KitchenLocation {
+  id: string;
+  name: string;
+  timezone: string;
+}
+
+export interface KitchenQueue {
+  orders: KitchenOrder[];
+  counts: Record<OrderStatus, number>;
+  page: number;
+  pageSize: number;
+  fetchedAt: string;
 }

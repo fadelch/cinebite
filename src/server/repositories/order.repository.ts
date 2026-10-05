@@ -7,27 +7,35 @@ import { aggregateRecipeRequirements, lineTotal, orderSubtotal } from "@/lib/ord
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
 import { ServiceError } from "@/server/services/service-error";
-import type { CustomerOrder } from "@/types/order";
+import type { CustomerOrder, OrderStatus } from "@/types/order";
 
-const orderInclude = { items: { orderBy: { createdAt: "asc" as const } } } as const;
+export const orderInclude = {
+  items: { orderBy: { createdAt: "asc" as const } },
+  location: { select: { timezone: true } },
+  statusEvents: { orderBy: { createdAt: "asc" as const } },
+} as const;
 
 function publicOrderCode() {
   return `CB-${randomBytes(5).toString("hex").toUpperCase()}`;
 }
 
-function orderDto(row: {
-  publicOrderCode: string; status: "PLACED"; currencyCode: string;
+export function orderDto(row: {
+  publicOrderCode: string; status: OrderStatus; currencyCode: string;
   subtotal: { toFixed(value: number): string }; total: { toFixed(value: number): string };
   customerNote: string | null; locationNameSnapshot: string; hallNameSnapshot: string;
   seatLabelSnapshot: string; movieTitleSnapshot: string; screeningStartsAt: Date; createdAt: Date;
   items: Array<{ productNameSnapshot: string; productImageSnapshot: string | null; quantity: number;
     unitPrice: { toFixed(value: number): string }; lineTotal: { toFixed(value: number): string }; currencyCode: string }>;
+  location?: { timezone: string };
+  statusEvents?: Array<{ fromStatus: OrderStatus | null; toStatus: OrderStatus; actorType: "CUSTOMER" | "STAFF" | "SYSTEM"; createdAt: Date }>;
 }): CustomerOrder {
   return {
     publicOrderCode: row.publicOrderCode, status: row.status, currencyCode: row.currencyCode,
     subtotal: row.subtotal.toFixed(2), total: row.total.toFixed(2), customerNote: row.customerNote,
     locationName: row.locationNameSnapshot, hallName: row.hallNameSnapshot, seatLabel: row.seatLabelSnapshot,
     movieTitle: row.movieTitleSnapshot, screeningStartsAt: row.screeningStartsAt.toISOString(), createdAt: row.createdAt.toISOString(),
+    timezone: row.location?.timezone ?? "UTC",
+    history: (row.statusEvents ?? []).map((event) => ({ fromStatus: event.fromStatus, toStatus: event.toStatus, actorType: event.actorType, createdAt: event.createdAt.toISOString() })),
     items: row.items.map((item) => ({
       productName: item.productNameSnapshot, imageUrl: item.productImageSnapshot, quantity: item.quantity,
       unitPrice: item.unitPrice.toFixed(2), lineTotal: item.lineTotal.toFixed(2), currencyCode: item.currencyCode,
@@ -113,6 +121,7 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
             locationNameSnapshot: location.name, hallNameSnapshot: session.seat.hall.name,
             seatLabelSnapshot: session.seat.label, movieTitleSnapshot: session.screening.movie.title,
             screeningStartsAt: session.screening.startsAt,
+            statusEvents: { create: { id: randomUUID(), toStatus: "PLACED", actorType: "CUSTOMER" } },
             items: { create: checkoutLines.map(({ item, offer }) => ({
               id: randomUUID(), productId: item.productId, productNameSnapshot: item.product.name,
               productImageSnapshot: item.product.imageUrl, unitPrice: offer.price, currencyCode,
