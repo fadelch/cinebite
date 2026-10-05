@@ -21,11 +21,13 @@ describe("order snapshot and timeline rendering", () => {
     ["ACCEPTED", "The kitchen accepted your order"],
     ["PREPARING", "Your order is being prepared"],
     ["READY", "Your order is ready"],
+    ["OUT_FOR_DELIVERY", "Your order is on the way to your seat."],
+    ["DELIVERED", "Delivered."],
   ] as const)("renders customer %s progress without staff identity or delivery claims", (status, heading) => {
     const html = renderToStaticMarkup(createElement(CustomerOrderProgress, { initialOrder: { ...order, status } }));
     expect(html).toContain(heading);
     expect(html).not.toContain("Kitchen Team");
-    expect(html).not.toContain("Delivered");
+    expect(html).not.toContain("actorUserId");
     expect(html).toContain('aria-current="step"');
   });
   it("renders original snapshots and treats customer notes as escaped text", () => {

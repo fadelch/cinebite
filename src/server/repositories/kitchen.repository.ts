@@ -5,12 +5,12 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
-import { isValidOrderTransition, ORDER_STATUSES } from "@/lib/orders/status";
+import { isValidKitchenTransition, KITCHEN_STATUSES } from "@/lib/orders/status";
 import { localDateBounds } from "@/lib/screenings/timezone";
 import { orderDto, orderInclude } from "@/server/repositories/order.repository";
 import { assertKitchenLocationAccess, kitchenPermittedLocationIds, requireKitchenActor, type KitchenActor } from "@/server/services/kitchen-access";
 import { ServiceError } from "@/server/services/service-error";
-import type { KitchenOrder, KitchenQueue, OrderStatus } from "@/types/order";
+import type { KitchenOrder, KitchenQueue, KitchenStatus, OrderStatus } from "@/types/order";
 import type { OrderQueueQuery } from "@/validation/kitchen";
 
 export const kitchenOrderInclude = {
@@ -64,12 +64,12 @@ export async function buildOrderQueueWhere(actor: KitchenActor, query: OrderQueu
 }
 
 export async function getKitchenQueueRecord(actor: KitchenActor, query: OrderQueueQuery): Promise<KitchenQueue> {
-  const where = await buildOrderQueueWhere(actor, query);
+  const where = { ...await buildOrderQueueWhere(actor, query), status: { in: KITCHEN_STATUSES.filter((status) => !query.status || status === query.status) } };
   const pageSize = 25;
   // Each state has its own bounded oldest-first page; one busy state cannot hide another.
   const result = await prisma.$transaction(async (tx) => {
     const counts = await tx.order.groupBy({ by: ["status"], where, _count: { _all: true } });
-    const states = query.status ? [query.status] : ORDER_STATUSES;
+    const states = query.status ? KITCHEN_STATUSES.filter((status) => status === query.status) : KITCHEN_STATUSES;
     const orders = (await Promise.all(states.map((status) => tx.order.findMany({
       where: { ...where, status }, include: kitchenOrderInclude,
       orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: (query.page - 1) * pageSize, take: pageSize,
@@ -78,7 +78,7 @@ export async function getKitchenQueueRecord(actor: KitchenActor, query: OrderQue
   }, { isolationLevel: "RepeatableRead" });
   return {
     orders: result.orders.map(kitchenOrderDto),
-    counts: Object.fromEntries(ORDER_STATUSES.map((status) => [status, result.counts.find((group) => group.status === status)?._count._all ?? 0])) as Record<OrderStatus, number>,
+    counts: Object.fromEntries(KITCHEN_STATUSES.map((status) => [status, result.counts.find((group) => group.status === status)?._count._all ?? 0])) as Record<KitchenStatus, number>,
     page: query.page, pageSize, fetchedAt: new Date().toISOString(),
   };
 }
@@ -107,10 +107,10 @@ const transitionAudit = { ACCEPTED: "ORDER_ACCEPTED", PREPARING: "ORDER_PREPARIN
 export async function transitionKitchenOrderRecord(input: {
   actor: KitchenActor; publicCode: string; expectedStatus: OrderStatus; toStatus: OrderStatus;
 }) {
-  if (!isValidOrderTransition(input.expectedStatus, input.toStatus) || input.toStatus === "PLACED") {
+  if (!isValidKitchenTransition(input.expectedStatus, input.toStatus)) {
     throw new ServiceError("INVALID_ORDER_TRANSITION", 409, "Only the next kitchen step is allowed.");
   }
-  const target = input.toStatus;
+  const target = input.toStatus as keyof typeof transitionAudit;
   try {
     return await prisma.$transaction(async (tx) => {
       // Re-read staff grants in this transaction; cookies/client claims are never RBAC authority.
@@ -132,10 +132,11 @@ export async function transitionKitchenOrderRecord(input: {
         data: { status: target },
       });
       if (update.count !== 1) throw new ServiceError("STALE_ORDER_STATE", 409, "This order was already updated. The queue has refreshed.");
-      await tx.orderStatusEvent.create({ data: {
+      const event = await tx.orderStatusEvent.create({ data: {
         id: randomUUID(), orderId: order.id, fromStatus: input.expectedStatus, toStatus: target,
         actorType: "STAFF", actorUserId: user.id,
       } });
+      if (target === "READY") await tx.order.update({ where: { id: order.id }, data: { readyAt: event.createdAt } });
       await tx.auditLog.create({ data: {
         actorUserId: user.id, action: transitionAudit[target], entityType: "ORDER", entityId: order.id,
         organizationId: order.organizationId, locationId: order.locationId, hallId: order.hallId,

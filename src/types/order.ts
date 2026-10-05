@@ -1,4 +1,5 @@
-export type OrderStatus = "PLACED" | "ACCEPTED" | "PREPARING" | "READY";
+export type KitchenStatus = "PLACED" | "ACCEPTED" | "PREPARING" | "READY";
+export type OrderStatus = KitchenStatus | "OUT_FOR_DELIVERY" | "DELIVERED";
 
 export interface OrderStatusHistoryEntry {
   fromStatus: OrderStatus | null;
@@ -69,7 +70,27 @@ export interface KitchenLocation {
 
 export interface KitchenQueue {
   orders: KitchenOrder[];
-  counts: Record<OrderStatus, number>;
+  counts: Record<KitchenStatus, number>;
+  page: number;
+  pageSize: number;
+  fetchedAt: string;
+}
+
+export interface DeliveryOrder extends KitchenOrder {
+  readyAt: string | null;
+  deliveryClaimedAt: string | null;
+  deliveredAt: string | null;
+  assignedToMe: boolean;
+  assignedStaffName: string | null;
+  canClaim: boolean;
+  canDeliver: boolean;
+}
+
+export interface DeliveryQueue {
+  ready: DeliveryOrder[];
+  active: DeliveryOrder[];
+  delivered: DeliveryOrder[];
+  counts: { ready: number; active: number; delivered: number };
   page: number;
   pageSize: number;
   fetchedAt: string;

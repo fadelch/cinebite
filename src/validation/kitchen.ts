@@ -1,12 +1,11 @@
 import { z } from "zod";
 
-import { ORDER_STATUSES } from "@/lib/orders/status";
-import { isValidOrderTransition } from "@/lib/orders/status";
+import { ORDER_STATUSES, KITCHEN_STATUSES, isValidKitchenTransition } from "@/lib/orders/status";
 
 export const orderTransitionSchema = z.object({
-  expectedStatus: z.enum(ORDER_STATUSES),
-  toStatus: z.enum(ORDER_STATUSES),
-}).strict().refine((input) => isValidOrderTransition(input.expectedStatus, input.toStatus), {
+  expectedStatus: z.enum(KITCHEN_STATUSES),
+  toStatus: z.enum(KITCHEN_STATUSES),
+}).strict().refine((input) => isValidKitchenTransition(input.expectedStatus, input.toStatus), {
   message: "Only the next kitchen step is allowed.", path: ["toStatus"],
 });
 
@@ -18,5 +17,7 @@ export const orderQueueQuerySchema = z.object({
   code: z.string().trim().max(32).optional(),
   page: z.coerce.number().int().min(1).max(10000).default(1),
 }).strict();
+
+export const kitchenQueueQuerySchema = orderQueueQuerySchema.extend({ status: z.enum(KITCHEN_STATUSES).optional() });
 
 export type OrderQueueQuery = z.infer<typeof orderQueueQuerySchema>;

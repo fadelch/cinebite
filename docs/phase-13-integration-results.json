@@ -1,0 +1,122 @@
+{
+  "A": {
+    "status": "PASS",
+    "evidence": "A Phase 12 READY order appeared in an already-open authorized delivery queue via five-second polling."
+  },
+  "B": {
+    "status": "PASS",
+    "evidence": "Trusted location, Hall 1, seat A7, movie and two popcorn snapshot items match checkout; secret/internal fields are absent."
+  },
+  "C": {
+    "status": "PASS",
+    "evidence": "Actual phone Claim atomically set the assigned PostgreSQL user, status, database timestamp and one claim event."
+  },
+  "D": {
+    "status": "PASS",
+    "evidence": "Two claim submissions produced one success, one safe conflict and exactly one persisted claim event."
+  },
+  "E": {
+    "status": "PASS",
+    "evidence": "Two distinct emulated Firebase delivery workers raced the same READY order against real PostgreSQL: exactly one 200, one 409, one owner and one event."
+  },
+  "F": {
+    "status": "PASS",
+    "evidence": "Second worker cannot read another worker's active assignment or mark it delivered."
+  },
+  "G": {
+    "status": "PASS",
+    "evidence": "Assigned worker completed the full READY→Claim→My delivery→Hall/Seat→Delivered flow at 390×844 with no horizontal overflow."
+  },
+  "H": {
+    "status": "PASS",
+    "evidence": "Direct READY to DELIVERED and invalid preparation-state delivery requests rejected."
+  },
+  "I": {
+    "status": "PASS",
+    "evidence": "Terminal backward mutation and duplicate delivery rejected."
+  },
+  "J": {
+    "status": "PASS",
+    "evidence": "All claims, completions, expiry/end/cancel scenarios left stock and ORDER_CONSUMPTION counts identical to post-checkout values."
+  },
+  "K": {
+    "status": "PASS",
+    "evidence": "Beirut worker denied Dbayeh read, claim, explicit location API and direct page filter."
+  },
+  "L": {
+    "status": "PASS",
+    "evidence": "Cinema admin sees own-organization Beirut and Dbayeh only, never another tenant."
+  },
+  "M": {
+    "status": "PASS",
+    "evidence": "Manager oversight is limited to granted locations; manager/admin cannot implicitly claim or complete deliveries."
+  },
+  "N": {
+    "status": "PASS",
+    "evidence": "Kitchen staff cannot claim/deliver, and delivery staff cannot use kitchen transitions."
+  },
+  "O": {
+    "status": "PASS",
+    "evidence": "Valid anonymous customer session is not staff mutation authority."
+  },
+  "P": {
+    "status": "PASS",
+    "evidence": "Public order code without staff authorization grants no delivery access; customer cannot read someone else's order."
+  },
+  "Q": {
+    "status": "PASS",
+    "evidence": "The same open customer page automatically progressed READY→on the way→Delivered without reload; no private worker name appears."
+  },
+  "R": {
+    "status": "PASS",
+    "evidence": "Closing the original page and creating a new staff session retained the assigned order in My deliveries."
+  },
+  "S": {
+    "status": "PASS",
+    "evidence": "A deliberately stale second-worker card sent a real claim, received a safe conflict and disappeared after polling resumed."
+  },
+  "T": {
+    "status": "PASS",
+    "evidence": "Renaming the source Product and Seat leaves the placed order's item and seat snapshots unchanged."
+  },
+  "U": {
+    "status": "PASS",
+    "evidence": "The real browser escaped a script-like customer note as visible plain text; no JavaScript executed."
+  },
+  "V": {
+    "status": "PASS",
+    "evidence": "Screening ended after claim; assigned staff still delivered the preserved order."
+  },
+  "W": {
+    "status": "PASS",
+    "evidence": "Expired original CustomerSession did not block staff claiming and delivering the existing order."
+  },
+  "X": {
+    "status": "PASS",
+    "evidence": "Cancelled screening preserved its order, showed an operational warning and still allowed assigned delivery."
+  },
+  "Y": {
+    "status": "PASS",
+    "evidence": "PostgreSQL stores six ordered immutable events, two delivery audits, valid assignment relation and trusted claim/delivery timestamps."
+  },
+  "Z": {
+    "status": "PASS",
+    "evidence": "PostgreSQL stores six ordered immutable events, two delivery audits, valid assignment relation and trusted claim/delivery timestamps."
+  },
+  "AA": {
+    "status": "PASS",
+    "evidence": "Executed delivery path persists through Prisma/PostgreSQL only; inspected delivery sources contain no Firestore writes."
+  },
+  "AB": {
+    "status": "PASS",
+    "evidence": "Assigned worker completed the full READY→Claim→My delivery→Hall/Seat→Delivered flow at 390×844 with no horizontal overflow."
+  },
+  "AC": {
+    "status": "PASS",
+    "evidence": "Desktop/tablet supervisor queues, bounded pagination, delivered-date/hall/code/worker filters, keyboard dialog/Escape and no overflow verified; multi-location selector contains only authorized locations."
+  },
+  "AD": {
+    "status": "PASS",
+    "evidence": "Eight real application-only demo screenshots captured; no browser/desktop chrome or credentials. Original-resolution visual review is recorded separately before commit."
+  }
+}
