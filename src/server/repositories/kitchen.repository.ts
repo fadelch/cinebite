@@ -12,6 +12,7 @@ import { assertKitchenLocationAccess, kitchenPermittedLocationIds, requireKitche
 import { ServiceError } from "@/server/services/service-error";
 import type { KitchenOrder, KitchenQueue, KitchenStatus, OrderStatus } from "@/types/order";
 import type { OrderQueueQuery } from "@/validation/kitchen";
+import { fulfillmentWhere, isOrderEligibleForFulfillment } from "@/lib/payments/policy";
 
 export const kitchenOrderInclude = {
   ...orderInclude,
@@ -64,7 +65,7 @@ export async function buildOrderQueueWhere(actor: KitchenActor, query: OrderQueu
 }
 
 export async function getKitchenQueueRecord(actor: KitchenActor, query: OrderQueueQuery): Promise<KitchenQueue> {
-  const where = { ...await buildOrderQueueWhere(actor, query), status: { in: KITCHEN_STATUSES.filter((status) => !query.status || status === query.status) } };
+  const where = { ...await buildOrderQueueWhere(actor, query), AND: [fulfillmentWhere], status: { in: KITCHEN_STATUSES.filter((status) => !query.status || status === query.status) } };
   const pageSize = 25;
   // Each state has its own bounded oldest-first page; one busy state cannot hide another.
   const result = await prisma.$transaction(async (tx) => {
@@ -86,7 +87,7 @@ export async function getKitchenQueueRecord(actor: KitchenActor, query: OrderQue
 export async function getKitchenOrderRecord(actor: KitchenActor, publicCode: string) {
   const permitted = kitchenPermittedLocationIds(actor);
   const row = await prisma.order.findFirst({
-    where: { organizationId: actor.organizationId, publicOrderCode: publicCode, ...(permitted === null ? {} : { locationId: { in: [...permitted] } }) },
+    where: { organizationId: actor.organizationId, publicOrderCode: publicCode, AND: [fulfillmentWhere], ...(permitted === null ? {} : { locationId: { in: [...permitted] } }) },
     include: kitchenOrderInclude,
   });
   if (!row) throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found in your permitted locations.");
@@ -127,6 +128,7 @@ export async function transitionKitchenOrderRecord(input: {
         ...(permitted === null ? {} : { locationId: { in: [...permitted] } }),
       } });
       if (!order) throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found in your permitted locations.");
+      if (!isOrderEligibleForFulfillment(order)) throw new ServiceError("PAYMENT_NOT_ELIGIBLE", 409, "This order is not cleared for fulfillment.");
       const update = await tx.order.updateMany({
         where: { id: order.id, organizationId: actor.organizationId, locationId: order.locationId, status: input.expectedStatus },
         data: { status: target },

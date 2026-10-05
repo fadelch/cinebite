@@ -19,6 +19,7 @@ const now = new Date("2026-10-05T12:00:00Z");
 function row(status: "PLACED" | "ACCEPTED" | "PREPARING" | "READY") {
   return {
     id: "order-a", organizationId: "org-a", locationId: "beirut", hallId: "hall-a", publicOrderCode: "CB-12AB34CD56", status,
+    paymentPolicy: "LEGACY_NOT_REQUIRED", fulfillmentEligible: true,
     currencyCode: "USD", subtotal: new Prisma.Decimal("5"), total: new Prisma.Decimal("5"), customerNote: "<script>alert(1)</script>",
     locationNameSnapshot: "Demo Beirut", hallNameSnapshot: "Original Hall", seatLabelSnapshot: "A7", movieTitleSnapshot: "Interstellar", screeningStartsAt: now, createdAt: now,
     location: { timezone: "Asia/Beirut" }, screening: { status: "CANCELLED", endsAt: now },
@@ -85,11 +86,11 @@ describe("atomic kitchen transitions", () => {
     const queue = await getKitchenQueueRecord(actor, { page: 2 });
     expect(queue.counts.PLACED).toBe(1);
     expect(database.tx.order.findMany).toHaveBeenCalledTimes(4);
-    expect(database.tx.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { organizationId: "org-a", OR: [{ locationId: "beirut" }], status: "PLACED" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: 25, take: 25 }));
+    expect(database.tx.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ organizationId: "org-a", OR: [{ locationId: "beirut" }], status: "PLACED", AND: expect.any(Array) }), orderBy: [{ createdAt: "asc" }, { id: "asc" }], skip: 25, take: 25 }));
     await expect(buildOrderQueueWhere(actor, { page: 1, locationId: "dbayeh" })).rejects.toMatchObject({ code: "LOCATION_ACCESS_DENIED" });
     database.prisma.order.findFirst.mockResolvedValue(null);
     await expect(getKitchenOrderRecord(actor, "CB-12AB34CD56")).rejects.toMatchObject({ code: "ORDER_NOT_FOUND" });
-    expect(database.prisma.order.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { organizationId: "org-a", publicOrderCode: "CB-12AB34CD56", locationId: { in: ["beirut"] } } }));
+    expect(database.prisma.order.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ organizationId: "org-a", publicOrderCode: "CB-12AB34CD56", locationId: { in: ["beirut"] }, AND: expect.any(Array) }) }));
   });
 
   it("uses immutable item/context snapshots and preserves cancelled screening orders", () => {

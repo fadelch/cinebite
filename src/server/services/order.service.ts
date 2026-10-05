@@ -9,11 +9,18 @@ import { ServiceError } from "@/server/services/service-error";
 import { checkoutSchema, orderCodeSchema } from "@/validation/order";
 import { documentIdSchema } from "@/validation/shared";
 import { orderQueueQuerySchema } from "@/validation/kitchen";
+import { paymentConfig } from "@/lib/payments/config";
+import { expirePaymentReservations, initializeProviderPayment, limitPaymentRequests } from "@/server/repositories/payment.repository";
 
 export async function placeCustomerOrder(rawToken: string | undefined, input: unknown, now = new Date()) {
   const parsed = checkoutSchema.parse(input);
   const session = await validateCustomerSession(rawToken, now);
-  return placeOrderRecord({ customerSessionId: session.id, idempotencyKey: parsed.idempotencyKey, customerNote: parsed.customerNote || null, now });
+  paymentConfig();
+  await limitPaymentRequests(session.id, "initiate");
+  await expirePaymentReservations(now);
+  const result = await placeOrderRecord({ customerSessionId: session.id, idempotencyKey: parsed.idempotencyKey, customerNote: parsed.customerNote || null, now });
+  await initializeProviderPayment(session.id, result.order.publicOrderCode);
+  return result;
 }
 
 export async function getCustomerOrder(rawToken: string | undefined, publicCodeInput: string, now = new Date()) {

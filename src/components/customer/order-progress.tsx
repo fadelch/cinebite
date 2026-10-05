@@ -19,6 +19,7 @@ export function CustomerOrderProgress({ initialOrder }: { initialOrder: Customer
   const { data: order, error } = usePolling(`/api/customer/orders/${initialOrder.publicOrderCode}`, initialOrder);
   const reduced = useReducedMotion();
   const current = ORDER_STATUSES.indexOf(order.status);
+  if (order.paymentPolicy === "ONLINE_REQUIRED" && !order.fulfillmentEligible) return <main className="min-h-screen bg-zinc-950 p-6"><div className="mx-auto max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-900 p-6"><h1 className="text-2xl font-semibold">Payment confirmation required</h1><p className="mt-3 text-zinc-400">Your order is not yet cleared for the kitchen.</p><Link href={`/customer/payments/${order.publicOrderCode}`} className="cb-button-primary mt-5">View payment status</Link></div></main>;
   return <main className="min-h-screen bg-[#09090b] px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))]"><div className="mx-auto max-w-2xl">
     <section className="rounded-3xl border border-emerald-400/25 bg-emerald-400/8 p-6">
       <p className="text-xs font-semibold tracking-[0.18em] text-emerald-300 uppercase">Order progress</p>

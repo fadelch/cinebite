@@ -8,6 +8,7 @@ export async function getEffectiveProductAvailability(organizationId: string, pr
   const inventory = projectedProductAvailability(offer.product.recipeComponents.map((component) => ({
     quantityRequired: component.quantityRequired.toFixed(3),
     quantityOnHand: component.inventoryItem.locationInventories[0]?.quantityOnHand.toFixed(3) ?? "0.000",
+    quantityReserved: component.inventoryItem.locationInventories[0]?.quantityReserved?.toFixed(3) ?? "0.000",
   })));
   return {
     manualLocationAvailable: offer.isAvailable,

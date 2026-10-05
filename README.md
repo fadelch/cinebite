@@ -4,11 +4,11 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 ## Current phase
 
-**Phase 13 — Delivery Operations**
+**Phase 14 — Secure Payments (sandbox only)**
 
-Phases 1–12 provide cinema administration, menus, inventory, screenings, secure seat sessions, atomic checkout and kitchen preparation. Phase 13 extends READY orders into assigned, concurrency-safe seat delivery and customer delivery progress.
+Phases 1–13 provide administration, stock, screenings, seat sessions, cart/order snapshots, kitchen preparation and delivery. Phase 14 adds server-authoritative payment attempts, signed/idempotent webhooks, short-lived inventory reservations and payment-gated fulfillment. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge anyone.
 
-This phase does not implement payment processing, refunds, customer cancellation, suppliers, maps/routing, SMS/push notifications, ticketing or revenue analytics.
+This phase does not implement real-money charging, refunds, chargebacks, customer order cancellation, suppliers, maps/routing, SMS/push notifications, ticketing or revenue analytics. Cancelling a payment session is not cancelling an order or refunding a charge.
 
 ## Architecture
 
@@ -379,7 +379,7 @@ Phase 11 extends the verified Phase 10 `CustomerSession` into a PostgreSQL-backe
 
 Cart additions do not reserve inventory. This avoids abandoned carts locking concession stock. The server verifies Product, Category, ProductLocation, manual availability, location price, and Phase 8 effective availability when an item is added, then repeats every check at checkout. Cart responses reload the current `ProductLocation` price and calculate line totals/subtotal with exact integer cents. The stored reviewed-price fields are server-written review markers—not client prices—and let checkout return `PRICE_CHANGED`, refresh those markers, and require a deliberate second submission rather than silently charging a changed amount. Mixed-currency carts are rejected; CineBite performs no foreign-exchange conversion.
 
-Checkout accepts only an idempotency key and optional note. Seat, Screening, Location, Organization, price, currency, subtotal, and total are derived from trusted relations. A unique `(customerSessionId, idempotencyKey)` constraint makes retries return the original Order. A successful serializable transaction creates the `PLACED` Order and immutable OrderItem/context snapshots, aggregates shared recipe requirements, performs guarded `quantityOnHand >= required` decrements, creates immutable `ORDER_CONSUMPTION` movements, writes a safe `ORDER_PLACED` audit event, and clears Cart items. Any failure rolls everything back. Guarded updates and serializable retries ensure two last-stock checkouts cannot produce negative inventory. Products with no recipe retain the Phase 8 `NOT_TRACKED` behavior and create no invented stock movement.
+Checkout accepts only an idempotency key and optional note. Seat, Screening, Location, Organization, price, currency, subtotal, and total are derived from trusted relations. A unique `(customerSessionId, idempotencyKey)` constraint makes retries return the original Order. Phase 14 supersedes Phase 11's immediate stock consumption: a serializable transaction now creates `PLACED` order snapshots, Payment/Attempt and aggregate reservations, increases `quantityReserved` with a conditional available-stock update, audits and clears the cart. Only verified payment success consumes on-hand stock and creates `ORDER_CONSUMPTION`. Products without a recipe remain `NOT_TRACKED` with no invented movement. Failed transactions roll back their database effects; provider operations are deliberately outside database transactions.
 
 `PLACED` means only that CineBite accepted the order; it does not claim payment or fulfillment. Payment, Kitchen preparation, delivery, discounts, refunds, and additional operational states remain separate future domains. Cinema Admins and location-scoped Location Managers receive read-only order views, while customer order confirmation requires the same owning CustomerSession.
 
@@ -397,7 +397,7 @@ Staff Firebase sessions authenticate identity; active PostgreSQL users, membersh
 
 Each transition uses one Serializable PostgreSQL transaction: reload current staff grants, conditionally update the expected order state, append one `OrderStatusEvent`, and append one safe `AuditLog`. A racing or repeated request receives a friendly conflict, not duplicate history. Event timestamps come from the database. A unique `(orderId, toStatus)` constraint and an append-only database trigger protect the timeline. New checkout creates its initial CUSTOMER PLACED event in the existing atomic transaction; the migration backfills one SYSTEM PLACED event for each older order using its historical UTC creation time.
 
-Kitchen actions never change stock, consumption movements, items, quantities, prices, or seating. Phase 11 already consumed inventory. Orders remain independently processable after customer-session expiry or screening end/cancellation; a screening warning is displayed, with no automatic refund, cancellation, or restock. Customer viewing remains subject to its original session eligibility.
+Kitchen actions never change stock, consumption movements, items, quantities, prices, or seating. For new online-required orders, Phase 14 consumes inventory at verified payment success, before kitchen eligibility. Legacy orders retain their historical Phase 11 stock consumption. Cleared orders remain independently processable after customer-session expiry or screening end/cancellation; a screening warning is displayed, with no automatic refund, cancellation, or restock. Customer viewing remains subject to its original session eligibility.
 
 Kitchen and customer clients poll protected, uncached APIs approximately every five seconds plus request latency. Polling pauses in hidden tabs, cancels superseded requests, rejects stale responses, and cleans up on unmount. This works with Next.js/Vercel without adding WebSocket infrastructure or exposing Neon to browsers. Queue pages contain at most 25 orders **per status**; admin history contains 30 orders per page. Location dates and timeline times use the existing Phase 9 timezone utilities. Motion is restrained and respects reduced-motion preferences; dialogs use native focus/keyboard behavior.
 
@@ -420,7 +420,7 @@ npx tsx --conditions=react-server --env-file=.env.local scripts/verify-phase-12.
 
 It creates only isolated `phase12-evidence-*` business fixtures, uses example.com test staff identities, and disables those identities afterward. It is **not** part of automated unit tests or CI. It writes actual integration outcomes to `docs/phase-12-integration-results.json` and captures application-only images in [`linkedin/phase-12`](linkedin/phase-12/README.md). Demo orders/events remain available as evidence; repeated runs create new demonstration orders and consume only their isolated demo stock.
 
-See the [Phase 12 architecture guide](docs/phase-12-architecture.md) for preparation behavior. Phase 13 adds the delivery flow described below; payment, refunds, customer cancellation and restocking remain separate.
+See the [Phase 12 architecture guide](docs/phase-12-architecture.md) for preparation behavior. Phase 13 adds delivery; Phase 14 adds the payment gate below. Refunds, customer order cancellation and restocking remain separate.
 
 ## Phase 13: delivery operations
 
@@ -480,5 +480,63 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
-- Payment, refunds, discounts, promotions, routing and ticketing remain deferred. Phase 13 covers physical fulfillment through DELIVERED, not payment settlement. Delivery reassignment/emergency overrides and a staff-management UI remain deliberately absent.
+- Phase 14 adds sandbox payment settlement. Refunds, discounts, promotions, routing and ticketing remain deferred. Phase 13 delivery semantics still cover physical fulfillment through DELIVERED, not payment mutation. Delivery reassignment/emergency overrides and a staff-management UI remain deliberately absent.
 - Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.
+
+## Phase 14: secure payments (sandbox only)
+
+Payment status is independent from the six kitchen/delivery Order statuses. A new checkout creates an online-required Order, a PaymentAttempt and short-lived aggregate inventory reservations. No stock is consumed at payment initiation. Only a verified callback or server-to-server retrieval can settle payment, consume reservations exactly once and make the Order actionable in kitchen. Existing Orders are explicitly `LEGACY_NOT_REQUIRED`, with no fabricated provider payment.
+
+With physical stock 10 and reservations 2, customers can promise only 8. Success changes these to physical 8/reserved 0 with one consumption movement. Failure/cancellation/expiry restores physical 10/reserved 0 without consumption. A late success after expiry or screening closure records financial truth for manual review, never oversells or starts preparation, and does not automatically refund.
+
+### Operator setup after review/merge
+
+The default is **disabled**. No Stripe/other live merchant adapter or real-money credentials are configured. Do not enter card details. Configure the following privately in `.env.local` or deployment secrets for the explicit test-only adapter:
+
+```env
+PAYMENT_PROVIDER=sandbox
+PAYMENT_SANDBOX_ENABLED=true
+PAYMENT_PROVIDER_WEBHOOK_SECRET=<random-server-only-value-at-least-32-characters>
+PAYMENT_RESERVATION_MINUTES=12
+PAYMENT_EXPIRY_JOB_SECRET=<different-random-server-only-value-at-least-32-characters>
+```
+
+These are not `NEXT_PUBLIC_` settings. Copy placeholders only; generate your own private secrets. No card information is submitted to CineBite and no real charges can be made. A real provider must be selected deliberately, implemented behind `PaymentProvider` using its official signature SDK and hosted/tokenized card controls, and verified in its official test environment before live-money enablement. Unsupported provider names fail closed.
+
+Apply reviewed migrations against the intended database, without resetting it, then restart the server:
+
+```powershell
+npm.cmd run prisma:validate
+npm.cmd run prisma:generate
+npm.cmd run prisma:migrate:deploy
+```
+
+Production migrations were **not** applied during development. Confirm the selected `DIRECT_URL` privately before deploying. Never use `prisma db push` or a reset to bypass this migration.
+
+Configure a deployment scheduler to POST `/api/payments/expire` every minute with `Authorization: Bearer <PAYMENT_EXPIRY_JOB_SECRET>`. It processes up to 100 due/closed-screening attempts; drain additional batches if the returned count reaches 100. Checkout, retry and payment status reads also perform opportunistic sweeps, but these do not replace scheduling when the site is idle. Payment holds last at most 12 minutes by default and cannot exceed screening/session end. Provider cancellation is outside the SQL transaction, and any late financial success remains reviewable.
+
+Customer checkout is `/customer/payments/[publicCode]`; public code alone never grants access. The dark mobile UI polls trusted status, supports failed/expired same-order retry while still eligible, and never treats a browser return as proof of payment. Admin/manager summaries are scoped by current organization/location grants. Kitchen/delivery receive no added provider payload and cannot mutate payment. Raw webhook bodies are bounded, signature-checked before JSON parsing, and idempotently journaled. See the [65-point architecture walkthrough](docs/phase-14-architecture.md) for design choices, state/race policies, currency precision, database constraints and limits.
+
+### Executed verification and isolated reproduction
+
+See [verification](docs/phase-14-verification.md), [individual A–AT outcomes](docs/phase-14-integration-results.json), and the [eight native application screenshots](linkedin/phase-14/README.md). Real merchant/test-card facilities are **NOT EXECUTABLE** without a selected provider/test configuration; sandbox verification is not a claim of live financial readiness or PCI certification. Refunds, chargebacks, discounts, saved cards, wallets, taxes and reconciliation/review-resolution tools remain out of scope.
+
+The runner deliberately hardcodes only loopback test PostgreSQL/Firebase endpoints and creates example.com demo staff; it never loads `.env.local`. Offline tests use mocked dependencies. To reproduce integration, install PostgreSQL 17 locally, add its `bin` directory to PATH, and use a separate terminal for the emulator:
+
+```powershell
+# New local test cluster only. Never point these at a production data directory.
+initdb -D .phase14-test/pgdata -U cinebite_test -A trust --no-locale -E UTF8
+pg_ctl -D .phase14-test/pgdata -l .phase14-test/postgres.log -o '-h 127.0.0.1 -p 55414' start
+createdb -h 127.0.0.1 -p 55414 -U cinebite_test cinebite_phase14_test
+$env:DIRECT_URL='postgresql://cinebite_test@127.0.0.1:55414/cinebite_phase14_test'
+npx.cmd prisma migrate deploy
+
+# Separate terminal; demo project ONLY, no Firebase login required.
+npx.cmd --yes firebase-tools@15.32.1 emulators:start --only auth --project demo-cinebite-phase14 --config scripts/phase-14-emulators.json
+
+# Runner terminal; do not add --env-file=.env.local.
+npm.cmd run build
+npx.cmd tsx --conditions=react-server scripts/verify-phase-14.ts --local
+```
+
+The runner uses port 3114 for its own optimized application server and installed Chrome (or `CHROME_PATH`), generates signing secrets only in memory, and captures real pages without OS/browser chrome. Test cluster/debug data stay ignored. It closes its server/browser and disables demo identities after each run; PostgreSQL and the emulator should be stopped after testing. No production Neon/Firebase/provider writes are performed.

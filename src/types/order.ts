@@ -37,6 +37,8 @@ export interface OrderLine {
 }
 
 export interface CustomerOrder {
+  paymentPolicy?: "LEGACY_NOT_REQUIRED" | "ONLINE_REQUIRED";
+  fulfillmentEligible?: boolean;
   publicOrderCode: string;
   status: OrderStatus;
   currencyCode: string;

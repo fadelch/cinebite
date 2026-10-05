@@ -13,6 +13,6 @@ export async function POST(request: Request) {
   try { input = await request.json(); } catch { return invalidRequestBody(); }
   try {
     const result = await placeCustomerOrder((await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value, input);
-    return apiSuccess({ ...result, destination: `/customer/orders/${result.order.publicOrderCode}` }, result.replayed ? 200 : 201);
+    return apiSuccess({ ...result, destination: `/customer/payments/${result.order.publicOrderCode}` }, result.replayed ? 200 : 201);
   } catch (error) { return apiError(error); }
 }

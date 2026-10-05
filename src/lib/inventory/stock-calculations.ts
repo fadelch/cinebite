@@ -16,14 +16,15 @@ export function computeStockStatus(quantityOnHand: string, lowStockThreshold: st
 }
 
 export function projectedProductAvailability(
-  components: ReadonlyArray<{ quantityOnHand: string; quantityRequired: string }>,
+  components: ReadonlyArray<{ quantityOnHand: string; quantityReserved?: string; quantityRequired: string }>,
 ): InventoryAvailability {
   if (components.length === 0) return { state: "NOT_TRACKED", projectedUnits: null };
   let limiting: bigint | null = null;
   for (const component of components) {
     const required = thousandths(component.quantityRequired);
     if (required <= BigInt(0)) throw new Error("Recipe quantities must be greater than zero.");
-    const producible = thousandths(component.quantityOnHand) / required;
+    const available = thousandths(component.quantityOnHand) - thousandths(component.quantityReserved ?? "0.000");
+    const producible = (available > BigInt(0) ? available : BigInt(0)) / required;
     limiting = limiting === null || producible < limiting ? producible : limiting;
   }
   const projectedUnits = Number(limiting ?? BigInt(0));
