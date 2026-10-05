@@ -57,7 +57,13 @@ export type ServiceErrorCode =
   | "ORDER_NOT_FOUND"
   | "CHECKOUT_CONFLICT"
   | "INVALID_ORDER_TRANSITION"
-  | "STALE_ORDER_STATE";
+  | "STALE_ORDER_STATE"
+  | "ORDER_ALREADY_CLAIMED"
+  | "ORDER_NOT_READY"
+  | "NOT_ASSIGNED_TO_YOU"
+  | "INVALID_DELIVERY_TRANSITION"
+  | "UNAUTHORIZED_LOCATION"
+  | "ORDER_ALREADY_DELIVERED";
 
 export class ServiceError extends Error {
   constructor(

@@ -21,7 +21,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // Preserve the Neon adapter's native Node runtime in production route handlers.
-  serverExternalPackages: ["@prisma/adapter-neon", "@neondatabase/serverless"],
+  serverExternalPackages: ["@prisma/adapter-neon", "@neondatabase/serverless", "@prisma/adapter-pg"],
   allowedDevOrigins: configuredDevOriginHosts(),
   images: {
     remotePatterns: [

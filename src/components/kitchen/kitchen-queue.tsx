@@ -8,7 +8,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { KitchenOrderDetail } from "@/components/kitchen/kitchen-order-detail";
 import { useNotifications } from "@/components/ui/notification-provider";
 import { usePolling } from "@/lib/hooks/use-polling";
-import { elapsedOrderTime, nextOrderStatus, ORDER_STATUSES, orderActionLabel } from "@/lib/orders/status";
+import { elapsedOrderTime, nextOrderStatus, KITCHEN_STATUSES, orderActionLabel } from "@/lib/orders/status";
 import { formatInTimeZone, todayInTimeZone } from "@/lib/screenings/timezone";
 import type { KitchenLocation, KitchenOrder, KitchenQueue as Queue } from "@/types/order";
 import type { OrderQueueQuery } from "@/validation/kitchen";
@@ -50,7 +50,7 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
     <header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.18em] text-amber-400 uppercase">CineBite kitchen</p><h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Kitchen operations</h1><p className="mt-1 text-sm text-zinc-500">Prepare orders for every seat.</p></div><div className="flex items-center gap-3">{canOpenAdmin ? <Link href="/admin/orders" className="cb-button-secondary">Admin orders</Link> : null}<LogoutButton /></div></header>
     <form action="/kitchen" className="mt-6 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
       <label className="text-xs text-zinc-400">Location<select name="locationId" defaultValue={query.locationId ?? ""} className="cb-field mt-1"><option value="">All authorized locations</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
-      <label className="text-xs text-zinc-400">Status<select name="status" defaultValue={query.status ?? ""} className="cb-field mt-1"><option value="">All kitchen steps</option>{ORDER_STATUSES.map((status) => <option key={status} value={status}>{columnLabels[status]}</option>)}</select></label>
+      <label className="text-xs text-zinc-400">Status<select name="status" defaultValue={query.status ?? ""} className="cb-field mt-1"><option value="">All kitchen steps</option>{KITCHEN_STATUSES.map((status) => <option key={status} value={status}>{columnLabels[status]}</option>)}</select></label>
       <label className="text-xs text-zinc-400">Location date<input name="date" type="date" defaultValue={query.date} className="cb-field mt-1" /></label>
       <label className="text-xs text-zinc-400">Hall<input name="hall" defaultValue={query.hall} placeholder="Hall 1" className="cb-field mt-1" /></label>
       <label className="text-xs text-zinc-400">Order code<input name="code" defaultValue={query.code} placeholder="CB-…" className="cb-field mt-1" /></label>
@@ -58,7 +58,7 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
     </form>
     <div className="my-5 flex flex-wrap items-center justify-between gap-2 text-xs"><p role="status" className={error ? "text-amber-300" : "text-zinc-500"}>{error ?? "Queue updates automatically every 5 seconds"}</p><span className="text-zinc-600">Oldest orders first · Page {queue.page}</span></div>
     <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {ORDER_STATUSES.filter((status) => !query.status || status === query.status).map((status) => <section key={status} aria-label={columnLabels[status]} className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-3">
+      {KITCHEN_STATUSES.filter((status) => !query.status || status === query.status).map((status) => <section key={status} aria-label={columnLabels[status]} className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-3">
         <div className={`mb-4 flex items-center justify-between border-b pb-3 ${columnStyle[status]}`}><h2 className="font-semibold">{columnLabels[status]}</h2><span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs" aria-live="polite">{queue.counts[status]}</span></div>
         <div className="space-y-3"><AnimatePresence initial={false}>{queue.orders.filter((order) => order.status === status).map((order) => <motion.article layout={!reduced} key={order.publicOrderCode} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.15 }} className="rounded-xl border border-zinc-700/70 bg-zinc-900 p-4" data-order-code={order.publicOrderCode}>
           <button className="text-left font-mono text-sm font-semibold text-zinc-100 underline-offset-4 hover:underline" onClick={() => openOrder(order)} aria-label={`Open order ${order.publicOrderCode}`}>{order.publicOrderCode}</button>

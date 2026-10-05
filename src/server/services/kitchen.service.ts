@@ -3,7 +3,7 @@ import "server-only";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getKitchenOrderRecord, getKitchenQueueRecord, listKitchenLocationsRecord, transitionKitchenOrderRecord } from "@/server/repositories/kitchen.repository";
 import { requireKitchenActor } from "@/server/services/kitchen-access";
-import { orderQueueQuerySchema, orderTransitionSchema } from "@/validation/kitchen";
+import { kitchenQueueQuerySchema, orderTransitionSchema } from "@/validation/kitchen";
 import { orderCodeSchema } from "@/validation/order";
 
 export async function getKitchenContext() {
@@ -13,7 +13,7 @@ export async function getKitchenContext() {
 }
 
 export async function getKitchenQueue(input: unknown) {
-  const query = orderQueueQuerySchema.parse(input);
+  const query = kitchenQueueQuerySchema.parse(input);
   const actor = requireKitchenActor(await getCurrentUser());
   return getKitchenQueueRecord(actor, query);
 }

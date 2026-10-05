@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const database = vi.hoisted(() => {
   const tx = {
-    user: { findUnique: vi.fn() }, order: { findFirst: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() },
+    user: { findUnique: vi.fn() }, order: { findFirst: vi.fn(), updateMany: vi.fn(), update: vi.fn(), findUniqueOrThrow: vi.fn(), groupBy: vi.fn(), findMany: vi.fn() },
     orderStatusEvent: { create: vi.fn() }, auditLog: { create: vi.fn() },
   };
   return { prisma: { $transaction: vi.fn(), location: { findMany: vi.fn() }, order: { findFirst: vi.fn() } }, tx };
@@ -34,6 +34,7 @@ describe("atomic kitchen transitions", () => {
     database.tx.user.findUnique.mockResolvedValue({ id: "staff-db", active: true, memberships: [{ role: "KITCHEN_STAFF", allLocations: false, locationAccess: [{ locationId: "beirut" }], organization: { status: "ACTIVE" } }] });
     database.tx.order.findFirst.mockResolvedValue(row("PLACED"));
     database.tx.order.updateMany.mockResolvedValue({ count: 1 });
+    database.tx.orderStatusEvent.create.mockResolvedValue({ createdAt: now });
     database.tx.order.findUniqueOrThrow.mockResolvedValue(row("ACCEPTED"));
     database.prisma.location.findMany.mockResolvedValue([{ id: "beirut", name: "Beirut", timezone: "Asia/Beirut" }]);
   });

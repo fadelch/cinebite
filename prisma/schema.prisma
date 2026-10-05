@@ -93,6 +93,8 @@ enum OrderStatus {
   ACCEPTED
   PREPARING
   READY
+  OUT_FOR_DELIVERY
+  DELIVERED
 }
 
 enum OrderStatusActorType {
@@ -154,6 +156,8 @@ enum AuditAction {
   ORDER_ACCEPTED
   ORDER_PREPARING_STARTED
   ORDER_MARKED_READY
+  ORDER_CLAIMED_FOR_DELIVERY
+  ORDER_DELIVERED
 }
 
 enum AuditEntityType {
@@ -189,6 +193,7 @@ model User {
   auditLogs          AuditLog[]               @relation("AuditActor")
   inventoryMovements InventoryMovement[]      @relation("InventoryMovementActor")
   orderStatusEvents  OrderStatusEvent[]
+  deliveryOrders    Order[] @relation("DeliveryAssignment")
 
   @@map("users")
 }
@@ -604,6 +609,10 @@ model Order {
   seatId               String
   screeningId          String
   status               OrderStatus @default(PLACED)
+  readyAt              DateTime?   @db.Timestamptz(3)
+  deliveryAssignedUserId String?
+  deliveryClaimedAt    DateTime?   @db.Timestamptz(3)
+  deliveredAt          DateTime?   @db.Timestamptz(3)
   currencyCode         String      @db.Char(3)
   subtotal             Decimal     @db.Decimal(12, 2)
   total                Decimal     @db.Decimal(12, 2)
@@ -626,12 +635,16 @@ model Order {
   items              OrderItem[]
   inventoryMovements InventoryMovement[]
   statusEvents       OrderStatusEvent[]
+  deliveryAssignedUser User? @relation("DeliveryAssignment", fields: [deliveryAssignedUserId], references: [id], onDelete: Restrict)
 
   @@unique([customerSessionId, idempotencyKey])
   @@index([organizationId, createdAt])
   @@index([locationId, createdAt])
   @@index([screeningId, createdAt])
   @@index([locationId, status, createdAt])
+  @@index([locationId, status, readyAt])
+  @@index([deliveryAssignedUserId, status, deliveryClaimedAt])
+  @@index([locationId, status, deliveredAt])
   @@map("orders")
 }
 

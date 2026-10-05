@@ -4,11 +4,11 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 ## Current phase
 
-**Phase 9 - Movies & Screenings**
+**Phase 13 — Delivery Operations**
 
-This phase adds an organization Movie catalog, timezone-safe per-Hall Screening schedule, database-enforced overlap protection, computed upcoming/live/ended state, cancellation history, and reusable active Hall/Seat resolution on top of the Phase 8 cinema and inventory foundation.
+Phases 1–12 provide cinema administration, menus, inventory, screenings, secure seat sessions, atomic checkout and kitchen preparation. Phase 13 extends READY orders into assigned, concurrency-safe seat delivery and customer delivery progress.
 
-Phase 9 does not implement QR generation/verification, customer sessions, ordering, inventory reservation/deduction, payments, ticket sales/reservation, kitchen/delivery queues, or revenue analytics.
+This phase does not implement payment processing, refunds, customer cancellation, suppliers, maps/routing, SMS/push notifications, ticketing or revenue analytics.
 
 ## Architecture
 
@@ -420,7 +420,53 @@ npx tsx --conditions=react-server --env-file=.env.local scripts/verify-phase-12.
 
 It creates only isolated `phase12-evidence-*` business fixtures, uses example.com test staff identities, and disables those identities afterward. It is **not** part of automated unit tests or CI. It writes actual integration outcomes to `docs/phase-12-integration-results.json` and captures application-only images in [`linkedin/phase-12`](linkedin/phase-12/README.md). Demo orders/events remain available as evidence; repeated runs create new demonstration orders and consume only their isolated demo stock.
 
-See the [59-point Phase 12 architecture guide](docs/phase-12-architecture.md) for file structure, decisions, behavior, and examples. Phase 13 is not implemented: delivery possession, courier assignment, delivery authorization, and delivered states require their own reviewed design. Payment, refunds, customer cancellation, and restocking are also outside this phase.
+See the [Phase 12 architecture guide](docs/phase-12-architecture.md) for preparation behavior. Phase 13 adds the delivery flow described below; payment, refunds, customer cancellation and restocking remain separate.
+
+## Phase 13: delivery operations
+
+The complete fulfillment lifecycle is `PLACED → ACCEPTED → PREPARING → READY → OUT_FOR_DELIVERY → DELIVERED`. Kitchen APIs accept only the original three preparation transitions. `/delivery` replaces the placeholder with Ready to claim, My deliveries and Recently delivered; supervisors see Active deliveries instead of personal assignments. The admin navigation and six-state order filters expose delivery oversight without a competing authentication or state system.
+
+Delivery Staff can claim unassigned READY orders only within authorized locations, and complete only their own OUT_FOR_DELIVERY orders. Managers are limited to granted locations; Cinema Admins oversee their own organization. Supervisors are **read only for delivery**: no implicit emergency override, stealing or reassignment exists. Kitchen Staff, anonymous customers and public order codes cannot authorize delivery mutations. Each action reloads the current active PostgreSQL user, membership, organization and grants inside its transaction.
+
+Claiming uses a Serializable transaction and a conditional update matching the order, tenant, location, READY state and null assignee. The database-clock status event, assignment to the PostgreSQL User foreign key, claimed timestamp and safe audit commit together. The unique `(orderId, toStatus)` index also prevents duplicate claims; any losing transaction rolls back its entire event/update/audit. Completion matches OUT_FOR_DELIVERY and the assigned worker, retains ownership and records `deliveredAt`. DELIVERED is terminal, not an assertion of payment. Strict request schemas reject browser timestamps, actor IDs, prices, quantities and destination edits.
+
+The additive `20261005210000_phase_13_delivery_operations` migration adds statuses, assignment/timestamps, an assignment consistency check, indexes and User relation. Existing event uniqueness, foreign keys and append-only trigger remain intact. `readyAt` is an indexed cache of the authoritative READY event: old events are backfilled without changing history, and future kitchen READY transitions copy the database event timestamp in the same transaction. This correctly prioritizes preparation completion time instead of checkout age. Indexes support `(locationId,status,readyAt)`, `(deliveryAssignedUserId,status,deliveryClaimedAt)` and `(locationId,status,deliveredAt)` queries.
+
+Delivery cards show immutable location/Hall/Seat/movie/item snapshots and escaped plain-text notes. Phones prioritize the worker's active destination; compact completed cards expand into full snapshot/timeline tickets. Filters fold away to keep the destination near the top. Every section is paginated at 20 orders, with oldest-ready/oldest-claimed/newest-delivered ordering. Hall/code filters apply to all sections; delivered-date and supervisor worker filters support history, with location-timezone date boundaries. Date filters never hide active work. Worker queues/history do not expose other workers' assignments. Supervisor staff options are scoped and capped at 100; forged IDs cannot bypass tenant/location restrictions.
+
+Queue/detail/customer clients reuse the five-second uncached polling hook, hidden-tab pause, abort cleanup and stale-response protection. Stale claim attempts receive a friendly conflict and refresh. Assignment is stored in PostgreSQL, not browser memory, so signing in again restores My deliveries. Customer progress adds “Your order is on the way to your seat.” and “Delivered.” while hiding private staff identity; the valid owning CustomerSession is still required. Large controls, visible focus, native keyboard dialogs, action feedback at bottom right, and restrained reduced-motion-aware Motion support phones and supervisors.
+
+Delivery never changes inventory, consumption movements, order items, prices or totals. Staff can complete existing orders after original session expiry or screening end/cancellation; warnings require checking the destination, not silently cancelling/restocking. Customer reads retain the original session-eligibility policy. No Firestore delivery business writes exist.
+
+### Deployment and verification
+
+After review/merge, deploy the migration **before** starting this code against the configured Neon database:
+
+```bash
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run prisma:validate
+npm test
+npm run lint
+npm run build
+```
+
+Production migration is an operator deployment step, not an integration-test side effect. Phase 13 verification uses an isolated loopback PostgreSQL database and Firebase Auth emulator; it never reads production credentials or changes production Neon/Firebase. Local PostgreSQL uses Prisma's TCP adapter; hosted Neon keeps its existing serverless adapter. Start a separate PostgreSQL instance at `127.0.0.1:55413`, owned by `cinebite_test`, with the database `cinebite_phase13_test`, then run (PowerShell; `npm.cmd` avoids restricted script policies):
+
+```powershell
+$env:DIRECT_URL='postgresql://cinebite_test@127.0.0.1:55413/cinebite_phase13_test'
+npx.cmd prisma migrate deploy
+# In another terminal; no Firebase login or production project is needed:
+npx.cmd --yes firebase-tools@15.32.1 emulators:start --only auth --project demo-cinebite-phase13 --config scripts/phase-13-emulators.json
+# With a production build and installed Chrome:
+node --conditions=react-server --import tsx scripts/verify-phase-13.ts --local
+# Clear this terminal-only test override before any later deployment:
+Remove-Item Env:DIRECT_URL
+```
+
+The integration runner hardcodes only these local test endpoints, generates an ephemeral signing key in memory, creates example.com users only in the Auth emulator, runs actual Next.js HTTP/browser actions and verifies database effects. It is separate from offline `npm test`. Detailed outcomes are in [Phase 13 verification](docs/phase-13-verification.md) and [case results](docs/phase-13-integration-results.json); the [50-part architecture guide](docs/phase-13-architecture.md) explains each design choice. The [eight LinkedIn screenshots](linkedin/phase-13/README.md) contain real application UI with local demo data, without browser chrome, tokens or credentials.
+
+For every future phase, execute the full automated suite and supported isolated manual/integration cases, report each manual case as PASS, FAIL or NOT EXECUTABLE, and investigate/fix/rerun failures before declaring completion. Writing tests alone is not completion. Never run test mutations against production Neon/Firebase resources or merge a phase branch on the user's behalf.
 
 ## Vercel preparation
 
@@ -434,5 +480,5 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
-- Payment, delivery, refunds, discounts, promotions, and ticketing remain deferred to later phases. Phase 12 now covers Kitchen preparation through READY.
+- Payment, refunds, discounts, promotions, routing and ticketing remain deferred. Phase 13 covers physical fulfillment through DELIVERED, not payment settlement. Delivery reassignment/emergency overrides and a staff-management UI remain deliberately absent.
 - Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.
