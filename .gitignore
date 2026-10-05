@@ -13,6 +13,7 @@
 # testing
 /coverage
 /.phase13-test/
+/.phase14-test/
 /firebase-debug.log
 /ui-debug.log
 
@@ -41,6 +42,10 @@
 /linkedin/phase-13/*
 !/linkedin/phase-13/*.png
 !/linkedin/phase-13/README.md
+!/linkedin/phase-14/
+/linkedin/phase-14/*
+!/linkedin/phase-14/*.png
+!/linkedin/phase-14/README.md
 
 # debug
 npm-debug.log*

@@ -9,6 +9,7 @@ import { assertDeliveryLocationAccess, deliveryPermittedLocationIds, requireDeli
 import { ServiceError } from "@/server/services/service-error";
 import type { DeliveryOrder, DeliveryQueue } from "@/types/order";
 import type { DeliveryQueueQuery, DeliveryTransition } from "@/validation/delivery";
+import { fulfillmentWhere, isOrderEligibleForFulfillment } from "@/lib/payments/policy";
 
 export const deliveryOrderInclude = { ...kitchenOrderInclude, deliveryAssignedUser: { select: { displayName: true } } } as const;
 type DeliveryRow = Prisma.OrderGetPayload<{ include: typeof deliveryOrderInclude }>;
@@ -39,7 +40,7 @@ export async function buildDeliveryQueueWhere(actor: DeliveryActor, query: Deliv
     if (!locations.some((l) => l.id === query.locationId)) throw new ServiceError("LOCATION_NOT_FOUND", 404, "Location not found.");
   }
   if (actor.role === "DELIVERY_STAFF" && query.staffId) throw new ServiceError("AUTHORIZATION_DENIED", 403, "Staff filters are reserved for supervisors.");
-  return { organizationId: actor.organizationId, OR: locations.filter((l) => !query.locationId || l.id === query.locationId).map((l) => {
+  return { organizationId: actor.organizationId, AND: [fulfillmentWhere], OR: locations.filter((l) => !query.locationId || l.id === query.locationId).map((l) => {
     let bounds;
     try { bounds = query.date ? localDateBounds(query.date, l.timezone) : null; } catch { throw new ServiceError("SCREENING_TIME_INVALID", 400, "Choose a valid calendar date."); }
     return { locationId: l.id, ...(bounds ? { deliveredAt: { gte: bounds.start, lt: bounds.end } } : {}) };
@@ -66,7 +67,7 @@ export async function getDeliveryQueueRecord(actor: DeliveryActor, query: Delive
 }
 export async function getDeliveryOrderRecord(actor: DeliveryActor, publicCode: string) {
   const ids = deliveryPermittedLocationIds(actor);
-  const row = await prisma.order.findFirst({ where: { organizationId: actor.organizationId, publicOrderCode: publicCode,
+  const row = await prisma.order.findFirst({ where: { organizationId: actor.organizationId, publicOrderCode: publicCode, AND: [fulfillmentWhere],
     ...(ids === null ? {} : { locationId: { in: [...ids] } }), ...(actor.role === "DELIVERY_STAFF" ? { OR: [ { status: "READY", deliveryAssignedUserId: null },
       { status: { in: ["OUT_FOR_DELIVERY", "DELIVERED"] }, deliveryAssignedUserId: actor.userId } ] } : { status: { in: ["READY", "OUT_FOR_DELIVERY", "DELIVERED"] } }) }, include: deliveryOrderInclude });
   if (!row) throw new ServiceError("ORDER_NOT_FOUND", 404, "Delivery not found in your permitted queue.");
@@ -87,6 +88,7 @@ export async function transitionDeliveryOrderRecord(input: { actor: DeliveryActo
       const ids = deliveryPermittedLocationIds(actor);
       const order = await tx.order.findFirst({ where: { publicOrderCode: input.publicCode, organizationId: actor.organizationId, ...(ids === null ? {} : { locationId: { in: [...ids] } }) } });
       if (!order) throw new ServiceError("ORDER_NOT_FOUND", 404, "Delivery not found in your permitted locations.");
+      if (!isOrderEligibleForFulfillment(order)) throw new ServiceError("PAYMENT_NOT_ELIGIBLE", 409, "This order is not cleared for fulfillment.");
       if (order.status === "DELIVERED") throw new ServiceError("ORDER_ALREADY_DELIVERED", 409, "This order is already delivered.");
       if (claim && (order.deliveryAssignedUserId !== null || order.status === "OUT_FOR_DELIVERY")) throw new ServiceError("ORDER_ALREADY_CLAIMED", 409, "Another worker already claimed this order. The queue has refreshed.");
       if (claim && order.status !== "READY") throw new ServiceError("ORDER_NOT_READY", 409, "This order is not ready for delivery.");

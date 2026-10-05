@@ -22,6 +22,8 @@ export interface LocationInventoryDto {
   unit: InventoryUnit;
   itemStatus: InventoryItemStatus;
   quantityOnHand: string;
+  quantityReserved?: string;
+  quantityAvailable?: string;
   lowStockThreshold: string;
   stockStatus: StockStatus;
 }

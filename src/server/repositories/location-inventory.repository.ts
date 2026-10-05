@@ -1,4 +1,5 @@
 import "server-only";
+import { Prisma } from "@/generated/prisma/client";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -10,10 +11,13 @@ import type { LocationInventoryDto } from "@/types/inventory";
 function locationInventoryDto(row: {
   id: string; locationId: string; inventoryItemId: string;
   quantityOnHand: { toFixed(value: number): string };
+  quantityReserved?: { toFixed(value: number): string };
   lowStockThreshold: { toFixed(value: number): string };
   inventoryItem: { name: string; sku: string; unit: "EACH" | "GRAM" | "MILLILITER"; status: "ACTIVE" | "INACTIVE" };
 }): LocationInventoryDto {
   const quantityOnHand = row.quantityOnHand.toFixed(3);
+  const quantityReserved = row.quantityReserved?.toFixed(3) ?? "0.000";
+  const quantityAvailable = new Prisma.Decimal(quantityOnHand).minus(quantityReserved).toFixed(3);
   const lowStockThreshold = row.lowStockThreshold.toFixed(3);
   return {
     id: row.id,
@@ -24,8 +28,9 @@ function locationInventoryDto(row: {
     unit: row.inventoryItem.unit,
     itemStatus: row.inventoryItem.status,
     quantityOnHand,
+    quantityReserved, quantityAvailable,
     lowStockThreshold,
-    stockStatus: computeStockStatus(quantityOnHand, lowStockThreshold),
+    stockStatus: computeStockStatus(quantityAvailable, lowStockThreshold),
   };
 }
 

@@ -4,10 +4,13 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import { Prisma } from "@/generated/prisma/client";
 import { aggregateRecipeRequirements, lineTotal, orderSubtotal } from "@/lib/orders/calculations";
-import { isPrismaError } from "@/lib/db/errors";
+import { isPrismaError, isRetryableTransactionError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
 import { ServiceError } from "@/server/services/service-error";
 import type { CustomerOrder, OrderStatus } from "@/types/order";
+import { reserveInventory } from "./payment-inventory";
+import { paymentConfig } from "@/lib/payments/config";
+import { paymentMinorUnits } from "@/lib/payments/policy";
 
 export const orderInclude = {
   items: { orderBy: { createdAt: "asc" as const } },
@@ -27,10 +30,12 @@ export function orderDto(row: {
   items: Array<{ productNameSnapshot: string; productImageSnapshot: string | null; quantity: number;
     unitPrice: { toFixed(value: number): string }; lineTotal: { toFixed(value: number): string }; currencyCode: string }>;
   location?: { timezone: string };
+  paymentPolicy?: "LEGACY_NOT_REQUIRED" | "ONLINE_REQUIRED"; fulfillmentEligible?: boolean;
   statusEvents?: Array<{ fromStatus: OrderStatus | null; toStatus: OrderStatus; actorType: "CUSTOMER" | "STAFF" | "SYSTEM"; createdAt: Date }>;
 }): CustomerOrder {
   return {
     publicOrderCode: row.publicOrderCode, status: row.status, currencyCode: row.currencyCode,
+    paymentPolicy: row.paymentPolicy ?? "LEGACY_NOT_REQUIRED", fulfillmentEligible: row.fulfillmentEligible ?? true,
     subtotal: row.subtotal.toFixed(2), total: row.total.toFixed(2), customerNote: row.customerNote,
     locationName: row.locationNameSnapshot, hallName: row.hallNameSnapshot, seatLabel: row.seatLabelSnapshot,
     movieTitle: row.movieTitleSnapshot, screeningStartsAt: row.screeningStartsAt.toISOString(), createdAt: row.createdAt.toISOString(),
@@ -112,12 +117,19 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
         const currencyCode = checkoutLines[0]!.offer.currencyCode;
         const total = orderSubtotal(checkoutLines.map(({ item, offer }) => ({ unitPrice: offer.price.toFixed(2), quantity: item.quantity })));
         const orderId = randomUUID();
+        try { paymentMinorUnits(total, currencyCode); }
+        catch { throw new ServiceError("PAYMENT_CURRENCY_UNSUPPORTED", 409, "Online payment does not support this amount or currency."); }
+        const attemptId = randomUUID();
+        const expiresAt = new Date(Math.min(input.now.getTime() + paymentConfig().minutes * 60_000, session.screening.endsAt.getTime(), session.expiresAt.getTime()));
         const order = await tx.order.create({
           data: {
             id: orderId, publicOrderCode: publicOrderCode(), customerSessionId: session.id,
             organizationId: location.organizationId, locationId: location.id, hallId: session.hallId,
             seatId: session.seatId, screeningId: session.screeningId, currencyCode, subtotal: total, total,
             customerNote: input.customerNote, idempotencyKey: input.idempotencyKey,
+            paymentPolicy: "ONLINE_REQUIRED", fulfillmentEligible: false,
+            payment: { create: { id: randomUUID(), provider: "sandbox", amount: total, currencyCode,
+              attempts: { create: { id: attemptId, number: 1, idempotencyKey: input.idempotencyKey, expiresAt } } } },
             locationNameSnapshot: location.name, hallNameSnapshot: session.seat.hall.name,
             seatLabelSnapshot: session.seat.label, movieTitleSnapshot: session.screening.movie.title,
             screeningStartsAt: session.screening.startsAt,
@@ -131,19 +143,11 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
           include: orderInclude,
         });
 
-        for (const [inventoryItemId, requiredText] of requirements) {
-          const required = new Prisma.Decimal(requiredText);
-          const inventory = await tx.locationInventory.findUnique({ where: { locationId_inventoryItemId: { locationId: location.id, inventoryItemId } } });
-          if (!inventory) throw new ServiceError("INSUFFICIENT_STOCK", 409, "An item in your cart just went out of stock.");
-          const update = await tx.locationInventory.updateMany({
-            where: { id: inventory.id, quantityOnHand: { gte: required } }, data: { quantityOnHand: { decrement: required } },
-          });
-          if (update.count !== 1) throw new ServiceError("INSUFFICIENT_STOCK", 409, "An item in your cart just went out of stock.");
-          await tx.inventoryMovement.create({ data: {
-            id: randomUUID(), organizationId: location.organizationId, locationInventoryId: inventory.id,
-            type: "ORDER_CONSUMPTION", quantityDelta: required.negated(), reason: "Customer order", orderId,
-          } });
-        }
+        await reserveInventory(tx, { orderId, attemptId, organizationId: location.organizationId, locationId: location.id, expiresAt, requirements });
+        for (const action of ["PAYMENT_CREATED", ...(requirements.size ? ["INVENTORY_RESERVED"] : [])] as const) await tx.auditLog.create({ data: {
+          action: action as "PAYMENT_CREATED" | "INVENTORY_RESERVED", entityType: "ORDER", entityId: orderId,
+          organizationId: location.organizationId, locationId: location.id, metadata: { attemptNumber: 1, provider: "sandbox" },
+        } });
         await tx.auditLog.create({ data: {
           action: "ORDER_PLACED", entityType: "ORDER", entityId: orderId,
           organizationId: location.organizationId, locationId: location.id, hallId: session.hallId,
@@ -155,7 +159,8 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
       if (result.kind === "price-changed") throw new ServiceError("PRICE_CHANGED", 409, `Prices changed for: ${result.products.join(", ")}. Review your cart and place the order again.`);
       return result;
     } catch (error) {
-      if (attempt < 2 && (isPrismaError(error, "P2034") || isPrismaError(error, "P2002"))) continue;
+      if (attempt < 2 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) continue;
+      if (isRetryableTransactionError(error)) throw new ServiceError("CHECKOUT_CONFLICT", 409, "Checkout is busy. Please try again.");
       throw error;
     }
   }
@@ -181,5 +186,11 @@ export async function getAdminOrderRecord(organizationId: string, orderId: strin
     where: { id: orderId, organizationId, ...(permittedLocationIds === null ? {} : { locationId: { in: [...permittedLocationIds] } }) },
     include: orderInclude,
   });
-  return row ? { id: row.id, ...orderDto(row) } : null;
+  if (!row) return null;
+  const payment = await prisma.payment.findUnique({ where: { orderId: row.id }, include: { _count: { select: { attempts: true } } } });
+  return { id: row.id, ...orderDto(row), payment: payment ? {
+    status: payment.status, provider: payment.provider, amount: payment.amount.toFixed(2), currencyCode: payment.currencyCode,
+    attemptCount: payment._count.attempts, reviewRequired: payment.reviewRequired, reviewReason: payment.reviewReason,
+    succeededAt: payment.succeededAt?.toISOString() ?? null, failedAt: payment.failedAt?.toISOString() ?? null, canceledAt: payment.canceledAt?.toISOString() ?? null,
+  } : null };
 }

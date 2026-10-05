@@ -13,6 +13,7 @@ const time = new Date("2026-10-05T12:00:00Z");
 const actor: DeliveryActor = { uid: "firebase-a", userId: "worker-a", role: "DELIVERY_STAFF", email: "demo@example.com", displayName: "Demo", organizationId: "org-a", locationIds: ["beirut"], allLocations: false, active: true };
 function row(status: OrderStatus = "READY", assigned: string | null = null) {
   return { id: "order", organizationId: "org-a", locationId: "beirut", hallId: "hall", publicOrderCode: "CB-12AB34CD56", status, deliveryAssignedUserId: assigned,
+    paymentPolicy: "LEGACY_NOT_REQUIRED", fulfillmentEligible: true,
     readyAt: time, deliveryClaimedAt: assigned ? time : null, deliveredAt: status === "DELIVERED" ? time : null, deliveryAssignedUser: assigned ? { displayName: "Private worker" } : null,
     subtotal: new Prisma.Decimal("5"), total: new Prisma.Decimal("5"), currencyCode: "USD", customerNote: "<script>unsafe()</script>",
     locationNameSnapshot: "Demo Beirut", hallNameSnapshot: "Original Hall", seatLabelSnapshot: "A7", movieTitleSnapshot: "Interstellar", screeningStartsAt: time, createdAt: time,

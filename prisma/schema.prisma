@@ -103,6 +103,26 @@ enum OrderStatusActorType {
   SYSTEM
 }
 
+enum OrderPaymentPolicy {
+  LEGACY_NOT_REQUIRED
+  ONLINE_REQUIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum ReservationStatus {
+  ACTIVE
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
+
 enum AuditAction {
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
@@ -158,6 +178,13 @@ enum AuditAction {
   ORDER_MARKED_READY
   ORDER_CLAIMED_FOR_DELIVERY
   ORDER_DELIVERED
+  PAYMENT_CREATED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  PAYMENT_CANCELED
+  PAYMENT_REVIEW_REQUIRED
+  INVENTORY_RESERVED
+  INVENTORY_RESERVATION_RELEASED
 }
 
 enum AuditEntityType {
@@ -193,18 +220,19 @@ model User {
   auditLogs          AuditLog[]               @relation("AuditActor")
   inventoryMovements InventoryMovement[]      @relation("InventoryMovementActor")
   orderStatusEvents  OrderStatusEvent[]
-  deliveryOrders    Order[] @relation("DeliveryAssignment")
+  deliveryOrders     Order[]                  @relation("DeliveryAssignment")
 
   @@map("users")
 }
 
 model Organization {
-  id        String             @id @default(cuid())
-  name      String
-  slug      String             @unique
-  status    OrganizationStatus @default(ACTIVE)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  paymentMode OrderPaymentPolicy @default(ONLINE_REQUIRED)
+  status      OrganizationStatus @default(ACTIVE)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   memberships         OrganizationMembership[]
   locations           Location[]
@@ -421,14 +449,16 @@ model LocationInventory {
   locationId        String
   inventoryItemId   String
   quantityOnHand    Decimal  @default(0) @db.Decimal(14, 3)
+  quantityReserved  Decimal  @default(0) @db.Decimal(14, 3)
   lowStockThreshold Decimal  @default(0) @db.Decimal(14, 3)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  location      Location            @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  inventoryItem InventoryItem       @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location      Location               @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  inventoryItem InventoryItem          @relation(fields: [inventoryItemId, organizationId], references: [id, organizationId], onDelete: Restrict)
   movements     InventoryMovement[]
+  reservations  InventoryReservation[]
 
   @@unique([locationId, inventoryItemId])
   @@unique([id, organizationId])
@@ -600,42 +630,46 @@ model CartItem {
 }
 
 model Order {
-  id                   String      @id @default(cuid())
-  publicOrderCode      String      @unique
-  customerSessionId    String
-  organizationId       String
-  locationId           String
-  hallId               String
-  seatId               String
-  screeningId          String
-  status               OrderStatus @default(PLACED)
-  readyAt              DateTime?   @db.Timestamptz(3)
+  id                     String             @id @default(cuid())
+  publicOrderCode        String             @unique
+  customerSessionId      String
+  organizationId         String
+  locationId             String
+  hallId                 String
+  seatId                 String
+  screeningId            String
+  status                 OrderStatus        @default(PLACED)
+  paymentPolicy          OrderPaymentPolicy @default(ONLINE_REQUIRED)
+  fulfillmentEligible    Boolean            @default(false)
+  readyAt                DateTime?          @db.Timestamptz(3)
   deliveryAssignedUserId String?
-  deliveryClaimedAt    DateTime?   @db.Timestamptz(3)
-  deliveredAt          DateTime?   @db.Timestamptz(3)
-  currencyCode         String      @db.Char(3)
-  subtotal             Decimal     @db.Decimal(12, 2)
-  total                Decimal     @db.Decimal(12, 2)
-  customerNote         String?
-  idempotencyKey       String
-  locationNameSnapshot String
-  hallNameSnapshot     String
-  seatLabelSnapshot    String
-  movieTitleSnapshot   String
-  screeningStartsAt    DateTime    @db.Timestamptz(3)
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
+  deliveryClaimedAt      DateTime?          @db.Timestamptz(3)
+  deliveredAt            DateTime?          @db.Timestamptz(3)
+  currencyCode           String             @db.Char(3)
+  subtotal               Decimal            @db.Decimal(12, 2)
+  total                  Decimal            @db.Decimal(12, 2)
+  customerNote           String?
+  idempotencyKey         String
+  locationNameSnapshot   String
+  hallNameSnapshot       String
+  seatLabelSnapshot      String
+  movieTitleSnapshot     String
+  screeningStartsAt      DateTime           @db.Timestamptz(3)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
-  customerSession    CustomerSession     @relation(fields: [customerSessionId], references: [id], onDelete: Restrict)
-  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  location           Location            @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  hall               Hall                @relation(fields: [hallId], references: [id], onDelete: Restrict)
-  seat               Seat                @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
-  screening          Screening           @relation(fields: [screeningId], references: [id], onDelete: Restrict)
-  items              OrderItem[]
-  inventoryMovements InventoryMovement[]
-  statusEvents       OrderStatusEvent[]
-  deliveryAssignedUser User? @relation("DeliveryAssignment", fields: [deliveryAssignedUserId], references: [id], onDelete: Restrict)
+  customerSession      CustomerSession        @relation(fields: [customerSessionId], references: [id], onDelete: Restrict)
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location             Location               @relation(fields: [locationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  hall                 Hall                   @relation(fields: [hallId], references: [id], onDelete: Restrict)
+  seat                 Seat                   @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
+  screening            Screening              @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+  payment              Payment?
+  reservations         InventoryReservation[]
+  inventoryMovements   InventoryMovement[]
+  statusEvents         OrderStatusEvent[]
+  deliveryAssignedUser User?                  @relation("DeliveryAssignment", fields: [deliveryAssignedUserId], references: [id], onDelete: Restrict)
 
   @@unique([customerSessionId, idempotencyKey])
   @@index([organizationId, createdAt])
@@ -684,6 +718,111 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
   @@map("order_items")
+}
+
+model Payment {
+  id                   String           @id @default(cuid())
+  orderId              String           @unique
+  provider             String
+  providerPaymentId    String?          @unique
+  status               PaymentStatus    @default(PENDING)
+  amount               Decimal          @db.Decimal(12, 2)
+  currencyCode         String           @db.Char(3)
+  currentAttemptNumber Int              @default(1)
+  reviewRequired       Boolean          @default(false)
+  reviewReason         String?
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
+  succeededAt          DateTime?        @db.Timestamptz(3)
+  failedAt             DateTime?        @db.Timestamptz(3)
+  canceledAt           DateTime?        @db.Timestamptz(3)
+  order                Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  attempts             PaymentAttempt[]
+
+  @@index([status, updatedAt])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id                String                 @id @default(cuid())
+  paymentId         String
+  number            Int
+  idempotencyKey    String
+  providerPaymentId String?                @unique
+  status            PaymentStatus          @default(PENDING)
+  expiresAt         DateTime               @db.Timestamptz(3)
+  createdAt         DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @db.Timestamptz(3)
+  succeededAt       DateTime?              @db.Timestamptz(3)
+  failedAt          DateTime?              @db.Timestamptz(3)
+  canceledAt        DateTime?              @db.Timestamptz(3)
+  payment           Payment                @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reservations      InventoryReservation[]
+
+  @@unique([paymentId, number])
+  @@unique([paymentId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@map("payment_attempts")
+}
+
+model InventoryReservation {
+  id                  String            @id @default(cuid())
+  orderId             String
+  attemptId           String
+  locationInventoryId String
+  quantity            Decimal           @db.Decimal(14, 3)
+  status              ReservationStatus @default(ACTIVE)
+  expiresAt           DateTime          @db.Timestamptz(3)
+  createdAt           DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @db.Timestamptz(3)
+  releasedAt          DateTime?         @db.Timestamptz(3)
+  consumedAt          DateTime?         @db.Timestamptz(3)
+  order               Order             @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  attempt             PaymentAttempt    @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  locationInventory   LocationInventory @relation(fields: [locationInventoryId], references: [id], onDelete: Restrict)
+
+  @@unique([attemptId, locationInventoryId])
+  @@index([orderId])
+  @@index([status, expiresAt])
+  @@map("inventory_reservations")
+}
+
+model PaymentWebhookEvent {
+  id              String        @id @default(cuid())
+  provider        String
+  providerEventId String
+  eventType       PaymentStatus
+  status          String
+  failureCode     String?
+  receivedAt      DateTime      @default(now()) @db.Timestamptz(3)
+  processedAt     DateTime?     @db.Timestamptz(3)
+
+  @@unique([provider, providerEventId])
+  @@index([provider, status, receivedAt])
+  @@map("payment_webhook_events")
+}
+
+// Durable TEST provider ledger, deliberately separate from CineBite settlement.
+// This adapter cannot charge money and accepts no card data.
+model SandboxPaymentIntent {
+  id           String        @id
+  attemptId    String        @unique
+  amountMinor  String
+  currencyCode String        @db.Char(3)
+  status       PaymentStatus @default(PENDING)
+  expiresAt    DateTime      @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@map("sandbox_payment_intents")
+}
+
+model PaymentRateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("payment_rate_limits")
 }
 
 model AuditLog {

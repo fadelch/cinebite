@@ -1,0 +1,210 @@
+{
+  "executedAt": "2026-10-05T18:44:26.099Z",
+  "environment": "Isolated loopback PostgreSQL and Firebase Auth emulator; deterministic sandbox; production Next.js build; Chromium",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Actual strict checkout endpoints rejected browser total/currency. Durable provider request is exactly 1250 USD minor units."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Actual strict checkout endpoints rejected browser total/currency. Durable provider request is exactly 1250 USD minor units."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Actual cart PUT retained zero reserved stock."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Two popcorn plus Pepsi share one aggregate ACTIVE reservation of three portions; on-hand stock remains unchanged."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Real PostgreSQL on-hand 10/reserved 2 gave customer availability of eight units."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "Two actual simultaneous checkout requests competed for one portion: one reserved it, the other received 409 with no extra order."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Signed success atomically consumed aggregate recipe stock, cleared reservations and inserted ORDER_CONSUMPTION."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Failure and repeated failure released exactly once, preserved physical stock, and created no consumption movement."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Owner's same-origin sandbox cancellation released stock without consumption."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Ten duplicate signed HTTP success webhooks produced one settlement, one movement and one success audit."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Failure and repeated failure released exactly once, preserved physical stock, and created no consumption movement."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Invalid signature was rejected before trusted parsing; payment and stock remained unchanged."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Validly signed mismatched provider data was journaled REJECTED; no settlement, stock change or kitchen eligibility."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Validly signed mismatched provider data was journaled REJECTED; no settlement, stock change or kitchen eligibility."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Validly signed mismatched provider data was journaled REJECTED; no settlement, stock change or kitchen eligibility."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Manually visiting a success query still showed Waiting for payment and did not mark paid."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Webhook arrived before customer returned; return page read confirmed server state."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Return-first processing page waited for signed success and updated by server polling, not browser return authority."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Browser closed before signed callback; server still settled and consumed reservations."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Concurrent same-key checkout returned one order, one attempt, one durable provider intent and one reservation set."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Failed attempt retained history. Concurrent retry created attempt two on the same order with one active reservation; success consumed once."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Authenticated deployment sweep expired abandoned reservation; a second sweep did not release twice."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Authenticated deployment sweep expired abandoned reservation; a second sweep did not release twice."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Late financial success is recorded with manual review, no fulfillment, no re-reservation and no stock deduction."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "A later signed FAILED event could not downgrade SUCCEEDED."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Unpaid PLACED was hidden and mutation denied; paid order appeared in the already-open kitchen by polling."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Two popcorn plus Pepsi share one aggregate ACTIVE reservation of three portions; on-hand stock remains unchanged."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Signed success atomically consumed aggregate recipe stock, cleared reservations and inserted ORDER_CONSUMPTION."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "No-recipe NOT_TRACKED payment confirmed without fake inventory reservations or movements."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Two popcorn plus Pepsi share one aggregate ACTIVE reservation of three portions; on-hand stock remains unchanged."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Other guest cannot read, retry or simulate an owner's payment; public order code without trusted cookie is insufficient."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Other guest cannot read, retry or simulate an owner's payment; public order code without trusted cookie is insufficient."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Own-organization admin rendered safe payment summary; foreign organization could not retrieve it."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Location manager sees Beirut summary but cannot retrieve a Dbayeh payment outside current grants."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Kitchen DTO has no provider/financial payment details; staff cannot access admin payment view."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Delivery staff session cannot mutate customer payments or run expiry without the job credential."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Explicit legacy order has no fabricated payment and remains actionable in kitchen."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "Screening end expired unpaid holds; late signed success required review and could not fulfill. Previously paid order remained operational."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Actual admin screening cancellation expired pending stock; financial late success was retained for review with no automatic refund or kitchen entry."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Confirmed customer sees order code, Hall 1, seat A7, then actual kitchen acceptance arrives through progress polling."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Actual failed page explains release and offers same-order retry."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "Actual 390×844 cart → checkout → Pay/test processing → verified success → fulfillment progress; failure/retry was also rendered and interacted with."
+    },
+    "AQ": {
+      "status": "PASS",
+      "evidence": "Real migrated PostgreSQL persisted linked payments, attempts, webhook event, reservation and reserved stock with no invariant violations."
+    },
+    "AR": {
+      "status": "PASS",
+      "evidence": "Executed payment flow persisted exclusively in PostgreSQL; inspected payment/order/availability sources contain no Firestore calls."
+    },
+    "AS": {
+      "status": "PASS",
+      "evidence": "Inspected source diff against actual ephemeral webhook/job/private-key/guest secrets; no leaked values or card inputs. Final staged scan is repeated before commit."
+    },
+    "AT": {
+      "status": "PASS",
+      "evidence": "Eight screenshots captured actual sandbox CineBite pages using native browser screenshots, no desktop/browser chrome; manual visual review follows."
+    },
+    "CANCELLATION_RECOVERY": {
+      "status": "PASS",
+      "evidence": "Provider retrieval temporarily failed: stock still released, cancellation stayed durable, and the next real job request completed it after recovery."
+    },
+    "CREATION_RECOVERY": {
+      "status": "PASS",
+      "evidence": "Simulated provider-create/bind crash recovered the same intent via an actual status request; no duplicate provider session."
+    },
+    "SUPERSEDED_SUCCESS": {
+      "status": "PASS",
+      "evidence": "Late success from an older failed attempt required review, released replacement holds and cancelled the replacement provider session without consuming stock."
+    },
+    "FULFILLMENT_REGRESSION": {
+      "status": "PASS",
+      "evidence": "Paid order completed real kitchen and delivery transitions even after screening cancellation, with six immutable events and no second stock consumption/payment mutation."
+    },
+    "REAL_PROVIDER": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No real provider selected or credentials configured; deterministic sandbox only, no real charge/card tests."
+    }
+  }
+}

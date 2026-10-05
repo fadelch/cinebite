@@ -20,6 +20,11 @@ process.env.FIREBASE_ADMIN_CLIENT_EMAIL = "test@demo-cinebite-phase13.iam.gservi
 process.env.FIREBASE_STORAGE_BUCKET = "demo-cinebite-phase13.appspot.com";
 process.env.FIREBASE_ADMIN_PRIVATE_KEY = generateKeyPairSync("rsa", { modulusLength: 2048, privateKeyEncoding: { type: "pkcs8", format: "pem" }, publicKeyEncoding: { type: "spki", format: "pem" } }).privateKey;
 const base = "http://127.0.0.1:3113";
+// Phase 14 requires verified test payment before these operational regression tests.
+process.env.PAYMENT_PROVIDER = "sandbox";
+process.env.PAYMENT_SANDBOX_ENABLED = "true";
+process.env.PAYMENT_PROVIDER_WEBHOOK_SECRET = randomUUID() + randomUUID();
+process.env.PAYMENT_RESERVATION_MINUTES = "12";
 const evidenceRun = randomUUID().slice(0, 8);
 const output = path.join(process.cwd(), "linkedin", "phase-13");
 const results = new Map<string, { status: "PASS" | "FAIL" | "NOT EXECUTABLE"; evidence: string }>();
@@ -124,6 +129,8 @@ async function main() {
     for (const context of guests) {
       const response = await context.request.post(`${base}/api/customer/orders`, { headers: { Origin: base }, data: { idempotencyKey: randomUUID(), customerNote: "No salt, please." } });
       assert.equal(response.status(), 201, `Local demo checkout: ${response.status()}`); orders.push((await response.json()).order);
+      const paid = await context.request.post(`${base}/api/customer/payments/${orders.at(-1)!.publicOrderCode}/sandbox`, { headers: { Origin: base }, data: { outcome: "SUCCEEDED" } });
+      assert.equal(paid.status(), 200, "Verified demo payment must clear this operational test order.");
     }
     const code = orders[0].publicOrderCode;
     const customer = await guests[0].newPage();

@@ -14,6 +14,7 @@ const database = vi.hoisted(() => {
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/db/prisma", () => ({ prisma: database.prisma }));
+vi.mock("@/lib/payments/config", () => ({ paymentConfig: () => ({ minutes: 12 }) }));
 
 import { Prisma } from "@/generated/prisma/client";
 import { getCustomerOrderRecord, placeOrderRecord } from "@/server/repositories/order.repository";

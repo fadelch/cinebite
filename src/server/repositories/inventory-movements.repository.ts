@@ -57,7 +57,7 @@ export async function applyStockMovementRecord(input: {
       where: {
         id: existing.id,
         organizationId: input.organizationId,
-        ...(inbound ? {} : { quantityOnHand: { gte: quantity } }),
+        ...(inbound ? {} : { quantityReserved: existing.quantityReserved, quantityOnHand: { gte: quantity.plus(existing.quantityReserved ?? 0) } }),
       },
       data: { quantityOnHand: inbound ? { increment: quantity } : { decrement: quantity } },
     });

@@ -18,7 +18,7 @@ export async function getStockAvailabilityInputsRecord(organizationId: string, p
                 select: {
                   locationInventories: {
                     where: { locationId },
-                    select: { quantityOnHand: true },
+                    select: { quantityOnHand: true, quantityReserved: true },
                   },
                 },
               },
