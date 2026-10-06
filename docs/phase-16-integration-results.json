@@ -1,0 +1,210 @@
+{
+  "executedAt": "2026-10-06T12:54:23.402Z",
+  "environment": "Isolated local PostgreSQL / demo Auth emulator / production Next / Chromium",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Empty SQL period has zero paid orders and no financial rows; Decimal zero AOV rule executed."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "SQL groups USD38 and LBP100000 separately; no combined amount."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Actual SQL report: captures 10+20=30, successful refund 5, net25, AOV15; failed100/pending100/failed7/processing2 excluded; failed duplicate attempts do not double-count."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Two historical Popcorn snapshots, 2×5 + 3×6, report 5 units and exact28 gross; payment/item joins do not multiply captures."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Two historical Popcorn snapshots, 2×5 + 3×6, report 5 units and exact28 gross; payment/item joins do not multiply captures."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Actual product/hall/movie renames and inactive product leave snapshot names and historical sales unchanged."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Authenticated URL tampering rejected: manager foreign location403; organization override400; cross-tenant location403 both ways."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Authenticated URL tampering rejected: manager foreign location403; organization override400; cross-tenant location403 both ways."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Cinema admin location SQL rows attribute Dbayeh25 and Beirut currency-separated captures independently."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Interstellar/Dune and two independent Interstellar screenings aggregate their own successful captures only; no ticket revenue."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Interstellar/Dune and two independent Interstellar screenings aggregate their own successful captures only; no ticket revenue."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Real persisted events report preparation6, delivery4, fulfillment11; incomplete and negative preparation pairs excluded, with sample/exclusion counts."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Real persisted events report preparation6, delivery4, fulfillment11; incomplete and negative preparation pairs excluded, with sample/exclusion counts."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Real persisted events report preparation6, delivery4, fulfillment11; incomplete and negative preparation pairs excluded, with sample/exclusion counts."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Real persisted events report preparation6, delivery4, fulfillment11; incomplete and negative preparation pairs excluded, with sample/exclusion counts."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Real persisted events report preparation6, delivery4, fulfillment11; incomplete and negative preparation pairs excluded, with sample/exclusion counts."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "SQL InventoryMovement report keeps consumption300g and waste50g separate, with explicit unit; current reserved-aware low-stock count1."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "SQL InventoryMovement report keeps consumption300g and waste50g separate, with explicit unit; current reserved-aware low-stock count1."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Canceled unpaid order increases cohort cancellations but adds no revenue; captured/refunded canceled order reports gross10/refunds10/net0."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Canceled unpaid order increases cohort cancellations but adds no revenue; captured/refunded canceled order reports gross10/refunds10/net0."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Delivered order remains delivered while its actual successful refund is included financially."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Actual before/at/after-midnight SQL records use Beirut [start,end); boundary2 appears once, adjacent-period3 only in next range."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Actual before/at/after-midnight SQL records use Beirut [start,end); boundary2 appears once, adjacent-period3 only in next range."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Actual before/at/after-midnight SQL records use Beirut [start,end); boundary2 appears once, adjacent-period3 only in next range."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Deterministic Temporal conversion executes a 25-hour Beirut DST calendar day, no fixed offset."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Every report is rechecked against the manager's sole authorized location; kitchen/delivery403, unauthenticated401; no client dataset aggregation privilege bypass."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Every report is rechecked against the manager's sole authorized location; kitchen/delivery403, unauthenticated401; no client dataset aggregation privilege bypass."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Every report is rechecked against the manager's sole authorized location; kitchen/delivery403, unauthenticated401; no client dataset aggregation privilege bypass."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Actual authorized product CSV matches exact dashboard units/gross, safe fixed filename and metadata; no credential/provider fields."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Actual CSV export quotes/prefixes a persisted =2+2 entity name so it is spreadsheet text, not a formula."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "CSV export independently authenticates and authorizes scope; manipulated location/foreign tenant/kitchen requests denied."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "Server-paginated SQL pages include every matching order exactly once, with stable tie-breakers; no full history sent for page1."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Real empty application route displays professional No data for this period, no fabricated growth or Infinity/NaN."
+    },
+    "AN": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "Optional previous-period comparison is deliberately not implemented; zero-denominator growth helper was separately executed in offline tests. No Infinity/NaN comparison is presented."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Actual product/hall/movie renames and inactive product leave snapshot names and historical sales unchanged."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "Actual product/hall/movie renames and inactive product leave snapshot names and historical sales unchanged."
+    },
+    "AQ": {
+      "status": "PASS",
+      "evidence": "Inactive location and previously inactive hall do not erase valid historical financial reports."
+    },
+    "AR": {
+      "status": "PASS",
+      "evidence": "1,000 additional persisted demo orders/payments/items queried in 39.0ms HTTP end-to-end; constant SQL aggregation query count, not per-order N+1."
+    },
+    "AS": {
+      "status": "PASS",
+      "evidence": "Native 390×844 view: KPI cards/filters/chart/table remain inside viewport, mobile navigation scrolls locally and Apply is accessible."
+    },
+    "AT": {
+      "status": "PASS",
+      "evidence": "Tablet820×1180 plus desktop1440×1000 execute native reporting pages without horizontal page overflow."
+    },
+    "AU": {
+      "status": "PASS",
+      "evidence": "Executed reporting source is PostgreSQL only; inspected new service/repository for Firestore imports/calls—none present."
+    },
+    "AV": {
+      "status": "PASS",
+      "evidence": "Nine actual native CineBite PNGs captured from isolated fictional SQL data, app-only without desktop/browser chrome. Visual review follows."
+    },
+    "EXPORT_REQUEST_GUARDS": {
+      "status": "PASS",
+      "evidence": "Actual export requests reject foreign Origin403, body over4096bytes413, invalid JSON400 and anonymous401; error response exposes no SQL/private data."
+    },
+    "FILTER_VALIDATION": {
+      "status": "PASS",
+      "evidence": "Actual API rejects impossible/reversed/oversized dates, invalid IANA timezone, SQL-looking sort and duplicated query filters with safe400."
+    },
+    "EXPORT_RATE_LIMIT": {
+      "status": "PASS",
+      "evidence": "PostgreSQL export throttle rejects a seventh per-user/per-tenant export in the fixed minute window; independently authorized requests only."
+    }
+  }
+}
