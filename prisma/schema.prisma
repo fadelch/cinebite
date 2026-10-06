@@ -167,6 +167,7 @@ enum OrderIssueStatus {
 }
 
 enum AuditAction {
+  REPORT_EXPORTED
   ORDER_CANCELED
   REFUND_CREATED
   REFUND_SUCCEEDED
@@ -239,6 +240,7 @@ enum AuditAction {
 }
 
 enum AuditEntityType {
+  ANALYTICS
   ORGANIZATION
   LOCATION
   USER
@@ -799,6 +801,7 @@ model Payment {
   refunds              Refund[]
 
   @@index([status, updatedAt])
+  @@index([status, succeededAt])
   @@map("payments")
 }
 
@@ -884,6 +887,15 @@ model PaymentRateLimit {
   @@map("payment_rate_limits")
 }
 
+model ReportExportLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("report_export_limits")
+}
+
 model OrderCancellation {
   id                   String               @id @default(cuid())
   orderId              String               @unique
@@ -929,6 +941,7 @@ model Refund {
   @@unique([paymentId, idempotencyKey])
   @@index([orderId, createdAt])
   @@index([status, updatedAt])
+  @@index([status, succeededAt])
   @@map("refunds")
 }
 

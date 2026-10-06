@@ -4,11 +4,44 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 ## Current phase
 
-**Phase 15 — Cancellations, Refunds & Exceptions (sandbox only)**
+**Phase 16 — Analytics & Reporting**
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
-This phase does not implement real-money merchant onboarding, chargebacks/disputes, loyalty, promotions, subscriptions, accounting exports, fraud scoring, support chat or advanced analytics. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+Phase 16 adds server-calculated, tenant-safe concession analytics, operational timings, inventory consumption reports and authorized CSV export from existing PostgreSQL records. It does not implement real-money merchant onboarding, chargebacks, accounting/tax reporting, profit/COGS, FX, predictions or a BI warehouse. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+
+## Phase 16 analytics
+
+Open `/admin/analytics` as Cinema Admin or an authorized Location Manager. The eleven reports are Overview, Revenue, Orders, Products, Categories, Locations, Movies, Screenings, Halls, Operations and Inventory. Kitchen, Delivery, customer and anonymous identities cannot access financial reporting. There is no cross-organization Super Admin bypass.
+
+`analytics.service.ts` reloads current PostgreSQL membership/location grants after verifying the Firebase session, validates Zod filters and resolves calendar boundaries before querying `analytics.repository.ts`. A repeatable-read transaction keeps totals and rows consistent; React receives bounded, sanitized DTOs rather than raw historical records. The API and CSV use the same service and scope. No normal Firestore analytics business records are created.
+
+| Metric | Exact definition |
+| --- | --- |
+| Gross revenue | Canonical SUCCEEDED online Payment amounts settling in the period, per currency; never failed/pending payments or duplicate attempts. |
+| Successful refunds | SUCCEEDED Refund amounts settling in the period; processing/failed refunds excluded. |
+| Net revenue | Gross minus successful refunds; can be negative when older charges are returned. Not profit. |
+| Paid orders | Unique orders with canonical successful online captures in the settlement period; unpaid legacy orders excluded. |
+| AOV | Gross / paid count, Decimal-safe; zero-count rule is 0.00. |
+| Revenue refund rate | Successful refunded amount / gross × 100; no denominator means unavailable. |
+| Cancellation rate | Currently canceled / total created orders in the selected creation-date cohort × 100. |
+| Order volume/status | Creation-date cohort, classified by current PLACED through DELIVERED/CANCELED status; not historical-as-of reconstruction. |
+| Product gross sales | Successful paid orders' immutable OrderItem line totals and quantities, grouped by stable product ID/currency. |
+| Preparation / acceptance | Valid paired PREPARING→READY / PLACED→ACCEPTED event durations. |
+| Delivery / fulfillment | Valid paired OUT_FOR_DELIVERY→DELIVERED / PLACED→DELIVERED durations for delivered orders. |
+| Inventory consumption | ORDER_CONSUMPTION movement magnitudes; restoration, WASTE and ADJUSTMENT_OUT are separate, with explicit item/unit. |
+
+For example, successful captures 10.00 + 20.00, successful refund 5.00 and a failed capture 100.00 produce gross 30.00, refunds 5.00, net 25.00 and AOV 15.00. USD and LBP are never added together or compared as one monetary ranking. Product net sales are unavailable without item-level refund allocation; category reporting explicitly uses current category grouping because old orders lack category snapshots. Revenue cannot be called profit without actual costs/fees/taxes.
+
+Location/movie/screening/hall reports attribute concession money to immutable order context and retain historical name/price snapshots after current renames/inactivation. Movie/hall screening counts cover observed screenings with attributed orders, not all scheduled showings or ticket revenue. Operations includes mean, median, P90 and valid/excluded samples, never invented zero times or contractual SLA claims. Current available/low/out-of-stock summaries are explicitly separate from historical movement reports; unlike units are never summed.
+
+Today, Yesterday, Last 7/30 days, This/Previous month and Custom ranges use inclusive calendar dates converted to `[start, next-day-end)` instants, capped at 366 days. Single-location reports use its configured timezone; multi-location reports use one explicit IANA report timezone (Beirut default). Temporal handles DST. Captures use Payment.succeededAt; refunds use Refund.succeededAt; operational cohort counts use Order.createdAt; movements use their creation time. Daily chart buckets are server-derived; missing days are zero-filled only for currencies present. Empty datasets display no-data text, not fake growth.
+
+Report tables have allowlisted server sorting and pagination (maximum 100 rows/page). SQL aggregates inside PostgreSQL, avoids per-order N+1 requests, reuses existing scope indexes and adds settled Payment/Refund time indexes. Statement/transaction timeouts bound requests. No cache, rollup or warehouse was added; `no-store` avoids cross-tenant/stale reports. Local 1,000-order performance evidence is not a production-scale throughput claim.
+
+CSV export reruns current authorization, includes scope/date/timezone context in rectangular rows and stops at 5,000 rows. Same-origin and body-size checks protect the POST endpoint; PostgreSQL enforces six exports per actor/tenant/minute. Exports are audited, ordinary reads are not. Quoted UTF-8/CRLF output protects user text beginning with whitespace and `=`, `+`, `-` or `@` by prefixing an apostrophe. No session token, QR credential, staff secret, Firebase UID or provider ID is exported. Filename comes from validated report/dates. Exact money remains Decimal strings; only chart coordinates use approximate numeric conversion.
+
+Read the [66-point architecture explanation](docs/phase-16-architecture.md), [executed verification and reproduction](docs/phase-16-verification.md), [per-case evidence](docs/phase-16-integration-results.json) and [nine native screenshots](linkedin/phase-16/README.md). Optional previous-period comparison, seat profiling, configured SLA targets and platform analytics were not implemented. Production was not migrated: after review/merge, deploy the additive Phase 16 migration using your reviewed direct connection before running the updated application. Never run fixture verification against production or load `.env.local` into its runner.
 
 ## Architecture
 
