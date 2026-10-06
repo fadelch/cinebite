@@ -2,6 +2,45 @@
 
 CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and Prisma are the authoritative business-data layer, Firebase Authentication provides identity, and Firebase Storage holds normalized product and movie media.
 
+## App preview
+
+Actual CineBite screens captured with fictional demo/test data. Expand the previews below to see the complete pages; no real customer information or production financial data is shown.
+
+### Kitchen operations
+
+Staff track orders from new tickets through acceptance, preparation and readiness for delivery.
+
+![CineBite kitchen dashboard with new, accepted, preparing and ready order columns](linkedin/phase-12/01-kitchen-queue.png)
+
+<details>
+<summary>Customer menu — mobile seat ordering</summary>
+
+Customers browse concessions for their movie, hall and seat, then add products to their cart.
+
+![CineBite mobile customer menu showing popcorn and drinks for a cinema seat](linkedin/phase-11/01-customer-menu-add-to-cart.png)
+
+</details>
+
+<details>
+<summary>Delivery dashboard — from kitchen to seat</summary>
+
+The delivery supervisor view separates ready orders, active deliveries and recently delivered orders, with clear hall and seat destinations.
+
+![CineBite delivery dashboard showing ready orders, active deliveries and delivered seat destinations](linkedin/phase-13/01-delivery-ready-queue.png)
+
+</details>
+
+<details>
+<summary>Analytics dashboard — revenue and operational reporting</summary>
+
+Authorized staff review currency-separated revenue and refunds, order trends, product performance, location comparisons and kitchen/delivery timings.
+
+![Full CineBite analytics dashboard with currency-specific KPIs, charts and performance reports](linkedin/phase-16/01-analytics-overview.png)
+
+</details>
+
+More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md).
+
 ## Current phase
 
 **Phase 16 — Analytics & Reporting**
