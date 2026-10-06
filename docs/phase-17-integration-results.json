@@ -1,0 +1,195 @@
+{
+  "executedAt": "2026-10-06T13:44:05.463Z",
+  "environment": "Isolated PostgreSQL 17 / Firebase Auth emulator / sandbox verified payment-refund / production Next build / native Chromium",
+  "externalProvider": "NOT CONFIGURED",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Unpaid order emits no kitchen alert; verified signed sandbox payment makes it eligible and creates exactly one location-A kitchen notification."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Kitchen staff restricted to location B see no location-A new-order alert."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Duplicate signed payment webhooks and repeated processor calls do not duplicate NEW_ORDER."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Owning customer session receives one ACCEPTED update, including repeated processing."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Committed PREPARING transition produces customer preparation notification."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "Committed READY transition produces customer's ready update."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Authorized location-A delivery staff receive one READY alert."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Location-B delivery staff see no location-A READY alert."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Actual atomic delivery claim emits customer's on-the-way message without staff personal data."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Assigned delivery completion emits delivered notification, without settlement claims."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Customer cancellation retains committed CANCELED state and emits private cancellation update."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Pending refund cancellation says processing, never falsely claims completion."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Verified sandbox refund success emits safe exact amount/currency customer notification."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "FAILED refund alerts cinema admin and authorized manager; customer sees attention wording, not refunded or raw provider error."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Actual inventory transition IN_STOCK to LOW_STOCK creates one authorized manager alert."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Repeated real inventory/dashboard reads create no events or repeated low-stock alerts."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Available zero stock produces stronger mandatory CRITICAL out-of-stock warning."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Restock above threshold creates one documented STOCK_RECOVERED informational-success alert."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Assigned worker issue alerts supervisors and leaves order/refund/inventory authority untouched."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Other cinema sees no tenant-A data; caller-supplied organizationId rejected by strict query validation."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Another user's notification cannot be marked read, even by a different cinema admin."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Read marking updates only readAt, decrements count once and is idempotent."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Mark-all affects only the authenticated user's authorized inbox."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Disabled PG user receives no actionable new alert and cannot retrieve their inbox."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Valid session cannot retrieve another customer's order notifications."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Public code without owning secure session is insufficient."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Injected provider failure leaves verified payment/eligibility committed and persists safe bounded retry state."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Due retry succeeds and subsequent processing produces exactly one alert."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Four concurrent processors execute SKIP LOCKED claim/delivery with one committed notification."
+    },
+    "AD": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No approved external provider is configured. Real external-delivery failure test intentionally not executed. IN_APP failure injection exercised in AA."
+    },
+    "AE": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No external provider adapter/account configured; live external retries cannot be claimed. Bounded IN_APP fault retries independently executed below."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Optional ORDERS disabled for kitchen is honored for the next eligible order, without hiding the work queue."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Exception preference cannot be disabled; mandatory OUT_OF_STOCK bypasses disabled optional INVENTORY."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Exactly three unread become exactly two when one is read."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Stable createdAt/id pagination produces two bounded nonoverlapping pages, including timestamp ties."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Actual malicious inventory label is rendered as literal React-escaped text; script sentinel never executes."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Deep link resolves to permission-checked existing order page; foreign tenant sees no order code. Arbitrary inbox target query rejected."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "390px mobile inbox, admin bell panel and owning-customer progress load without horizontal page overflow; reduced motion used."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "New business data persisted in PostgreSQL; notification implementation contains no Firestore writes."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Eight full-page native Chromium PNGs captured from real application UI with fictional isolated demo data, no browser or desktop chrome."
+    },
+    "BOUNDED_IN_APP_RETRY": {
+      "status": "PASS",
+      "evidence": "Five injected failures persist terminal FAILED; subsequent jobs do not retry; paid order unchanged."
+    },
+    "EXTRA_SECURITY_ATOMICITY": {
+      "status": "PASS",
+      "evidence": "Executed authenticated job/401, CSRF/403, strict read/preference injection/400, fresh location revoke, rollback no-outbox, expired customer session/401 and committed screening cancellation alerts without weakening canceled-screening session rules."
+    },
+    "SAFE_AUDIT": {
+      "status": "PASS",
+      "evidence": "Preference changes audited with category/boolean only; read operations do not flood audit; terminal delivered order unchanged."
+    },
+    "PARTIAL_INSERT_RETRY": {
+      "status": "PASS",
+      "evidence": "Provider throws after actual DB insertion; savepoint removes partial drafts, retry commits exactly one kitchen alert."
+    },
+    "EXTRA_DATABASE_RECOVERY": {
+      "status": "PASS",
+      "evidence": "An actual PostgreSQL division-by-zero abort within the provider is recovered by savepoint; durable retry persists and then sends once."
+    },
+    "EXTRA_LEGACY_PAYMENT_FAILURE": {
+      "status": "PASS",
+      "evidence": "Explicit historical legacy fixture becomes eligible without online payment; actual failed signed sandbox attempt privately alerts customer but never kitchen."
+    },
+    "EXTRA_RETENTION": {
+      "status": "PASS",
+      "evidence": "Bounded cleanup removes an actually expired notification and old processed outbox; all business order/status-event history is retained."
+    }
+  }
+}

@@ -43,11 +43,31 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 16 — Analytics & Reporting**
+**Phase 17 — Notifications & Alerts**
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
 Phase 16 adds server-calculated, tenant-safe concession analytics, operational timings, inventory consumption reports and authorized CSV export from existing PostgreSQL records. It does not implement real-money merchant onboarding, chargebacks, accounting/tax reporting, profit/COGS, FX, predictions or a BI warehouse. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+
+## Phase 17 notifications
+
+Staff in-app alerts and private customer order updates are persisted in PostgreSQL. The bell appears in Admin, Kitchen and Delivery; `/notifications` offers All/Unread, type filters, 20-row pages, mark-one/mark-all and staff preferences. The customer order/payment pages show only the owning, still-valid anonymous seat session's updates. Customers need no email, phone or account. A public order code alone never grants access.
+
+An additive migration installs AFTER triggers on authoritative orders, status events, payments/refunds, inventory transitions, issues and screening cancellation. The business transaction writes a minimal, durable `NotificationOutbox` event atomically; no notification provider is contacted there. A separately authenticated, serverless-compatible job resolves current active staff membership, role and location grants, then creates `Notification` rows with unique per-event/per-recipient dedupe keys. Notification read state is only presentation: it never changes orders, money, stock or delivery. The domain remains PostgreSQL-authoritative; no Firestore writes were added.
+
+Kitchen NEW_ORDER is emitted only after verified online payment makes an order eligible, or for an explicitly eligible legacy payment policy. READY notifies the owning customer and authorized delivery staff. Customer updates cover accepted, preparing, on-the-way, delivered, canceled, payment failure and verified refunds. Pending refunds are never called completed. Stock alerts happen only when available quantity (on-hand minus reserved) crosses a threshold; recovery above low-stock threshold emits STOCK_RECOVERED. Refund failures, order issues and affected screening cancellations alert authorized supervisors/operators. Existing business services and financial analytics remain authoritative.
+
+Delivery is transactionally deduplicated with row locks, `SKIP LOCKED` and unique keys. Failures roll back partial notification drafts while persisting retry state: at most five attempts, 30/60/120/240-second retry delays, then FAILED. The committed business event remains intact. Category preferences default on; OUT_OF_STOCK, REFUND_FAILED, ORDER_ISSUE_REPORTED and SCREENING_CANCELED remain mandatory. Staff authorization is checked again on reads and mutations, including current location grants and current role eligibility for older messages. React escapes text; deep links come from allowlisted internal routes, not arbitrary URLs.
+
+**Deployment step:** after review/merge, use your reviewed direct database connection with `npm run prisma:migrate:deploy` (no reset or destructive db push). The trusted runtime SQL role must own the migrated objects or have explicitly reviewed table/emit-function privileges; PUBLIC access to the event-emitter function is revoked. Generate a server-only random `NOTIFICATION_JOB_SECRET` of 32–512 non-whitespace characters and configure an HTTPS scheduler to POST `/api/notifications/process` with `Authorization: Bearer <secret>`. Invoke regularly, e.g. every minute; do not put the secret in a URL, browser or `NEXT_PUBLIC_` variable. Without an authorized scheduler, events remain durably pending and no in-app alerts are delivered. The job processes at most 25 events per call, stops taking work after 20 seconds, uses bounded DB transactions and prunes at most 1,000 expired notifications/old completed outbox entries per call. Increase invocation frequency for measured volume. There is no immortal in-memory production worker or automatic production scheduler provisioning.
+
+Notifications expire after 30 days from the event; processed/failed outbox records without notifications retire after 90 days. Business and audit histories are untouched. Anonymous session expiry, seat/location suspension and canceled-screening rules still apply: a persisted customer notification does not extend anonymous access. The safe DTO excludes recipient/session IDs, provider IDs and raw payload metadata.
+
+Only **in-app** delivery is implemented. `NotificationChannelProvider` is the adapter seam for this phase; a future approved external channel needs its own durable delivery record, verified recipient/consent policy, stable provider idempotency and vendor adapter. No email/SMS/WhatsApp/push, contact collection, browser permission prompt, audio or marketing is enabled. A test-injected failing in-app adapter is not a working production external provider.
+
+![CineBite persistent staff notification center with stock, refund and order-issue updates](linkedin/phase-17/01-notification-center.png)
+
+See the [62-topic architecture explanation](docs/phase-17-architecture.md), [executed checks and deployment guide](docs/phase-17-verification.md), [individual A–AN results](docs/phase-17-integration-results.json) and [eight native full-page screenshots](linkedin/phase-17/README.md). Production has not been migrated or seeded by the verification runner. Phase 18 has not been started.
 
 ## Phase 16 analytics
 

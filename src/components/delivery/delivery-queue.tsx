@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationBell } from "@/components/notifications/notification-center";
 import { DeliveryOrderCard } from "@/components/delivery/delivery-order-card";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { useNotifications } from "@/components/ui/notification-provider";
@@ -49,6 +50,7 @@ export function DeliveryQueue({ initialQueue, query, locations, staff, superviso
     : !supervisor && queue.ready.length === 0 && queue.delivered.length > 0 ? [sections[2], sections[0], sections[1]] : sections;
   return <main className="min-h-screen bg-[#09090b] p-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:p-6">
     <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold tracking-[0.18em] text-amber-400 uppercase">CineBite delivery</p><h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Delivery operations</h1><p className="mt-2 text-sm text-zinc-400">From the kitchen, directly to the seat.</p></div><div className="flex gap-3">{supervisor ? <Link href="/admin/orders" className="cb-button-secondary">Admin orders</Link> : null}<LogoutButton /></div></header>
+    <div className="mt-4 flex justify-end"><NotificationBell /></div>
     <details className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4"><summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-zinc-300">Filters and delivery history</summary><form action="/delivery" className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
       <label className="text-xs text-zinc-400">Location<select name="locationId" defaultValue={query.locationId ?? ""} className="cb-field mt-1">{locations.length !== 1 ? <option value="">All authorized locations</option> : null}{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
       <label className="text-xs text-zinc-400">Hall<input name="hall" defaultValue={query.hall} placeholder="Hall 1" className="cb-field mt-1" /></label>

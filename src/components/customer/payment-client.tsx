@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { usePolling } from "@/lib/hooks/use-polling";
 import type { CustomerOrder } from "@/types/order";
 import { FinancialPanel } from "@/components/orders/financial-panel";
+import { CustomerNotifications } from "@/components/notifications/customer-notifications";
 
 export interface CustomerPayment {
   order: CustomerOrder; status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
@@ -63,5 +64,6 @@ export function PaymentClient({ initialPayment }: { initialPayment: CustomerPaym
       <Link href="/customer/menu" className="mt-5 block text-center text-sm text-amber-300">Back to menu</Link>
     </motion.section>
     <FinancialPanel identifier={order.publicOrderCode} onUpdated={refresh} />
+    <CustomerNotifications code={order.publicOrderCode} />
   </div></main>;
 }
