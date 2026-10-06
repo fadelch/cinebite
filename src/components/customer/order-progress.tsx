@@ -9,6 +9,7 @@ import { usePolling } from "@/lib/hooks/use-polling";
 import { ORDER_STATUSES, orderStatusLabel } from "@/lib/orders/status";
 import type { CustomerOrder } from "@/types/order";
 import { FinancialPanel } from "@/components/orders/financial-panel";
+import { CustomerNotifications } from "@/components/notifications/customer-notifications";
 
 const progressMessage = {
   PLACED: "We received your order", ACCEPTED: "The kitchen accepted your order",
@@ -17,6 +18,9 @@ const progressMessage = {
 };
 
 export function CustomerOrderProgress({ initialOrder }: { initialOrder: CustomerOrder }) {
+  return <><CustomerOrderProgressContent initialOrder={initialOrder} /><div className="bg-[#09090b] px-4 pb-6"><CustomerNotifications code={initialOrder.publicOrderCode}/></div></>;
+}
+function CustomerOrderProgressContent({ initialOrder }: { initialOrder: CustomerOrder }) {
   const { data: order, error, refresh } = usePolling(`/api/customer/orders/${initialOrder.publicOrderCode}`, initialOrder);
   const reduced = useReducedMotion();
   const current = ORDER_STATUSES.findIndex(status => status === order.status);

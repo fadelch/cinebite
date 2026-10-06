@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationBell } from "@/components/notifications/notification-center";
 import { joinClassNames } from "@/lib/utils";
 import type { TenantShellContext } from "@/types/tenant-admin";
 
@@ -36,6 +37,7 @@ export function AdminShell({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(244,185,66,0.055),transparent_34%),var(--background)]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-[var(--cb-border)] bg-[#0c0c0f]/95 px-5 py-6 backdrop-blur lg:flex lg:flex-col">
         <AdminBrand organizationName={context.organizationName} />
+        <div className="mt-4"><NotificationBell /></div>
         <nav aria-label="Cinema Admin navigation" className="mt-10 space-y-1">
           {navigation.map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -72,9 +74,9 @@ export function AdminShell({
       </aside>
 
       <header className="sticky top-0 z-20 border-b border-[var(--cb-border)] bg-[#0c0c0f]/92 px-4 py-3 backdrop-blur lg:hidden">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <AdminBrand organizationName={context.organizationName} compact />
-          <LogoutButton />
+          <div className="flex flex-wrap justify-end gap-2"><NotificationBell /><LogoutButton /></div>
         </div>
         <nav aria-label="Cinema Admin mobile navigation" className="mt-3 flex gap-2 overflow-x-auto pb-1">
           {navigation.map((item) => {

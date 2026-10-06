@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
+import { NotificationBell } from "@/components/notifications/notification-center";
 import { KitchenOrderDetail } from "@/components/kitchen/kitchen-order-detail";
 import { useNotifications } from "@/components/ui/notification-provider";
 import { usePolling } from "@/lib/hooks/use-polling";
@@ -48,6 +49,7 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
 
   return <main className="min-h-screen bg-[#09090b] p-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:p-6">
     <header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.18em] text-amber-400 uppercase">CineBite kitchen</p><h1 className="mt-1 text-2xl font-semibold text-white sm:text-3xl">Kitchen operations</h1><p className="mt-1 text-sm text-zinc-500">Prepare orders for every seat.</p></div><div className="flex items-center gap-3">{canOpenAdmin ? <Link href="/admin/orders" className="cb-button-secondary">Admin orders</Link> : null}<LogoutButton /></div></header>
+    <div className="mt-4 flex justify-end"><NotificationBell /></div>
     <form action="/kitchen" className="mt-6 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 sm:grid-cols-3 xl:grid-cols-6">
       <label className="text-xs text-zinc-400">Location<select name="locationId" defaultValue={query.locationId ?? ""} className="cb-field mt-1"><option value="">All authorized locations</option>{locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}</select></label>
       <label className="text-xs text-zinc-400">Status<select name="status" defaultValue={query.status ?? ""} className="cb-field mt-1"><option value="">All kitchen steps</option>{KITCHEN_STATUSES.map((status) => <option key={status} value={status}>{columnLabels[status]}</option>)}</select></label>
