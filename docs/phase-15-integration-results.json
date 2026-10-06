@@ -1,0 +1,226 @@
+{
+  "executedAt": "2026-10-06T11:50:30.450Z",
+  "environment": "Isolated PostgreSQL loopback / Auth emulator / sandbox / production Next build / Chromium",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "PENDING unpaid cancellation confirmed by provider; active holds released, physical stock unchanged, no refund."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Real customer confirmation starts exact 12.50 USD full refund; original stock restored and charge preserved; processing/completed browser UX follows signed provider state."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Customer cancellation rejected with TOO_LATE_TO_CANCEL for actual ACCEPTED order."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Processing cancellation stops fulfillment but retains both stock holds until verified success; late capture starts refund and releases stock without consumption."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Customer cancellation rejected with TOO_LATE_TO_CANCEL for actual PREPARING order."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "Customer cancellation rejected with TOO_LATE_TO_CANCEL for actual READY order."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Customer cancellation rejected with TOO_LATE_TO_CANCEL for actual OUT_FOR_DELIVERY order."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Customer cancellation rejected with TOO_LATE_TO_CANCEL for actual DELIVERED order."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Concurrent customer cancel / kitchen accept: one succeeds, one 409; one coherent state and no 500."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Exceptional staff cancellation / delivery completion race has one terminal winner; delivered history is never canceled."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Changed recipe to 900g/3 cups after capture; cancellation restores original 300g/2 cups once, with two explicit restock movements, one event and one refund across repeated requests."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Changed recipe to 900g/3 cups after capture; cancellation restores original 300g/2 cups once, with two explicit restock movements, one event and one refund across repeated requests."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Changed recipe to 900g/3 cups after capture; cancellation restores original 300g/2 cups once, with two explicit restock movements, one event and one refund across repeated requests."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Explicit confirmed PREPARING cancellation starts remaining refund with NO_AUTO_RESTOCK; physical balances unchanged."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Real customer confirmation starts exact 12.50 USD full refund; original stock restored and charge preserved; processing/completed browser UX follows signed provider state."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Tampered 1000 USD refund on 12.50 capture rejected; no provider intent or refund created."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Verified 2.50 partial refund leaves immutable order total 12.50 and remaining balance 10.00."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Second verified partial refund: total returned 7.50, remaining 5.00."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "6.00 over-refund rejected against remaining 5.00."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Two authorized supervisors concurrently request 8.00 with 10.00 remaining: one intent wins, one 409, no 16.00 exposure."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Concurrent identical-key full refund creates one SQL refund and one durable provider intent."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Five identical signed success events produce one refund success/audit and zero inventory/order-cancellation changes."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Invalid refund webhook signature rejected before mutation; processing exposure remains reserved."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Sandbox FAILED refund retains failure history, opens supervisor issue, and browser shows attention—not false refunded success."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Failed refund retries as one new linked record; duplicate retry preserves failed history and cannot exceed capture."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Delivered partial refund preserves DELIVERED, snapshots and all physical inventory."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Full remaining delivered refund is exactly 10.00 after prior 2.50; delivered history and inventory unchanged."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Kitchen staff denied financial refund and exceptional cancellation by server authentication/RBAC."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Delivery staff denied refund and payment/cancellation financial mutation."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Beirut manager has Beirut financial access; Dbayeh refund and cancellation both fail 404 without leakage."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Both cross-tenant financial directions denied 404 by trusted organization grants."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Another seat session cannot cancel or read financial status of the order."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Assigned delivery worker reports CUSTOMER_UNAVAILABLE; creates OPEN issue only, no refund/restock/status rewind."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Malicious operational note rendered as literal escaped React text; browser script sentinel never executes."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Authorized manager records immutable reporting identity plus resolution, actor and trusted timestamp without automatic financial effects."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Actual screening cancellation + reviewed reconciliation cancels unpaid order, releases holds on provider confirmation and creates no refund."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Paid PLACED screening reconciliation starts full refund and restores original consumption exactly once."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "Preparing order remains operational with supervisor screening issue; no automatic restock or refund."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Delivered order preserved with no screening-driven refund, cancellation, restock or history rewind."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Same reconciliation twice: no duplicate cancellation/refund/restock/issue and stock/reservations unchanged."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Actual simultaneous provider-success / customer cancellation serializes to captured payment, canceled order and exactly one remaining refund, never fulfillment or negative holds."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "Five identical signed success events produce one refund success/audit and zero inventory/order-cancellation changes."
+    },
+    "AQ": {
+      "status": "PASS",
+      "evidence": "Real customer confirmation starts exact 12.50 USD full refund; original stock restored and charge preserved; processing/completed browser UX follows signed provider state."
+    },
+    "AR": {
+      "status": "PASS",
+      "evidence": "Admin view shows paid/refunded/processing/remaining with safe history and no provider/payment IDs or secrets."
+    },
+    "AS": {
+      "status": "PASS",
+      "evidence": "Inspected actual PostgreSQL relations, statuses, cancellation/event/refund/issue/movement records after all workflows."
+    },
+    "AT": {
+      "status": "PASS",
+      "evidence": "Executed Phase 15 persisted in isolated PostgreSQL only; inspected all new business layers for Firestore calls—none present."
+    },
+    "AU": {
+      "status": "PASS",
+      "evidence": "Actual 390x844 cancel/confirmation/processing/completed flow: native focus remains in modal including Shift+Tab, touch targets readable and no horizontal overflow."
+    },
+    "AV": {
+      "status": "PASS",
+      "evidence": "Nine real app-only native browser PNGs captured with fictional sandbox data and no browser/desktop chrome. Native-resolution visual review follows."
+    },
+    "FAILED_CANCELED_UNPAID": {
+      "status": "PASS",
+      "evidence": "FAILED and provider-CANCELED unpaid orders cancel without refunds, re-consumption or double reservation release."
+    },
+    "REFUND_CREATE_BIND_RECOVERY": {
+      "status": "PASS",
+      "evidence": "Simulated create/bind crash recovers same provider refund by stable SQL refund ID; no second provider intent or exposure."
+    },
+    "REFUND_CALLBACK_MISMATCH": {
+      "status": "PASS",
+      "evidence": "Correctly signed amount/currency/provider-refund/payment-ID mismatches are journaled REJECTED without financial mutation."
+    },
+    "REFUND_TERMINAL_REGRESSION": {
+      "status": "PASS",
+      "evidence": "Verified stale failure cannot rewind a successful refund, free its captured balance or create a false issue."
+    },
+    "QUEUE_REMOVAL": {
+      "status": "PASS",
+      "evidence": "Canceled online order is absent from actionable kitchen queue and cannot be reopened as a kitchen ticket."
+    },
+    "CSRF_AND_HISTORY": {
+      "status": "PASS",
+      "evidence": "Cross-origin financial POST rejected; PostgreSQL rejects cancellation-history, refund-amount and original-consumption mutation."
+    },
+    "REAL_PROVIDER": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No merchant provider selected/configured; sandbox refunds actually executed, no real money/card/provider account contacted."
+    }
+  }
+}

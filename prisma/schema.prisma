@@ -66,6 +66,7 @@ enum InventoryMovementType {
   ADJUSTMENT_OUT
   WASTE
   ORDER_CONSUMPTION
+  ORDER_CANCELLATION_RESTOCK
 }
 
 enum MovieStatus {
@@ -95,6 +96,7 @@ enum OrderStatus {
   READY
   OUT_FOR_DELIVERY
   DELIVERED
+  CANCELED
 }
 
 enum OrderStatusActorType {
@@ -123,7 +125,56 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum CancellationReason {
+  CUSTOMER_REQUEST
+  SCREENING_CANCELED
+  ITEM_UNAVAILABLE
+  OPERATIONAL_ISSUE
+  DELIVERY_ISSUE
+  DUPLICATE_ORDER
+  OTHER
+}
+
+enum InventoryDisposition {
+  NONE
+  RESERVATION_RELEASED
+  HOLD_UNTIL_PROVIDER_FINAL
+  AUTO_RESTOCKED
+  NO_AUTO_RESTOCK
+}
+
+enum OrderIssueType {
+  CUSTOMER_UNAVAILABLE
+  WRONG_SEAT_CONTEXT
+  ORDER_DAMAGED
+  ITEM_MISSING
+  SCREENING_CANCELED
+  PAYMENT_REFUND_FAILED
+  OTHER
+}
+
+enum OrderIssueStatus {
+  OPEN
+  RESOLVED
+}
+
 enum AuditAction {
+  ORDER_CANCELED
+  REFUND_CREATED
+  REFUND_SUCCEEDED
+  REFUND_FAILED
+  ORDER_ISSUE_REPORTED
+  ORDER_ISSUE_RESOLVED
+  INVENTORY_RESTORED_FOR_CANCELLATION
+  SCREENING_ORDER_RECONCILED
   ORGANIZATION_CREATED
   ORGANIZATION_SUSPENDED
   ORGANIZATION_REACTIVATED
@@ -221,6 +272,10 @@ model User {
   inventoryMovements InventoryMovement[]      @relation("InventoryMovementActor")
   orderStatusEvents  OrderStatusEvent[]
   deliveryOrders     Order[]                  @relation("DeliveryAssignment")
+  cancellations      OrderCancellation[]
+  refunds            Refund[]
+  reportedIssues     OrderIssue[]             @relation("IssueReporter")
+  resolvedIssues     OrderIssue[]             @relation("IssueResolver")
 
   @@map("users")
 }
@@ -670,6 +725,9 @@ model Order {
   inventoryMovements   InventoryMovement[]
   statusEvents         OrderStatusEvent[]
   deliveryAssignedUser User?                  @relation("DeliveryAssignment", fields: [deliveryAssignedUserId], references: [id], onDelete: Restrict)
+  cancellation         OrderCancellation?
+  refunds              Refund[]
+  issues               OrderIssue[]
 
   @@unique([customerSessionId, idempotencyKey])
   @@index([organizationId, createdAt])
@@ -738,6 +796,7 @@ model Payment {
   canceledAt           DateTime?        @db.Timestamptz(3)
   order                Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
   attempts             PaymentAttempt[]
+  refunds              Refund[]
 
   @@index([status, updatedAt])
   @@map("payments")
@@ -823,6 +882,88 @@ model PaymentRateLimit {
 
   @@index([expiresAt])
   @@map("payment_rate_limits")
+}
+
+model OrderCancellation {
+  id                   String               @id @default(cuid())
+  orderId              String               @unique
+  fromStatus           OrderStatus
+  initiatedByType      OrderStatusActorType
+  initiatedByUserId    String?
+  reasonCode           CancellationReason
+  reasonNote           String?              @db.VarChar(300)
+  inventoryDisposition InventoryDisposition
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  order                Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actor                User?                @relation(fields: [initiatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([initiatedByUserId])
+  @@map("order_cancellations")
+}
+
+model Refund {
+  id                String               @id @default(cuid())
+  paymentId         String
+  orderId           String
+  provider          String
+  providerRefundId  String?              @unique
+  status            RefundStatus         @default(PENDING)
+  amount            Decimal              @db.Decimal(12, 2)
+  currencyCode      String               @db.Char(3)
+  reasonCode        CancellationReason
+  reasonNote        String?              @db.VarChar(300)
+  initiatedByType   OrderStatusActorType
+  initiatedByUserId String?
+  idempotencyKey    String
+  retryOfId         String?              @unique
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
+  succeededAt       DateTime?            @db.Timestamptz(3)
+  failedAt          DateTime?            @db.Timestamptz(3)
+  payment           Payment              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  order             Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  actor             User?                @relation(fields: [initiatedByUserId], references: [id], onDelete: Restrict)
+  retryOf           Refund?              @relation("RefundRetry", fields: [retryOfId], references: [id], onDelete: Restrict)
+  retry             Refund?              @relation("RefundRetry")
+
+  @@unique([paymentId, idempotencyKey])
+  @@index([orderId, createdAt])
+  @@index([status, updatedAt])
+  @@map("refunds")
+}
+
+model OrderIssue {
+  id               String           @id @default(cuid())
+  orderId          String
+  type             OrderIssueType
+  status           OrderIssueStatus @default(OPEN)
+  reportedByUserId String?
+  note             String?          @db.VarChar(300)
+  deduplicationKey String?          @unique
+  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
+  resolvedAt       DateTime?        @db.Timestamptz(3)
+  resolvedByUserId String?
+  resolution       String?          @db.VarChar(300)
+  order            Order            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  reporter         User?            @relation("IssueReporter", fields: [reportedByUserId], references: [id], onDelete: Restrict)
+  resolver         User?            @relation("IssueResolver", fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, status, createdAt])
+  @@map("order_issues")
+}
+
+// Durable sandbox refund ledger: only TEST money, no card/provider credentials.
+model SandboxRefundIntent {
+  id                String       @id
+  refundId          String       @unique
+  providerPaymentId String
+  amountMinor       String
+  currencyCode      String       @db.Char(3)
+  status            RefundStatus @default(PROCESSING)
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([providerPaymentId])
+  @@map("sandbox_refund_intents")
 }
 
 model AuditLog {

@@ -10,8 +10,9 @@ import { getPaymentProvider, type ProviderEvent } from "@/lib/payments/provider"
 import { orderDto, orderInclude } from "./order.repository";
 import { reserveInventory, settleReservations } from "./payment-inventory";
 import { ServiceError } from "@/server/services/service-error";
+import { stageRefund } from "./refund-domain";
 
-async function serial<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+export async function serial<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let retry = 0; ; retry++) {
     try { return await prisma.$transaction(operation, { isolationLevel: "Serializable", timeout: 15000 }); }
     catch (error) {
@@ -22,6 +23,8 @@ async function serial<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>
   }
 }
 async function lockPayment(tx: Prisma.TransactionClient, id: string) {
+  // All financial/cancellation transactions lock Order before Payment.
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM orders WHERE id = (SELECT "orderId" FROM payments WHERE id = ${id}) FOR UPDATE`);
   await tx.$queryRaw(Prisma.sql`SELECT id FROM payments WHERE id = ${id} FOR UPDATE`);
 }
 function eligibleContext(order: { screening: { status: string; startsAt: Date; endsAt: Date }; customerSession: { status: string; expiresAt: Date };
@@ -50,8 +53,8 @@ export async function getOwnedPayment(sessionId: string, publicCode: string) {
   const attempt = row.attempts[0];
   return { order: orderDto(row.order), status: row.status, provider: row.provider, sandbox: true,
     reviewRequired: row.reviewRequired, attemptCount: row.currentAttemptNumber, expiresAt: attempt.expiresAt.toISOString(),
-    canRetry: ["FAILED", "CANCELED"].includes(row.status) && !row.reviewRequired,
-    canPay: ["PENDING", "PROCESSING"].includes(row.status) && !row.reviewRequired && attempt.expiresAt > new Date(),
+    canRetry: row.order.status !== "CANCELED" && ["FAILED", "CANCELED"].includes(row.status) && !row.reviewRequired,
+    canPay: row.order.status !== "CANCELED" && ["PENDING", "PROCESSING"].includes(row.status) && !row.reviewRequired && attempt.expiresAt > new Date(),
     succeededAt: row.succeededAt?.toISOString() ?? null };
 }
 
@@ -85,7 +88,7 @@ export async function retryPaymentRecord(sessionId: string, publicCode: string, 
       items: { include: { product: { include: { category: true, productLocations: true, recipeComponents: { include: { inventoryItem: true } } } } } } } } } });
     const replay = await tx.paymentAttempt.findUnique({ where: { paymentId_idempotencyKey: { paymentId: payment.id, idempotencyKey: key } } });
     if (replay) return;
-    if (!["FAILED", "CANCELED"].includes(payment.status) || payment.reviewRequired || payment.order.fulfillmentEligible) throw new ServiceError("PAYMENT_CONFLICT", 409, "This payment cannot be restarted.");
+    if (payment.order.status === "CANCELED" || !["FAILED", "CANCELED"].includes(payment.status) || payment.reviewRequired || payment.order.fulfillmentEligible) throw new ServiceError("PAYMENT_CONFLICT", 409, "This payment cannot be restarted.");
     if (!eligibleContext(payment.order, now)) throw new ServiceError("PAYMENT_NOT_ELIGIBLE", 409, "This screening is no longer accepting payments.");
     for (const line of payment.order.items) {
       const offer = line.product.productLocations.find((offer) => offer.locationId === payment.order.locationId);
@@ -131,6 +134,31 @@ export async function processVerifiedPaymentEvent(event: ProviderEvent, now = ne
       await tx.paymentWebhookEvent.create({ data: { ...journal, status: "REJECTED", failureCode: anomaly } });
       // A bogus/mismatched event cannot change stock, success or eligibility.
       return { status: "REJECTED" };
+    }
+    if (payment.order.status === "CANCELED") {
+      // Cancellation holds stock until provider financial truth is terminal.
+      // A captured charge on a canceled order is refunded, never fulfilled.
+      if (event.status === "SUCCEEDED" && payment.status !== "SUCCEEDED") {
+        await settleReservations(tx, payment.order, currentAttempt.id, "RELEASED", now);
+        await tx.paymentAttempt.update({ where: { id: currentAttempt.id }, data: { status: "SUCCEEDED", succeededAt: now } });
+        const captured = await tx.payment.update({ where: { id: payment.id }, data: { status: "SUCCEEDED", providerPaymentId: event.providerPaymentId, succeededAt: now } });
+        const cancellation = await tx.orderCancellation.findUniqueOrThrow({ where: { orderId: payment.orderId } });
+        await stageRefund(tx, { payment: captured, key: `cancel:${payment.orderId}`, reasonCode: cancellation.reasonCode, actorType: "SYSTEM", allowEmpty: true });
+        await tx.auditLog.create({ data: { action: "PAYMENT_SUCCEEDED", entityType: "ORDER", entityId: payment.orderId,
+          organizationId: payment.order.organizationId, locationId: payment.order.locationId, metadata: { reason: "CAPTURE_AFTER_CANCELLATION", amount: captured.amount.toFixed(2) } } });
+      } else if (["FAILED", "CANCELED"].includes(event.status)) {
+        await settleReservations(tx, payment.order, currentAttempt.id, "RELEASED", now);
+        if (canAdvancePayment(currentAttempt.status, event.status)) {
+          const times = event.status === "FAILED" ? { failedAt: now } : { canceledAt: now };
+          await tx.paymentAttempt.update({ where: { id: currentAttempt.id }, data: { status: event.status, ...times } });
+          if (payment.status !== "SUCCEEDED" && currentAttempt.number === payment.currentAttemptNumber) await tx.payment.update({ where: { id: payment.id }, data: { status: event.status, ...times } });
+        }
+      } else if (event.status === "PROCESSING" && canAdvancePayment(currentAttempt.status, event.status)) {
+        await tx.paymentAttempt.update({ where: { id: currentAttempt.id }, data: { status: "PROCESSING" } });
+        if (payment.status !== "SUCCEEDED") await tx.payment.update({ where: { id: payment.id }, data: { status: "PROCESSING" } });
+      }
+      await tx.paymentWebhookEvent.create({ data: { ...journal, status: "PROCESSED" } });
+      return { status: "PROCESSED" };
     }
     if (payment.status === "SUCCEEDED") {
       await tx.paymentWebhookEvent.create({ data: { ...journal, status: "IGNORED", failureCode: event.status === "SUCCEEDED" && currentAttempt.status !== "SUCCEEDED" ? "SECOND_SETTLEMENT_REVIEW" : "TERMINAL_SUCCESS" } });
@@ -193,7 +221,7 @@ export async function processVerifiedPaymentEvent(event: ProviderEvent, now = ne
 
 // Durable sweep: deployment cron + opportunistic before checkout/status/retry.
 export async function expirePaymentReservations(now = new Date()) {
-  const candidates = await prisma.paymentAttempt.findMany({ where: { status: { in: ["PENDING", "PROCESSING"] }, OR: [
+  const candidates = await prisma.paymentAttempt.findMany({ where: { payment: { order: { status: { not: "CANCELED" } } }, status: { in: ["PENDING", "PROCESSING"] }, OR: [
     { expiresAt: { lte: now } }, { payment: { order: { screening: { OR: [{ status: "CANCELLED" }, { endsAt: { lte: now } }] } } } },
   ] }, orderBy: { expiresAt: "asc" }, take: 100 });
   let expired = 0;
@@ -219,7 +247,7 @@ export async function expirePaymentReservations(now = new Date()) {
 
 // Transactional cancellation outbox reuses the event journal with a distinct
 // internal namespace. No external HTTP cancellation is treated as SQL-atomic.
-async function requestProviderCancellation(tx: Prisma.TransactionClient, attemptId: string) {
+export async function requestProviderCancellation(tx: Prisma.TransactionClient, attemptId: string) {
   await tx.paymentWebhookEvent.upsert({ where: { provider_providerEventId: { provider: "sandbox-internal", providerEventId: `cancel:${attemptId}` } },
     create: { provider: "sandbox-internal", providerEventId: `cancel:${attemptId}`, eventType: "CANCELED", status: "CANCEL_PENDING" }, update: {} });
 }
@@ -235,7 +263,8 @@ export async function drainProviderCancellations(now = new Date(), attemptId?: s
         amountMinor: paymentMinorUnits(attempt.payment.amount.toFixed(2), attempt.payment.currencyCode), currencyCode: attempt.payment.currencyCode, expiresAt: attempt.expiresAt });
       if (!attempt.providerPaymentId) await prisma.paymentAttempt.update({ where: { id: attempt.id }, data: { providerPaymentId: intent.providerPaymentId } });
       const terminal = await provider.cancel(intent.providerPaymentId);
-      if (terminal.status === "SUCCEEDED") await processVerifiedPaymentEvent({ ...terminal, eventId: `cancellation-retrieval:${intent.providerPaymentId}:SUCCEEDED` }, now);
+      if (!["SUCCEEDED", "FAILED", "CANCELED"].includes(terminal.status)) continue;
+      await processVerifiedPaymentEvent({ ...terminal, eventId: `cancellation-retrieval:${intent.providerPaymentId}:${terminal.status}` }, now);
       await prisma.paymentWebhookEvent.updateMany({ where: { id: request.id, status: "CANCEL_PENDING" }, data: { status: "CANCEL_COMPLETE", processedAt: now, failureCode: null } });
     } catch {
       // Durable request is intentionally retained for the next sweep. No raw

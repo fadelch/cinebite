@@ -42,7 +42,7 @@ const auditAction = {
 
 export async function applyStockMovementRecord(input: {
   actorUid: string; organizationId: string; locationId: string; locationInventoryId: string;
-  movementId: string; type: Exclude<InventoryMovementType, "ORDER_CONSUMPTION">; quantity: string; reason: string | null; note: string | null;
+  movementId: string; type: Exclude<InventoryMovementType, "ORDER_CONSUMPTION" | "ORDER_CANCELLATION_RESTOCK">; quantity: string; reason: string | null; note: string | null;
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   return prisma.$transaction(async (tx) => {

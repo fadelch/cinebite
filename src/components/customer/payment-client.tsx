@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { usePolling } from "@/lib/hooks/use-polling";
 import type { CustomerOrder } from "@/types/order";
+import { FinancialPanel } from "@/components/orders/financial-panel";
 
 export interface CustomerPayment {
   order: CustomerOrder; status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
@@ -37,9 +38,9 @@ export function PaymentClient({ initialPayment }: { initialPayment: CustomerPaym
     <motion.section layout={!reduced} className="mt-5 rounded-3xl border border-zinc-700 bg-zinc-900 p-6">
       <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-sm text-amber-200">Sandbox demo only · No real money is charged. Do not enter card details.</div>
       <motion.h1 key={`${payment.status}-${payment.reviewRequired}`} initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 text-3xl font-semibold text-white" aria-live="polite">
-        {payment.reviewRequired ? "Payment needs cinema review" : messages[payment.status]}
+        {order.status === "CANCELED" ? "Order canceled" : payment.reviewRequired ? "Payment needs cinema review" : messages[payment.status]}
       </motion.h1>
-      <p className="mt-3 text-sm leading-6 text-zinc-400">{payment.reviewRequired ? "A late payment was recorded, but your order was not sent to the kitchen. Please contact the cinema team. No automatic refund is performed."
+      <p className="mt-3 text-sm leading-6 text-zinc-400">{order.status === "CANCELED" ? "Fulfillment is stopped. See the cancellation and refund status below; provider confirmation may take time." : payment.reviewRequired ? "A late payment was recorded, but your order was not sent to the kitchen. Please contact the cinema team. No automatic refund is performed."
         : payment.status === "SUCCEEDED" ? "Order received by CineBite. The kitchen can now prepare your seat order."
         : payment.status === "FAILED" ? "The test payment failed. Your stock reservation was released. You can safely retry the same order."
         : payment.status === "CANCELED" ? "The payment was cancelled, expired, or the screening closed. Your reservation was released. Retry is available only while ordering is open."
@@ -61,5 +62,6 @@ export function PaymentClient({ initialPayment }: { initialPayment: CustomerPaym
       {payment.status === "SUCCEEDED" && !payment.reviewRequired && order.fulfillmentEligible ? <Link href={`/customer/orders/${order.publicOrderCode}`} className="cb-button-primary mt-6 w-full min-h-12">Follow your order</Link> : null}
       <Link href="/customer/menu" className="mt-5 block text-center text-sm text-amber-300">Back to menu</Link>
     </motion.section>
+    <FinancialPanel identifier={order.publicOrderCode} onUpdated={refresh} />
   </div></main>;
 }

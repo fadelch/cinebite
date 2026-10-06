@@ -4,11 +4,11 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 ## Current phase
 
-**Phase 14 — Secure Payments (sandbox only)**
+**Phase 15 — Cancellations, Refunds & Exceptions (sandbox only)**
 
-Phases 1–13 provide administration, stock, screenings, seat sessions, cart/order snapshots, kitchen preparation and delivery. Phase 14 adds server-authoritative payment attempts, signed/idempotent webhooks, short-lived inventory reservations and payment-gated fulfillment. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge anyone.
+Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
-This phase does not implement real-money charging, refunds, chargebacks, customer order cancellation, suppliers, maps/routing, SMS/push notifications, ticketing or revenue analytics. Cancelling a payment session is not cancelling an order or refunding a charge.
+This phase does not implement real-money merchant onboarding, chargebacks/disputes, loyalty, promotions, subscriptions, accounting exports, fraud scoring, support chat or advanced analytics. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
 
 ## Architecture
 
@@ -381,7 +381,7 @@ Cart additions do not reserve inventory. This avoids abandoned carts locking con
 
 Checkout accepts only an idempotency key and optional note. Seat, Screening, Location, Organization, price, currency, subtotal, and total are derived from trusted relations. A unique `(customerSessionId, idempotencyKey)` constraint makes retries return the original Order. Phase 14 supersedes Phase 11's immediate stock consumption: a serializable transaction now creates `PLACED` order snapshots, Payment/Attempt and aggregate reservations, increases `quantityReserved` with a conditional available-stock update, audits and clears the cart. Only verified payment success consumes on-hand stock and creates `ORDER_CONSUMPTION`. Products without a recipe remain `NOT_TRACKED` with no invented movement. Failed transactions roll back their database effects; provider operations are deliberately outside database transactions.
 
-`PLACED` means only that CineBite accepted the order; it does not claim payment or fulfillment. Payment, Kitchen preparation, delivery, discounts, refunds, and additional operational states remain separate future domains. Cinema Admins and location-scoped Location Managers receive read-only order views, while customer order confirmation requires the same owning CustomerSession.
+`PLACED` means only that CineBite accepted the order; it does not claim payment or fulfillment. At Phase 11, payments, preparation, delivery and refunds were separate future domains; Phases 12–15 now implement those domains without changing the immutable order snapshots. Customer order confirmation still requires the same owning CustomerSession. Phase 15 adds scoped supervisor financial actions to the original read-only admin views.
 
 Phase 11 evidence and its screenshot guide are in [`linkedin/phase-11`](linkedin/phase-11/README.md). The reproducible capture script uses safe demo data, performs real checkout assertions, and captures the production build without browser chrome, developer indicators, credentials, QR codes, or session tokens.
 
@@ -480,7 +480,7 @@ Set `DATABASE_URL`, `DIRECT_URL`, existing Firebase Admin secrets, and client Fi
 - Invitation delivery remains manual; the setup link is shown once to the authenticated Super Admin.
 - There is no staff-management UI beyond initial Cinema Admin onboarding.
 - Firestore remains legacy backup data until a separately reviewed retention decision.
-- Phase 14 adds sandbox payment settlement. Refunds, discounts, promotions, routing and ticketing remain deferred. Phase 13 delivery semantics still cover physical fulfillment through DELIVERED, not payment mutation. Delivery reassignment/emergency overrides and a staff-management UI remain deliberately absent.
+- Phases 14–15 add sandbox payment settlement and refunds. Live payment/refund adapters, discounts, promotions, routing and ticketing remain deferred. Delivery semantics still cover physical fulfillment through DELIVERED, not payment mutation. Delivery reassignment/emergency overrides and a staff-management UI remain deliberately absent.
 - Phase 7 catalog data has no inventory quantity; inventory and stock movements belong to Phase 8.
 
 ## Phase 14: secure payments (sandbox only)
@@ -540,3 +540,68 @@ npx.cmd tsx --conditions=react-server scripts/verify-phase-14.ts --local
 ```
 
 The runner uses port 3114 for its own optimized application server and installed Chrome (or `CHROME_PATH`), generates signing secrets only in memory, and captures real pages without OS/browser chrome. Test cluster/debug data stay ignored. It closes its server/browser and disables demo identities after each run; PostgreSQL and the emulator should be stopped after testing. No production Neon/Firebase/provider writes are performed.
+
+## Phase 15: cancellations, refunds and exceptions
+
+See the [67-point architecture walkthrough](docs/phase-15-architecture.md), [executed verification](docs/phase-15-verification.md), [individual integration results](docs/phase-15-integration-results.json), and [nine native LinkedIn screenshots](linkedin/phase-15/README.md).
+
+### Cancellation and inventory policy
+
+Customers with their own valid trusted seat session may cancel only `PLACED` orders, before Kitchen acceptance. The server returns `TOO_LATE_TO_CANCEL` after acceptance, regardless of browser button visibility. Cinema administrators act only within their organization; location managers need current location grants. Kitchen and delivery staff can report issues but cannot cancel financially or refund. Later staff cancellation requires a reason, explicit exceptional mode and confirmation. `CANCELED` is terminal and cannot appear in actionable queues; `DELIVERED` cannot be rewound to canceled.
+
+| Situation | Order outcome | Financial outcome | Inventory outcome |
+| --- | --- | --- | --- |
+| Unpaid PENDING/PROCESSING, placed | CANCELED | Durable provider cancellation requested; no refund unless charge actually succeeds | Hold remains until verified final provider result, then release once |
+| FAILED/provider-CANCELED, placed | CANCELED | No refund | Release any remaining hold once |
+| Paid, placed before acceptance | CANCELED | Refund remaining available captured funds | Restore original ORDER_CONSUMPTION once |
+| Accepted/preparing/ready/active delivery | Exceptional staff CANCELED | Refund remaining captured funds | NO_AUTO_RESTOCK |
+| Delivered refund | Remains DELIVERED | Full remaining or authorized partial refund | Unchanged |
+| Standalone partial/full financial refund | Fulfillment unchanged | Separate Refund records | Unchanged |
+
+An immutable `OrderCancellation` records origin state, CUSTOMER/STAFF/SYSTEM identity, structured reason, safe note, inventory disposition and server timestamp. Cancellation also appends `OrderStatusEvent` and audit records. Original consumption—not the current recipe—is restored using `ORDER_CANCELLATION_RESTOCK`. For example, changing a recipe from 300g/2 cups to 900g/3 cups after purchase still restores only 300g/2 cups. Refund success never runs inventory-restock logic again.
+
+### Refund domain, provider and concurrency
+
+`Refund` records the captured Payment and original Order, Decimal amount/currency, provider binding, status, initiating actor, reason, stable idempotency key and timestamps. Retries create a new record linked through `retryOfId`; failure history is retained. Payment remains historically SUCCEEDED after a refund. The safe balance is:
+
+```text
+remaining refundable = captured payment - SUCCEEDED refunds - PENDING/PROCESSING refunds
+```
+
+For 12.50 USD, a successful 2.50 refund leaves 10.00; another 5.00 leaves 5.00. Full refund means that remaining balance, not another 12.50. Unknown provider/network outcomes stay PENDING and keep their exposure reserved. Only confirmed terminal failure/cancellation frees it. Decimal and the Phase 14 exact minor-unit conversion are authoritative; browser provider IDs/currency/maximum balances are not accepted.
+
+Serializable transactions lock Order then Payment. Cancellation and Kitchen/Delivery use conditional transitions, so concurrent operations cannot both win. Refund creation locks the captured payment and the database trigger additionally checks matching payment/order/currency and total committed exposure. Two 8.00 refunds against 10.00 cannot both proceed. Unique database/provider keys prevent duplicate double-click effects.
+
+The existing `PaymentProvider` gains `createRefund`/`retrieveRefund`. SQL intent is committed first; provider work occurs outside the transaction; binding/retrieval recovers a create/bind crash using the same refund ID. The existing raw-body signed webhook endpoint handles refund events, verifies provider-refund/payment relationships, exact money and currency, journals events idempotently, and only then updates Refund. Frontend return URLs are never authority. The current implementation is still sandbox only; real merchant/provider testing is NOT EXECUTABLE without a configured adapter and test credentials.
+
+### Operational exceptions and screening reconciliation
+
+`OrderIssue` is OPEN/RESOLVED, with reporter, type, escaped note, resolution, resolver and trusted timestamps. Assigned delivery staff may report CUSTOMER_UNAVAILABLE etc. Kitchen may report ITEM_MISSING, ORDER_DAMAGED or OTHER. Reporting does not cancel/refund/restock; a supervisor resolves the issue with an explicit recorded decision and uses separate financial actions if needed. No silent status rewind or destructive order deletion occurs.
+
+Canceled screenings now have an explicit admin reconciliation preview. The UI submits only the reviewed batch IDs, at most 100; every affected order is reauthorized/reclassified under transaction locks. Unpaid placed orders cancel safely; paid placed orders cancel/refund/restore; started orders receive a deduplicated supervisor issue; delivered orders stay unchanged. Repeat reviewed batches safely, without duplicate effects or hidden unreviewed mass financial operations. Screening cancellation itself remains a separate step; reconciliation is never an implicit bulk refund button.
+
+### Deployment and recovery
+
+After user review/merge, apply the four additive Phase 15 migrations to the intended database using your normal controlled migration process. This development task did not migrate or write production Neon/Firebase. Previous migrations were not rewritten; there is no reset/db-push shortcut.
+
+Reuse the server-only Phase 14 sandbox opt-in/configuration. No new merchant secrets or public financial secrets are required. Keep `PAYMENT_PROVIDER=disabled` until a reviewed deployment is ready; never claim the sandbox is a live provider. The existing authenticated `POST /api/payments/expire` job now also drains pending refund work in bounded batches. Configure a reliable scheduler with the existing private job bearer secret. Immediate cancellation/refund requests attempt their own recovery, but a scheduled worker is still necessary after crashes or outages. Refund rows rotate by last update to avoid backlog starvation. During an unresolved provider cancellation, stock stays protected rather than silently released; a supervisor should investigate prolonged holds.
+
+Customer/mobile and admin panels show paid, processing, returned and remaining amounts from safe server DTOs. Confirmation dialogs are keyboard/focus-safe, use 44–48px controls, announce updates and honor reduced motion. Error/success notifications use the existing bottom-right notification system. Provider IDs, secrets, raw webhook bodies and card data are excluded.
+
+### Isolated reproduction
+
+Start a separate loopback PostgreSQL test cluster on port 55414, owned by `cinebite_test`, and create a **new** `cinebite_phase15_test` database without resetting any existing database. The tests refuse cloud resources by hardcoding the separate local database/demo project. Use:
+
+```powershell
+$env:DIRECT_URL='postgresql://cinebite_test@127.0.0.1:55414/cinebite_phase15_test'
+npx.cmd prisma migrate deploy
+
+# Separate terminal; demo project only, no production Firebase login needed.
+npx.cmd --yes firebase-tools@15.32.1 emulators:start --only auth --project demo-cinebite-phase15 --config scripts/phase-14-emulators.json
+
+# Runner terminal; never add --env-file=.env.local.
+npm.cmd run build
+npx.cmd tsx --conditions=react-server scripts/verify-phase-15.ts --local
+```
+
+The runner starts its own production-mode Next.js server at loopback port 3115, uses installed Chrome/`CHROME_PATH`, generates signing keys only in memory, executes actual PostgreSQL/HTTP/browser workflows, captures application-only PNGs, closes its server/browser and disables demo staff afterward. Local database/emulator services should also be stopped after verification. Fixture business history is retained; test/browser/debug artifacts are ignored. No production Neon, Firebase or merchant transactions are involved.

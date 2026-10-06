@@ -2,6 +2,7 @@
 import { elapsedOrderTime, orderStatusLabel } from "@/lib/orders/status";
 import { formatInTimeZone } from "@/lib/screenings/timezone";
 import type { DeliveryOrder } from "@/types/order";
+import { IssueReporter } from "@/components/orders/issue-reporter";
 
 export function DeliveryOrderCard({ order, now, busy, action, open, expanded = false }: {
   order: DeliveryOrder; now: string; busy: boolean; action: (order: DeliveryOrder) => void; open: (order: DeliveryOrder) => void; expanded?: boolean;
@@ -15,6 +16,7 @@ export function DeliveryOrderCard({ order, now, busy, action, open, expanded = f
     <p className="mt-2 text-xs text-zinc-500">{order.movieTitle} · {order.locationName}</p>
     {time ? <p className="mt-2 text-xs text-zinc-400">Delivered {age === "Just now" ? "just now" : `${age} ago`} · <time dateTime={time}>{formatInTimeZone(time, order.timezone)}</time></p> : null}
     {order.assignedStaffName ? <p className="mt-2 text-xs text-sky-300">Assigned to {order.assignedStaffName}</p> : null}
+    {expanded && order.canDeliver ? <IssueReporter publicCode={order.publicOrderCode} /> : null}
   </article>;
   return <article className="rounded-2xl border border-zinc-700/70 bg-zinc-900 p-4" data-order-code={order.publicOrderCode}>
     <div className="flex flex-wrap items-center justify-between gap-2">{expanded ? <p className="flex min-h-11 items-center font-mono text-sm font-semibold text-zinc-100">{order.publicOrderCode}</p> : <button className="min-h-11 font-mono text-sm font-semibold text-zinc-100 hover:underline" onClick={() => open(order)} aria-label={`Open delivery ${order.publicOrderCode}`}>{order.publicOrderCode}</button>}<span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">{orderStatusLabel[order.status]}</span></div>

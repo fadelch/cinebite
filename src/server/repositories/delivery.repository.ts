@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { isPrismaError } from "@/lib/db/errors";
+import { isPrismaError, isRetryableTransactionError } from "@/lib/db/errors";
 import { localDateBounds } from "@/lib/screenings/timezone";
 import { kitchenOrderDto, kitchenOrderInclude } from "@/server/repositories/kitchen.repository";
 import { assertDeliveryLocationAccess, deliveryPermittedLocationIds, requireDeliveryActor, requireDeliveryWorker, type DeliveryActor } from "@/server/services/delivery-access";
@@ -104,7 +104,7 @@ export async function transitionDeliveryOrderRecord(input: { actor: DeliveryActo
       return deliveryOrderDto(await tx.order.findUniqueOrThrow({ where: { id: order.id }, include: deliveryOrderInclude }), actor);
     }, { isolationLevel: "Serializable" });
   } catch (error) {
-    if (isPrismaError(error, "P2034") || isPrismaError(error, "P2002")) throw new ServiceError("ORDER_ALREADY_CLAIMED", 409, "Another worker updated this order. The queue has refreshed.");
+    if (isRetryableTransactionError(error) || isPrismaError(error, "P2002")) throw new ServiceError("ORDER_ALREADY_CLAIMED", 409, "Another worker updated this order. The queue has refreshed.");
     throw error;
   }
 }

@@ -8,6 +8,7 @@ import { validateCustomerSession } from "./customer-session.service";
 import { ServiceError } from "./service-error";
 import { orderCodeSchema } from "@/validation/order";
 import { paymentRetrySchema, sandboxOutcomeSchema } from "@/validation/payment";
+import { drainRefundRequests, processVerifiedRefundEvent } from "@/server/repositories/refund.repository";
 
 export async function customerPaymentStatus(rawToken: string | undefined, publicCodeInput: string) {
   const publicCode = orderCodeSchema.parse(publicCodeInput);
@@ -28,10 +29,16 @@ export async function retryCustomerPayment(rawToken: string | undefined, codeInp
   return getOwnedPayment(session.id, code);
 }
 export async function receivePaymentWebhook(raw: string, signature: string | null) {
-  const result = await processVerifiedPaymentEvent(getPaymentProvider().verifyWebhook(raw, signature));
+  const event = getPaymentProvider().verifyWebhook(raw, signature);
+  if ("kind" in event) return processVerifiedRefundEvent(event);
+  const result = await processVerifiedPaymentEvent(event);
   const { cancellationAttemptId, ...publicResult } = result;
   // Only this event's related compensation; do not drain unrelated work on a webhook.
   if (cancellationAttemptId) await drainProviderCancellations(new Date(), cancellationAttemptId);
+  if (event.status === "SUCCEEDED") {
+    const attempt = await prisma.paymentAttempt.findUnique({ where: { id: event.attemptId }, select: { payment: { select: { orderId: true } } } });
+    if (attempt) await drainRefundRequests(attempt.payment.orderId);
+  }
   return publicResult;
 }
 
