@@ -1,11 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 import { KitchenOrderDetail } from "@/components/kitchen/kitchen-order-detail";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { CustomerOrderProgress } from "@/components/customer/order-progress";
 import type { KitchenOrder } from "@/types/order";
+import { NotificationProvider } from "@/components/ui/notification-provider";
 
 const order: KitchenOrder = {
   publicOrderCode: "CB-12AB34CD56", status: "READY", currencyCode: "USD", subtotal: "5.00", total: "5.00",
@@ -24,7 +26,7 @@ describe("order snapshot and timeline rendering", () => {
     ["OUT_FOR_DELIVERY", "Your order is on the way to your seat."],
     ["DELIVERED", "Delivered."],
   ] as const)("renders customer %s progress without staff identity or delivery claims", (status, heading) => {
-    const html = renderToStaticMarkup(createElement(CustomerOrderProgress, { initialOrder: { ...order, status } }));
+    const html = renderToStaticMarkup(createElement(NotificationProvider, null, createElement(CustomerOrderProgress, { initialOrder: { ...order, status } })));
     expect(html).toContain(heading);
     expect(html).not.toContain("Kitchen Team");
     expect(html).not.toContain("actorUserId");
@@ -42,5 +44,11 @@ describe("order snapshot and timeline rendering", () => {
     expect(html).not.toContain("Kitchen Team");
     expect(html.indexOf("Order received")).toBeLessThan(html.indexOf("Accepted"));
     expect(html).toContain("Asia/Beirut");
+  });
+  it("canceled online order shows terminal history, never a fulfillment/payment-confirmation claim", () => {
+    const html = renderToStaticMarkup(createElement(NotificationProvider, null, createElement(CustomerOrderProgress,
+      { initialOrder: { ...order, status: "CANCELED", paymentPolicy: "ONLINE_REQUIRED", fulfillmentEligible: false } })));
+    expect(html).toContain("Order canceled"); expect(html).not.toContain("We received your order");
+    expect(html).not.toContain("Payment confirmation required"); expect(html).not.toContain('aria-label="Fulfillment progress"');
   });
 });

@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { Prisma } from "@/generated/prisma/client";
-import { isPrismaError } from "@/lib/db/errors";
+import { isPrismaError, isRetryableTransactionError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
 import { isValidKitchenTransition, KITCHEN_STATUSES } from "@/lib/orders/status";
 import { localDateBounds } from "@/lib/screenings/timezone";
@@ -147,7 +147,7 @@ export async function transitionKitchenOrderRecord(input: {
       return kitchenOrderDto(await tx.order.findUniqueOrThrow({ where: { id: order.id }, include: kitchenOrderInclude }));
     }, { isolationLevel: "Serializable" });
   } catch (error) {
-    if (isPrismaError(error, "P2034") || isPrismaError(error, "P2002")) throw new ServiceError("STALE_ORDER_STATE", 409, "Another worker updated this order. The queue has refreshed.");
+    if (isRetryableTransactionError(error) || isPrismaError(error, "P2002")) throw new ServiceError("STALE_ORDER_STATE", 409, "Another worker updated this order. The queue has refreshed.");
     throw error;
   }
 }

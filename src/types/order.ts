@@ -1,5 +1,5 @@
 export type KitchenStatus = "PLACED" | "ACCEPTED" | "PREPARING" | "READY";
-export type OrderStatus = KitchenStatus | "OUT_FOR_DELIVERY" | "DELIVERED";
+export type OrderStatus = KitchenStatus | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELED";
 
 export interface OrderStatusHistoryEntry {
   fromStatus: OrderStatus | null;

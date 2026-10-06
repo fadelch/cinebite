@@ -16,7 +16,7 @@ export function canAdvancePayment(from: PaymentStatus, to: PaymentStatus): boole
   return (from === "PENDING" && to !== "PENDING") || (from === "PROCESSING" && ["SUCCEEDED", "FAILED", "CANCELED"].includes(to));
 }
 
-export function isOrderEligibleForFulfillment(order: { paymentPolicy?: string; fulfillmentEligible?: boolean }): boolean {
-  return order.paymentPolicy === "LEGACY_NOT_REQUIRED" || (order.paymentPolicy === "ONLINE_REQUIRED" && order.fulfillmentEligible === true);
+export function isOrderEligibleForFulfillment(order: { status?: string; paymentPolicy?: string; fulfillmentEligible?: boolean }): boolean {
+  return order.status !== "CANCELED" && (order.paymentPolicy === "LEGACY_NOT_REQUIRED" || (order.paymentPolicy === "ONLINE_REQUIRED" && order.fulfillmentEligible === true));
 }
-export const fulfillmentWhere = { OR: [{ paymentPolicy: "LEGACY_NOT_REQUIRED" as const }, { paymentPolicy: "ONLINE_REQUIRED" as const, fulfillmentEligible: true }] };
+export const fulfillmentWhere = { status: { not: "CANCELED" as const }, OR: [{ paymentPolicy: "LEGACY_NOT_REQUIRED" as const }, { paymentPolicy: "ONLINE_REQUIRED" as const, fulfillmentEligible: true }] };

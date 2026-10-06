@@ -11,7 +11,7 @@ export const orderTransitionSchema = z.object({
 
 export const orderQueueQuerySchema = z.object({
   locationId: z.string().trim().min(1).max(128).optional(),
-  status: z.enum(ORDER_STATUSES).optional(),
+  status: z.enum([...ORDER_STATUSES, "CANCELED"]).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   hall: z.string().trim().max(100).optional(),
   code: z.string().trim().max(32).optional(),
