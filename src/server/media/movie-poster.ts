@@ -3,7 +3,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { getDownloadURL } from "firebase-admin/storage";
+import { publicImageUrl } from './public-image-url';
 
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
 import { normalizeProductImage } from "@/server/media/product-image";
@@ -34,7 +34,7 @@ export async function storeMoviePoster(organizationId: string, movieId: string, 
         },
         validation: "crc32c",
       });
-      return { storagePath, url: await getDownloadURL(object) };
+      return { storagePath, url: publicImageUrl(object.bucket.name, storagePath, token) };
     } catch (error) {
       await object.delete({ ignoreNotFound: true }).catch(() => undefined);
       throw error;

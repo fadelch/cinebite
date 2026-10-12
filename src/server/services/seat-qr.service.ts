@@ -98,7 +98,8 @@ export async function generateMissingSeatQrs(locationIdInput: string, hallIdInpu
   if (hall.status !== "ACTIVE") throw new ServiceError("HALL_NOT_ACTIVE", 409, "The hall is not active.");
   const missing = hall.seats.filter((seat) => seat.status === "ACTIVE" && !seat.qrCode);
   let generated = 0;
-  for (const seat of missing) {
+  // Bound image work per request; repeat Generate Missing to continue a large hall.
+  for (const seat of missing.slice(0, 100)) {
     const prepared = await prepareImage({ organizationId: actor.organizationId, locationId, hallId: hall.id, seatId: seat.id, version: 1 });
     try {
       await createSeatQrRecord({ actorUid: actor.uid, organizationId: actor.organizationId, locationId, hallId: hall.id, seatId: seat.id, seatLabel: seat.label, ...prepared });

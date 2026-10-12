@@ -63,7 +63,7 @@ async function staffScope(
   });
   const membership = user?.memberships[0];
   if (
-    !user?.active ||
+    !user?.active || (user.authorizationVersion ?? 0) !== (value.authorizationVersion ?? 0) || user.platformRole === 'SUPER_ADMIN' ||
     !membership ||
     membership.role !== value.role ||
     membership.organization.status !== "ACTIVE"

@@ -43,11 +43,27 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 19 — Reliability & Observability**
+**Phase 20 — Security Hardening**
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
 Phase 16 adds server-calculated, tenant-safe concession analytics, operational timings, inventory consumption reports and authorized CSV export from existing PostgreSQL records. It does not implement real-money merchant onboarding, chargebacks, accounting/tax reporting, profit/COGS, FX, predictions or a BI warehouse. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+
+## Phase 20 security architecture
+
+Firebase proves staff identity; current PostgreSQL activity, membership role, authorization version, organization status and LocationAccess determine permission. Customer sessions are anonymous high-entropy hashed credentials bound to the server-resolved seat and live screening; order codes alone never authorize access. Tenant, location and customer ownership are checked in guarded services and transactional mutations. Catalog/staff/platform roles cannot be assigned by arbitrary request fields.
+
+All API mutations pass shared streamed body/query/form limits and exact configured Origin checks, while signed provider webhooks and dedicated bearer-authenticated jobs retain their independent authentication. Older DTOs are strict. Payment status GET is read-only; only validated POST workflows, verified provider events and recovery jobs change financial state. Existing transaction/idempotency protections prevent repeat stock consumption, competing delivery claims and over-refunds. CSV export retains formula protection and range/row limits.
+
+Production pages use fresh nonce-based script CSP and dynamic private/no-store HTML. Frame/object/base restrictions, nosniff, no-referrer and browser permission restrictions protect staff/customer/QR routes. HTTPS responses add HSTS without preload/subdomain assumptions. Styles retain a documented inline exception for current Motion/Recharts/layouts; production scripts do not permit unsafe-inline/eval. No unsafe HTML renderer, arbitrary outbound URL import or service worker cache was added.
+
+Raster uploads require actual signatures/decoding, at most 5 MiB/40 million pixels/10,000 pixels per dimension, no SVG/PDF/animation, bounded metadata-stripped WebP and server-generated authorized paths. QR images stay private; concurrent rotations use unique filenames and establishment rechecks the credential under a transaction lock. Credentials remain out of logs, browser bundles, repository and evidence images.
+
+Shared PostgreSQL HMAC-key quotas cover auth exchange, QR/start/end, customer mutations, checkout, staff/invite/setup/upload/refund/report and webhook ingress. No process-local map is the production authority. **Before production use**, apply the additive Phase 20 migration, set `SECURITY_RATE_LIMIT_SECRET` (random ≥32 characters, shared across instances) and an exact HTTPS `CINEBITE_APP_ORIGIN`. `CINEBITE_ALLOWED_ORIGINS` is optional; explicitly include the LAN origin for development. Production readiness fails closed if the main origin/secret is missing. Keep proxy trust disabled unless ingress overwrites the chosen validated single-IP header and blocks origin bypass. Schedule the existing authenticated operations monitor to prune expired quota records in bounded batches; retain external volume/timeouts/WAF controls.
+
+The production dependency audit reports zero vulnerabilities. Five HIGH development-only package findings remain in the unpatched braces/Next ESLint chain, disclosed in the review; do not blindly force a framework downgrade. The repository/history/client scan reports categories without printing secret values. Credentials previously exposed elsewhere still require owner rotation review. This task did not modify production Neon/Firebase, `.env.local`, payment merchants or external infrastructure.
+
+Run `npm.cmd run test:security`, `npm.cmd test`, `npm.cmd run build`, `npm.cmd run security:scan` and `node scripts/dependency-audit.mjs`. Actual isolated SQL/HTTP/browser security checks run with `npm.cmd run verify:phase20` after starting the dedicated local database and demo emulators—never load production `.env.local` into the runner. Full architecture, findings, tests, explicit NOT EXECUTABLE items and setup: [Phase 20 security review](docs/security/phase-20-security-review.md), [surface matrix](docs/security/phase-20-surface-matrix.md), [integration results](docs/security/phase-20-integration-results.json), [safe LinkedIn gallery](linkedin/phase-20/README.md).
 
 ## Phase 19 reliability and observability
 
@@ -71,7 +87,7 @@ Set server-only `OBSERVABILITY_ENVIRONMENT` and optional safe `OBSERVABILITY_REL
 
 Read the [75-topic architecture](docs/phase-19-architecture.md), [executed verification](docs/phase-19-verification.md), [individual A–AP results](docs/phase-19-integration-results.json), [operations/retry runbook](docs/operations/README.md) and [eight native screenshot originals](linkedin/phase-19/README.md).
 
-After user review/merge, deploy the additive Phase 19 migration before using operations/jobs telemetry. Do not reset Neon or rewrite previous migrations. Production was not migrated, seeded or used for verification. New commerce/payment features, order states, business KPIs, scaling, load testing, CI/CD, final penetration hardening and Phase 20 are not implemented.
+After user review/merge, deploy the additive Phase 19 migration before using operations/jobs telemetry. Do not reset Neon or rewrite previous migrations. Production was not migrated, seeded or used for verification. Phase 20 now adds the security review and hardening described above; new commerce/payment features, order states, business KPIs, scaling, production load testing and CI/CD remain outside this phase.
 
 ## Phase 18 organization settings and staff management
 

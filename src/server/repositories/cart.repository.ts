@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { prisma } from "@/lib/db/prisma";
+import { ServiceError } from '@/server/services/service-error';
 
 const cartInclude = {
   items: {
@@ -23,6 +24,19 @@ export async function setCartItemRecord(input: {
   currencyCode: string;
 }) {
   return prisma.$transaction(async (tx) => {
+    const now = new Date();
+    const session = await tx.customerSession.findFirst({ where: {
+      id: input.customerSessionId, status: 'ACTIVE', expiresAt: { gt: now },
+      screening: { status: 'SCHEDULED', startsAt: { lte: now }, endsAt: { gt: now } },
+      seat: { status: 'ACTIVE', hall: { status: 'ACTIVE', location: { status: 'ACTIVE', organization: { status: 'ACTIVE' } } } },
+    }, include: { seat: { include: { hall: { include: { location: true } } } }, screening: true } });
+    if (!session || session.screening.hallId !== session.hallId)
+      throw new ServiceError('CUSTOMER_SESSION_EXPIRED', 401, 'This seat session has ended.');
+    const offer = await tx.productLocation.findFirst({ where: {
+      productId: input.productId, locationId: session.seat.hall.locationId,
+      organizationId: session.seat.hall.location.organizationId,
+    } });
+    if (!offer) throw new ServiceError('PRODUCT_UNAVAILABLE', 404, 'This product is unavailable.');
     const cart = await tx.cart.upsert({
       where: { customerSessionId: input.customerSessionId },
       create: { id: randomUUID(), customerSessionId: input.customerSessionId },
@@ -31,6 +45,9 @@ export async function setCartItemRecord(input: {
     if (input.quantity === 0) {
       await tx.cartItem.deleteMany({ where: { cartId: cart.id, productId: input.productId } });
     } else {
+      const existing = await tx.cartItem.findUnique({ where: { cartId_productId: { cartId: cart.id, productId: input.productId } } });
+      if (!existing && await tx.cartItem.count({ where: { cartId: cart.id } }) >= 50)
+        throw new ServiceError('CART_INVALID', 400, 'A cart can contain at most 50 different products.');
       await tx.cartItem.upsert({
         where: { cartId_productId: { cartId: cart.id, productId: input.productId } },
         create: {

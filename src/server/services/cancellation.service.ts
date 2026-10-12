@@ -1,4 +1,5 @@
 import "server-only";
+import { customerFinancialDto } from '@/lib/payments/customer-financial';
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentUser } from "@/server/auth/current-user";
@@ -28,7 +29,7 @@ export async function customerFinancial(rawToken: string | undefined, codeInput:
   await limitPaymentRequests(session.id, "status");
   const summary = await financialSummaryRecord(order.id);
   // Customer safe projection: never show internal issue notes or provider IDs.
-  return { ...summary, issues: [], refunds: summary.refunds.map(({ id: _id, retryOfId: _retry, ...r }) => { void _id; void _retry; return r; }) };
+  return customerFinancialDto(summary);
 }
 export async function cancelCustomerOrder(rawToken: string | undefined, codeInput: string, input: unknown) {
   const parsed = customerCancelSchema.parse(input), session = await validateCustomerSession(rawToken), code = orderCodeSchema.parse(codeInput);

@@ -16,7 +16,7 @@ export async function authorizeOrderStaff(tx: Prisma.TransactionClient, actor: A
   const user = await tx.user.findUnique({ where: { firebaseUid: actor.uid }, include: { memberships: {
     where: { organizationId: order.organizationId }, include: { organization: true, locationAccess: true } } } });
   const grant = user?.memberships[0];
-  if (!user?.active || actor.organizationId !== order.organizationId || !grant || grant.organization.status !== "ACTIVE") throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found in your permitted locations.");
+  if (!user?.active || (user.authorizationVersion ?? 0) !== (actor.authorizationVersion ?? 0) || user.platformRole === 'SUPER_ADMIN' || actor.organizationId !== order.organizationId || !grant || grant.role !== actor.role || grant.organization.status !== "ACTIVE") throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found in your permitted locations.");
   if (financial && !["CINEMA_ADMIN", "LOCATION_MANAGER"].includes(grant.role)) throw new ServiceError("AUTHORIZATION_DENIED", 403, "Financial actions require a cinema administrator or location manager.");
   if (grant.role !== "CINEMA_ADMIN" && !grant.allLocations && !grant.locationAccess.some(g => g.locationId === order.locationId)) throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found in your permitted locations.");
   return { user, grant };

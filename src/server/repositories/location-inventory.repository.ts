@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 import { Prisma } from "@/generated/prisma/client";
 
 import { isPrismaError } from "@/lib/db/errors";
@@ -67,6 +68,7 @@ export async function configureLocationInventoryRecord(input: {
   const actorUserId = await inventoryActorId(input.actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
       const [location, item] = await Promise.all([
         tx.location.findFirst({ where: { id: input.locationId, organizationId: input.organizationId } }),
         tx.inventoryItem.findFirst({ where: { id: input.inventoryItemId, organizationId: input.organizationId, status: "ACTIVE" } }),
@@ -96,6 +98,7 @@ export async function updateInventoryThresholdRecord(input: {
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   const row = await prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
     const existing = await tx.locationInventory.findFirst({
       where: { id: input.locationInventoryId, organizationId: input.organizationId, locationId: input.locationId },
       include: locationInventoryInclude,

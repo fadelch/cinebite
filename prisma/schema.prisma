@@ -1163,6 +1163,15 @@ enum OperationalJobStatus {
   PARTIAL
 }
 
+model SecurityRateLimit {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("security_rate_limits")
+}
+
 enum OperationalIncidentStatus {
   OPEN
   RESOLVED

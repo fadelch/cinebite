@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+afterEach(() => vi.unstubAllEnvs());
 
 import { isSameOriginRequest } from "@/lib/security/request-origin";
 
@@ -14,6 +15,7 @@ describe("isSameOriginRequest", () => {
   });
 
   it("accepts a LAN origin when Next constructed the URL with its bind hostname", () => {
+    vi.stubEnv('CINEBITE_APP_ORIGIN', 'http://192.168.10.111:3000');
     expect(isSameOriginRequest(request("http://localhost:3000/api/auth/session", {
       origin: "http://192.168.10.111:3000",
       host: "192.168.10.111:3000",
@@ -21,6 +23,7 @@ describe("isSameOriginRequest", () => {
   });
 
   it("uses forwarded host and protocol behind a trusted deployment proxy", () => {
+    vi.stubEnv('CINEBITE_APP_ORIGIN', 'https://cinebite.example.com');
     expect(isSameOriginRequest(request("http://127.0.0.1:3000/api/auth/session", {
       origin: "https://cinebite.example.com",
       host: "127.0.0.1:3000",

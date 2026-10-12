@@ -1,0 +1,96 @@
+{
+  "recordedAt": "2026-10-12T16:31:15.340Z",
+  "reports": [
+    {
+      "scope": "all",
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 5,
+        "critical": 0,
+        "total": 5
+      },
+      "findings": [
+        {
+          "name": "@next/eslint-plugin-next",
+          "direct": false,
+          "severity": "high",
+          "range": ">=14.3.0-canary.0",
+          "advisories": [],
+          "fixAvailable": {
+            "name": "eslint-config-next",
+            "version": "14.2.35",
+            "isSemVerMajor": true
+          }
+        },
+        {
+          "name": "braces",
+          "direct": false,
+          "severity": "high",
+          "range": "*",
+          "advisories": [
+            {
+              "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+              "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+              "severity": "high"
+            }
+          ],
+          "fixAvailable": {
+            "name": "eslint-config-next",
+            "version": "14.2.35",
+            "isSemVerMajor": true
+          }
+        },
+        {
+          "name": "eslint-config-next",
+          "direct": true,
+          "severity": "high",
+          "range": ">=14.3.0-canary.0",
+          "advisories": [],
+          "fixAvailable": {
+            "name": "eslint-config-next",
+            "version": "14.2.35",
+            "isSemVerMajor": true
+          }
+        },
+        {
+          "name": "fast-glob",
+          "direct": false,
+          "severity": "high",
+          "range": "*",
+          "advisories": [],
+          "fixAvailable": {
+            "name": "eslint-config-next",
+            "version": "14.2.35",
+            "isSemVerMajor": true
+          }
+        },
+        {
+          "name": "micromatch",
+          "direct": false,
+          "severity": "high",
+          "range": ">=0.2.0",
+          "advisories": [],
+          "fixAvailable": {
+            "name": "eslint-config-next",
+            "version": "14.2.35",
+            "isSemVerMajor": true
+          }
+        }
+      ]
+    },
+    {
+      "scope": "production",
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "findings": []
+    }
+  ]
+}

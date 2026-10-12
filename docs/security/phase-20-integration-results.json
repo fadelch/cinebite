@@ -1,0 +1,186 @@
+{
+  "recordedAt": "2026-10-12T16:30:59.134Z",
+  "scope": "Isolated loopback PostgreSQL + demo Firebase Auth/Storage + production Next build",
+  "results": {
+    "119": {
+      "status": "PASS",
+      "evidence": "Organization A cannot read B's payment/refund financial view or mutate B's order."
+    },
+    "120": {
+      "status": "PASS",
+      "evidence": "Cross-tenant staff read/edit/suspend requests are denied."
+    },
+    "121": {
+      "status": "PASS",
+      "evidence": "A1-scoped manager cannot escape to A2 inventory, screening, queue, analytics or staff location surfaces."
+    },
+    "122": {
+      "status": "PASS",
+      "evidence": "Cinema Admin cannot create SUPER_ADMIN, and lower roles cannot self-escalate through invitation."
+    },
+    "123": {
+      "status": "PASS",
+      "evidence": "Customer A cannot read B's order, payment, financial or notification data using public code or internal ID."
+    },
+    "124": {
+      "status": "PASS",
+      "evidence": "Strict input rejects forged context or money fields; persisted A7/Beirut/USD 12.50 remains server authoritative."
+    },
+    "125": {
+      "status": "PASS",
+      "evidence": "Strict input rejects forged context or money fields; persisted A7/Beirut/USD 12.50 remains server authoritative."
+    },
+    "126": {
+      "status": "PASS",
+      "evidence": "Strict input rejects forged context or money fields; persisted A7/Beirut/USD 12.50 remains server authoritative."
+    },
+    "127": {
+      "status": "PASS",
+      "evidence": "Forged payment-success query/page does not settle payment; GET polling is read-only."
+    },
+    "128": {
+      "status": "PASS",
+      "evidence": "Invalid raw-body signature is rejected without business mutation."
+    },
+    "129": {
+      "status": "PASS",
+      "evidence": "Signed webhook replay has one journal/settlement and no duplicate stock consumption."
+    },
+    "130": {
+      "status": "PASS",
+      "evidence": "Refund greater than captured server balance is rejected."
+    },
+    "131": {
+      "status": "PASS",
+      "evidence": "Competing partial refunds preserve the capture cap; only one competing request succeeds."
+    },
+    "132": {
+      "status": "PASS",
+      "evidence": "Stored markup across product/movie/branding/customer/order issue surfaces does not execute in admin/customer/kitchen/delivery/notification/analytics pages."
+    },
+    "133": {
+      "status": "PASS",
+      "evidence": "External/protocol-relative returnTo remains on the login origin; destinations come from role allowlist."
+    },
+    "134": {
+      "status": "PASS",
+      "evidence": "Mass-assignment fields are rejected before trusted state can change."
+    },
+    "135": {
+      "status": "PASS",
+      "evidence": "Bounded search remains parameterized; malicious ID text cannot escape scope. Dedicated source suite checks all raw SQL boundaries."
+    },
+    "136": {
+      "status": "PASS",
+      "evidence": "Fake/SVG/oversized/extreme raster content is rejected; cross-tenant replacement cannot proceed."
+    },
+    "137": {
+      "status": "PASS",
+      "evidence": "Traversal-like client filename never controls storage path; actual raster becomes server-named WebP."
+    },
+    "138": {
+      "status": "PASS",
+      "evidence": "Shared counter quota/recovery and actual auth 429 Retry-After are executed with bounded local requests."
+    },
+    "139": {
+      "status": "PASS",
+      "evidence": "Enormous page size/offset requests are rejected."
+    },
+    "140": {
+      "status": "PASS",
+      "evidence": "Actual authorized CSV export neutralizes a stored formula-leading product name."
+    },
+    "141": {
+      "status": "PASS",
+      "evidence": "Actual HTTP paths do not log cookies, QR credentials, signatures, notes or test secrets; safe request references remain."
+    },
+    "142": {
+      "status": "PASS",
+      "evidence": "Actual final production client assets and tracked/history text checked for server secret names/values; no findings."
+    },
+    "143": {
+      "status": "PASS",
+      "evidence": "Production runtime emits nonce scripts and intended headers; real login hydrates, password toggle works, no CSP/hydration error."
+    },
+    "144": {
+      "status": "PASS",
+      "evidence": "Authenticated/customer API and HTML responses disallow shared public caching."
+    },
+    "145": {
+      "status": "PASS",
+      "evidence": "Open staff session fails the next request after current PostgreSQL suspension."
+    },
+    "146": {
+      "status": "PASS",
+      "evidence": "Rotation immediately invalidates old credential, stale resolution cannot create a session, valid current lookup works, GET never creates session, revocation/regeneration execute."
+    },
+    "147": {
+      "status": "PASS",
+      "evidence": "Bounded invalid QR session attempts hit protection; an independent normal scan is unaffected."
+    },
+    "148": {
+      "status": "PASS",
+      "evidence": "All job surfaces reject unauthenticated triggers; authorized repeated notification job has no duplicate effects."
+    },
+    "149": {
+      "status": "PASS",
+      "evidence": "Public health is minimal, all non-platform roles denied operations, current SUPER_ADMIN succeeds."
+    },
+    "150": {
+      "status": "PASS",
+      "evidence": "All exercised business writes use dedicated PostgreSQL; demo Firebase Auth/Storage only, no Firestore service/client write used."
+    },
+    "extra-customer-dto": {
+      "status": "PASS",
+      "evidence": "Owned customer financial response strips staff free-text notes and internal refund references while retaining verified balances/statuses."
+    },
+    "extra-browser-auth": {
+      "status": "PASS",
+      "evidence": "Desktop and mobile primary email/password login hydrate, exchange a real demo-emulator token for a server cookie, and reach admin without credentials in URL, durable Firebase user storage or CSP errors; all external requests intercepted or blocked."
+    },
+    "extra-origin": {
+      "status": "PASS",
+      "evidence": "Forged cross-origin/forwarded-host mutation denied before body or business work."
+    },
+    "extra-body": {
+      "status": "PASS",
+      "evidence": "Actual oversized legacy JSON request returns 413 before parsing."
+    },
+    "extra-expiry": {
+      "status": "PASS",
+      "evidence": "Expired session cannot perform a new checkout."
+    },
+    "extra-product-regression": {
+      "status": "PASS",
+      "evidence": "Sandbox payment plus real kitchen/delivery transitions complete without weakening state/role boundaries."
+    },
+    "extra-payment-binding": {
+      "status": "PASS",
+      "evidence": "Signed but wrong amount/currency/provider identity is rejected without settlement or inventory effects."
+    },
+    "extra-session-cookies": {
+      "status": "PASS",
+      "evidence": "Issued staff cookies are HttpOnly/Secure/Lax; staff logout leaves customer cookie alone, anonymous customer end revokes only its session."
+    },
+    "extra-recovery-jobs": {
+      "status": "PASS",
+      "evidence": "Actual authenticated recovery/outbox/monitor jobs execute successfully; fixture refunds finalize from test-provider confirmation and corrected setup incidents are explicitly triaged locally."
+    },
+    "production-distributed": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "Production multi-instance ingress/proxy policy is not provisioned here; shared PostgreSQL atomic behavior and real local quota tested."
+    },
+    "live-provider": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No live-money provider; signature/replay/amount/refund testing uses isolated sandbox."
+    },
+    "external-scanner": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No dedicated ZAP/DAST scanner installed; bounded Playwright HTTP/browser and passive source/bundle/secret scanners were executed instead."
+    },
+    "https-deployment": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No deployed TLS endpoint in scope; HTTPS HSTS behavior executed in proxy unit test, local HTTP runtime correctly does not emit HSTS."
+    }
+  }
+}

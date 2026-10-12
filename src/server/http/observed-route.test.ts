@@ -1,5 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("@/server/security/request-boundary", () => ({ secureRequest: vi.fn(async (request: Request) => request) }));
 vi.mock("@/server/observability/incident", () => ({
   recordIncident: vi.fn().mockResolvedValue(undefined),
 }));

@@ -1,6 +1,7 @@
 import "server-only";
 
 import QRCode from "qrcode";
+import { randomUUID } from 'node:crypto';
 
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
 import { documentIdSchema } from "@/validation/shared";
@@ -35,7 +36,7 @@ export function seatQrImagePath(input: {
   const hallId = safeSegment(input.hallId);
   const seatId = safeSegment(input.seatId);
   if (!Number.isSafeInteger(input.version) || input.version < 1) throw new Error("Invalid QR version.");
-  return `organizations/${organizationId}/locations/${locationId}/halls/${hallId}/seats/${seatId}/qr-v${input.version}.png`;
+  return `organizations/${organizationId}/locations/${locationId}/halls/${hallId}/seats/${seatId}/qr-v${input.version}-${randomUUID()}.png`;
 }
 
 export async function createSeatQrPng(credential: string): Promise<Buffer> {

@@ -5,6 +5,8 @@ const database = vi.hoisted(() => {
   return { prisma: { user: { findUnique: vi.fn() }, movie: { findMany: vi.fn(), count: vi.fn() }, $transaction: vi.fn() }, transaction };
 });
 vi.mock("server-only", () => ({}));
+// Repository write behavior is isolated here; the real guard has its own adversarial suite.
+vi.mock("@/server/auth/mutation-scope", () => ({ assertMutationActor: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/db/prisma", () => ({ prisma: database.prisma }));
 
 import { createMovieRecord, listMoviesRecord } from "@/server/repositories/movies.repository";

@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { prisma } from "@/lib/db/prisma";
 import { ServiceError } from "@/server/services/service-error";
@@ -63,6 +64,7 @@ export async function createSeatQrRecord(input: {
 }) {
   const actorId = await actorUserId(input.actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
     const existing = await tx.seatQrCode.findUnique({ where: { hallId_seatId: { hallId: input.hallId, seatId: input.seatId } } });
     if (existing) throw new ServiceError("SEAT_QR_ALREADY_EXISTS", 409, "This seat already has a QR credential.");
     const created = await tx.seatQrCode.create({ data: {
@@ -101,6 +103,7 @@ export async function replaceSeatQrRecord(input: {
 }) {
   const actorId = await actorUserId(input.actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
     const result = await tx.seatQrCode.updateMany({
       where: { hallId: input.hallId, seatId: input.seatId, version: input.expectedVersion },
       data: {
@@ -139,6 +142,7 @@ export async function revokeSeatQrRecord(input: {
 }) {
   const actorId = await actorUserId(input.actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
     const existing = await tx.seatQrCode.findUnique({ where: { hallId_seatId: { hallId: input.hallId, seatId: input.seatId } } });
     if (!existing) throw new ServiceError("SEAT_QR_NOT_FOUND", 404, "Seat QR credential not found.");
     if (existing.status === "REVOKED") throw new ServiceError("NO_STATUS_CHANGE", 409, "This QR credential is already revoked.");

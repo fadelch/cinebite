@@ -1,5 +1,6 @@
 import { log } from "@/lib/observability/logger";
 import "server-only";
+import { assertPlatformMutation } from '@/server/auth/mutation-scope';
 
 import { randomUUID } from "node:crypto";
 
@@ -252,6 +253,7 @@ function productionDependencies(): OrganizationOnboardingDependencies {
     async commitOnboarding(input) {
       try {
         await prisma.$transaction(async (transaction) => {
+          await assertPlatformMutation(transaction, input.actorUid);
           const actor = await transaction.user.findUnique({
             where: { firebaseUid: input.actorUid },
             select: { id: true },

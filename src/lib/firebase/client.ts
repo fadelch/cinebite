@@ -1,7 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getAuth, initializeAuth, inMemoryPersistence } from "firebase/auth";
 
 import { clientEnv } from "@/lib/env";
 
@@ -17,6 +15,20 @@ const firebaseConfig = {
 export const firebaseApp = getApps().length
   ? getApp()
   : initializeApp(firebaseConfig);
-export const firebaseAuth = getAuth(firebaseApp);
-export const firestore = getFirestore(firebaseApp);
-export const firebaseStorage = getStorage(firebaseApp);
+// This application uses email/password, not popup/redirect OAuth. Do not initialize
+// durable browser token persistence or proactive mobile auth-helper iframes.
+export const firebaseAuth = (() => {
+  try {
+    return initializeAuth(firebaseApp, { persistence: inMemoryPersistence });
+  } catch (error) {
+    // Preserve the existing singleton during development hot reload only.
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "auth/already-initialized"
+    )
+      return getAuth(firebaseApp);
+    throw error;
+  }
+})();

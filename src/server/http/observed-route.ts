@@ -5,15 +5,18 @@ import { normalizeError, expectedLevel } from "@/lib/observability/errors";
 import { observabilityConfig } from "@/lib/observability/config";
 import { recordIncident } from "@/server/observability/incident";
 import { captureTrackedError } from "@/lib/observability/error-tracker";
+import { secureRequest } from "@/server/security/request-boundary";
+import { authorizationScope } from '@/server/auth/authorization-context';
 export function observedRoute<Args extends unknown[]>(
   operation: string,
   handler: (...args: Args) => Promise<Response> | Response,
 ) {
   return async (...args: Args) =>
-    observationScope({ requestId: newRequestId(), operation }, async () => {
+    authorizationScope(() => observationScope({ requestId: newRequestId(), operation }, async () => {
       const started = performance.now();
       let response: Response;
       try {
+        if (args[0] instanceof Request) args[0] = await secureRequest(args[0]);
         response = await handler(...args);
       } catch (error) {
         const failure = normalizeError(error);
@@ -32,6 +35,7 @@ export function observedRoute<Args extends unknown[]>(
         await import("@/lib/observability/context");
       const requestId = currentObservation().requestId!;
       response.headers.set("X-Request-ID", requestId);
+      if (response.status === 429) response.headers.set("Retry-After", "60");
       const durationMs = performance.now() - started;
       log(expectedLevel(response.status), "http.completed", {
         operation,
@@ -68,5 +72,5 @@ export function observedRoute<Args extends unknown[]>(
         );
       }
       return response;
-    });
+    }));
 }

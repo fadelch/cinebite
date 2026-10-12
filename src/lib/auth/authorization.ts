@@ -1,5 +1,6 @@
 import type { AuthenticatedUser } from "@/types/auth";
 import type { OrganizationStatus, UserRole } from "@/types/status";
+import { USER_ROLES } from "@/types/status";
 
 const ROLE_LANDING_PATHS = {
   SUPER_ADMIN: "/super-admin",
@@ -24,14 +25,14 @@ export function hasRole(
   user: AuthenticatedUser,
   allowedRoles: readonly UserRole[],
 ): boolean {
-  return user.active && allowedRoles.includes(user.role);
+  return user.active && USER_ROLES.includes(user.role) && allowedRoles.includes(user.role);
 }
 
 export function canAccessOrganization(
   user: AuthenticatedUser,
   organizationId: string,
 ): boolean {
-  if (!user.active) {
+  if (!user.active || !USER_ROLES.includes(user.role) || !organizationId) {
     return false;
   }
 
@@ -43,7 +44,7 @@ export function canAccessLocation(
   organizationId: string,
   locationId: string,
 ): boolean {
-  if (!canAccessOrganization(user, organizationId)) {
+  if (!locationId || !canAccessOrganization(user, organizationId)) {
     return false;
   }
 
@@ -58,7 +59,7 @@ export function canUseOrganization(
   user: Pick<AuthenticatedUser, "active" | "organizationId" | "role">,
   organizationStatus: OrganizationStatus | null,
 ): boolean {
-  if (!user.active) {
+  if (!user.active || !USER_ROLES.includes(user.role)) {
     return false;
   }
 

@@ -20,6 +20,26 @@ export function getServerEnv(): ServerEnv {
     return cachedServerEnv;
   }
 
+  if (process.env.NODE_ENV === "production") {
+    let originValid = false;
+    try {
+      const origin = new URL(process.env.CINEBITE_APP_ORIGIN ?? "");
+      originValid =
+        origin.protocol === "https:" &&
+        !origin.username &&
+        !origin.password &&
+        origin.origin === process.env.CINEBITE_APP_ORIGIN?.trim();
+    } catch {}
+    if (
+      !originValid ||
+      (process.env.SECURITY_RATE_LIMIT_SECRET?.length ?? 0) < 32
+    )
+      throw Object.assign(
+        new Error("Production security configuration is missing or invalid."),
+        { code: "CONFIGURATION_UNAVAILABLE" },
+      );
+  }
+
   const result = serverEnvSchema.safeParse({
     FIREBASE_ADMIN_PROJECT_ID: process.env.FIREBASE_ADMIN_PROJECT_ID,
     FIREBASE_ADMIN_CLIENT_EMAIL: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -36,15 +56,20 @@ export function getServerEnv(): ServerEnv {
       .map((issue) => issue.path.join("."))
       .join(", ");
 
-    throw Object.assign(new Error(
-      `Missing or invalid server environment variables: ${invalidVariables}. Check .env.local or your Vercel project settings.`,
-    ), { code: "CONFIGURATION_UNAVAILABLE" });
+    throw Object.assign(
+      new Error(
+        `Missing or invalid server environment variables: ${invalidVariables}. Check .env.local or your Vercel project settings.`,
+      ),
+      { code: "CONFIGURATION_UNAVAILABLE" },
+    );
   }
 
   cachedServerEnv = {
     ...result.data,
-    FIREBASE_ADMIN_PRIVATE_KEY:
-      result.data.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    FIREBASE_ADMIN_PRIVATE_KEY: result.data.FIREBASE_ADMIN_PRIVATE_KEY.replace(
+      /\\n/g,
+      "\n",
+    ),
   };
 
   return cachedServerEnv;

@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -77,6 +78,7 @@ export async function createInventoryItemRecord(actorUid: string, organizationId
   const actorUserId = await inventoryActorId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const created = await tx.inventoryItem.create({ data: { id, organizationId, ...input }, include: { _count: usageCount } });
       await tx.auditLog.create({ data: {
         actorUserId, action: "INVENTORY_ITEM_CREATED", entityType: "INVENTORY_ITEM",
@@ -92,6 +94,7 @@ export async function updateInventoryItemRecord(actorUid: string, organizationId
   const actorUserId = await inventoryActorId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const existing = await tx.inventoryItem.findFirst({
         where: { id, organizationId },
         include: { _count: usageCount },

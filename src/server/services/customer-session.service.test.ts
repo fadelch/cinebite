@@ -32,7 +32,8 @@ describe("anonymous customer sessions", () => {
   it("binds a new token to the trusted Seat and LIVE Screening without accepting client IDs", async () => {
     vi.mocked(resolveSeatCredential).mockResolvedValue({ qr: {}, seat: {}, active } as never);
     vi.mocked(createCustomerSessionRecord).mockResolvedValue(persisted as never);
-    const result = await startCustomerSession({ credential, seatId: "attacker-seat", screeningId: "attacker-screen" }, now);
+    await expect(startCustomerSession({ credential, seatId: "attacker-seat", screeningId: "attacker-screen" }, now)).rejects.toThrow();
+    const result = await startCustomerSession({ credential }, now);
     expect(result.rawToken).toHaveLength(43);
     expect(createCustomerSessionRecord).toHaveBeenCalledWith(expect.objectContaining({ hallId: "hall-1", seatId: "seat-a7", screeningId: "screen-1", tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/) }));
   });

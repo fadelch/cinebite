@@ -8,7 +8,7 @@ export async function databaseHealth(
   probe: () => Promise<unknown> = async () =>
     prisma.$transaction(
       async (tx) => {
-        await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '1500ms'");
+        await tx.$executeRaw`SET LOCAL statement_timeout = '1500ms'`;
         return tx.$queryRaw`SELECT 1`;
       },
       { timeout: 2000, maxWait: 1000 },

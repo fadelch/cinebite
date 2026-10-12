@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { connection } from "next/server";
 
 import { NotificationProvider } from "@/components/ui/notification-provider";
 
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
   description: "Cinema food ordering and seat delivery platform.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  await connection();
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full">

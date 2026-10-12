@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { headers } from 'next/headers';
+import { anonymousPolicy, consumeRateLimit, networkSubject, RATE_POLICIES } from '@/server/security/rate-limit';
 
 import { StartOrderingButton } from "@/components/customer/start-ordering-button";
 import { resolveSeatScan } from "@/server/services/seat-scan.service";
@@ -8,6 +10,8 @@ export const metadata = { title: "Scan your seat | CineBite" };
 
 export default async function SeatScanPage({ params }: { params: Promise<{ credential: string }> }) {
   const { credential } = await params;
+  const subject = networkSubject(await headers());
+  await consumeRateLimit(anonymousPolicy(RATE_POLICIES.qr, subject), subject);
   const result = await resolveSeatScan(credential);
   const brand=result.state==="READY"?result.context.branding:result.state==="NO_ACTIVE_SCREENING"?result.branding:null;
   return (

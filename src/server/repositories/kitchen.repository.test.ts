@@ -70,7 +70,8 @@ describe("atomic kitchen transitions", () => {
   });
 
   it("uses current PostgreSQL grants rather than stale actor access", async () => {
-    await transitionKitchenOrderRecord({ actor: { ...actor, role: "CINEMA_ADMIN", allLocations: true }, publicCode: "CB-12AB34CD56", expectedStatus: "PLACED", toStatus: "ACCEPTED" });
+    await expect(transitionKitchenOrderRecord({ actor: { ...actor, role: "CINEMA_ADMIN", allLocations: true }, publicCode: "CB-12AB34CD56", expectedStatus: "PLACED", toStatus: "ACCEPTED" })).rejects.toMatchObject({ code: 'AUTHORIZATION_DENIED' });
+    await transitionKitchenOrderRecord({ actor, publicCode: "CB-12AB34CD56", expectedStatus: "PLACED", toStatus: "ACCEPTED" });
     expect(database.tx.order.findFirst).toHaveBeenCalledWith({ where: { organizationId: "org-a", publicOrderCode: "CB-12AB34CD56", locationId: { in: ["beirut"] } } });
     expect(database.tx.auditLog.create.mock.calls[0][0].data.metadata).toEqual({ publicOrderCode: "CB-12AB34CD56", fromStatus: "PLACED", toStatus: "ACCEPTED" });
   });

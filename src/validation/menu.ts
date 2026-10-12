@@ -18,7 +18,7 @@ const skuSchema = z.preprocess(
     .nullable(),
 );
 
-export const menuCategoryInputSchema = z.object({
+export const menuCategoryInputSchema = z.strictObject({
   name: nameSchema,
   slug: slugSchema,
   description: z.string().trim().max(500).nullable().optional().transform((value) => value || null),
@@ -49,14 +49,14 @@ export const currencyCodeSchema = z.string().trim().toUpperCase().regex(
   "Currency must be a three-letter code such as USD, LBP, or EUR.",
 );
 
-export const productLocationInputSchema = z.object({
+export const productLocationInputSchema = z.strictObject({
   locationId: documentIdSchema,
   price: priceSchema,
   currencyCode: currencyCodeSchema,
   isAvailable: z.boolean(),
 });
 
-const productIdentity = z.object({
+const productIdentity = z.strictObject({
   name: nameSchema,
   slug: slugSchema,
   categoryId: documentIdSchema,
@@ -83,12 +83,12 @@ export const productUpdateSchema = productIdentity.partial().refine(
 
 export const productLocationUpdateSchema = productLocationInputSchema.omit({ locationId: true });
 
-export const productListQuerySchema = z.object({
+export const productListQuerySchema = z.strictObject({
   search: z.string().trim().max(100).default(""),
   categoryId: z.string().trim().max(1_500).optional(),
   status: menuStatusSchema.optional(),
   locationId: z.string().trim().max(1_500).optional(),
   availability: z.enum(["AVAILABLE", "UNAVAILABLE"]).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });

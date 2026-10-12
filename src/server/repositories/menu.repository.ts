@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -160,6 +161,7 @@ export async function createMenuCategoryRecord(actorUid: string, organizationId:
   const actorId = await actorUserId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const created = await tx.menuCategory.create({ data: { id, organizationId, ...input }, include: { _count: { select: { products: true } } } });
       await tx.auditLog.create({ data: { actorUserId: actorId, action: "CATEGORY_CREATED", entityType: "MENU_CATEGORY", entityId: id, organizationId, metadata: { slug: input.slug } } });
       return created;
@@ -172,6 +174,7 @@ export async function updateMenuCategoryRecord(actorUid: string, organizationId:
   const actorId = await actorUserId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const existing = await tx.menuCategory.findFirst({ where: { id, organizationId } });
       if (!existing) throw new ServiceError("CATEGORY_NOT_FOUND", 404, "Menu category not found.");
       const updated = await tx.menuCategory.update({ where: { id }, data: input, include: { _count: { select: { products: true } } } });
@@ -189,6 +192,7 @@ export async function createMenuProductRecord(actorUid: string, organizationId: 
   const actorId = await actorUserId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const category = await tx.menuCategory.findFirst({ where: { id: input.categoryId, organizationId } });
       if (!category) throw new ServiceError("CATEGORY_NOT_FOUND", 404, "Menu category not found.");
       const locationIds = input.locations.map((entry) => entry.locationId);
@@ -226,6 +230,7 @@ export async function updateMenuProductRecord(actorUid: string, organizationId: 
   const actorId = await actorUserId(actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, actorUid, organizationId, undefined, true);
       const existing = await tx.product.findFirst({ where: { id, organizationId } });
       if (!existing) throw new ServiceError("PRODUCT_NOT_FOUND", 404, "Product not found.");
       if (input.categoryId) {
@@ -246,6 +251,7 @@ export async function updateMenuProductRecord(actorUid: string, organizationId: 
 export async function upsertProductLocationRecord(actorUid: string, organizationId: string, productId: string, locationId: string, input: ProductLocationInput) {
   const actorId = await actorUserId(actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, actorUid, organizationId, locationId, false);
     const [product, location, existing] = await Promise.all([
       tx.product.findFirst({ where: { id: productId, organizationId } }),
       tx.location.findFirst({ where: { id: locationId, organizationId } }),
@@ -283,6 +289,7 @@ export async function upsertProductLocationRecord(actorUid: string, organization
 export async function setProductImageRecord(actorUid: string, organizationId: string, productId: string, image: { storagePath: string; url: string } | null) {
   const actorId = await actorUserId(actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, actorUid, organizationId, undefined, true);
     const existing = await tx.product.findFirst({ where: { id: productId, organizationId } });
     if (!existing) throw new ServiceError("PRODUCT_NOT_FOUND", 404, "Product not found.");
     const updated = await tx.product.update({ where: { id: productId }, data: { imageStoragePath: image?.storagePath ?? null, imageUrl: image?.url ?? null } });

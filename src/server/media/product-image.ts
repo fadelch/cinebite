@@ -3,7 +3,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { getDownloadURL } from "firebase-admin/storage";
+import { publicImageUrl } from './public-image-url';
 import sharp from "sharp";
 
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
@@ -12,6 +12,8 @@ import { documentIdSchema } from "@/validation/shared";
 
 export const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 const allowedFormats = new Set(["jpeg", "png", "webp"]);
+// Disable dangerous non-raster loaders before even metadata parsing.
+sharp.block({ operation: ["VipsForeignLoadSvg", "VipsForeignLoadPdf"] });
 
 export interface StoredProductImage { storagePath: string; url: string }
 
@@ -21,9 +23,15 @@ export async function normalizeProductImage(file: File): Promise<Buffer> {
   }
   const input = Buffer.from(await file.arrayBuffer());
   try {
+    const raster = input.subarray(0, 3).equals(Buffer.from([255, 216, 255]))
+      || input.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+      || (input.toString('ascii', 0, 4) === 'RIFF' && input.toString('ascii', 8, 12) === 'WEBP');
+    if (!raster) throw new Error('unsupported signature');
     const processor = sharp(input, { failOn: "error", limitInputPixels: 40_000_000 });
     const metadata = await processor.metadata();
     if (!metadata.format || !allowedFormats.has(metadata.format)) throw new Error("unsupported format");
+    if (!metadata.width || !metadata.height || metadata.width > 10000 || metadata.height > 10000
+      || metadata.width * metadata.height > 40_000_000 || (metadata.pages ?? 1) > 1) throw new Error('excessive image');
     return await processor.autoOrient().resize(1200, 1200, {
       fit: "inside",
       withoutEnlargement: true,
@@ -59,7 +67,7 @@ export async function storeProductImage(
         },
         validation: "crc32c",
       });
-      return { storagePath, url: await getDownloadURL(object) };
+      return { storagePath, url: publicImageUrl(object.bucket.name, storagePath, token) };
     } catch (error) {
       await object.delete({ ignoreNotFound: true }).catch(() => undefined);
       throw error;

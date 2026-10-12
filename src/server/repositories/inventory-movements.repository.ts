@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 import { observedOperation } from "@/lib/observability/logger";
 
 import { Prisma } from "@/generated/prisma/client";
@@ -47,6 +48,7 @@ export async function applyStockMovementRecord(input: {
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   return observedOperation("inventory.stock_movement", () => prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
     const existing = await tx.locationInventory.findFirst({
       where: { id: input.locationInventoryId, organizationId: input.organizationId, locationId: input.locationId },
       include: { inventoryItem: { select: { id: true, name: true, sku: true, unit: true, status: true } } },

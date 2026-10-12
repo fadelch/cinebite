@@ -2,6 +2,7 @@ import { log } from "@/lib/observability/logger";
 import "server-only";
 import { normalizeError } from "@/lib/observability/errors";
 import { ServiceError } from "@/server/services/service-error";
+import { rememberAuthorization } from './authorization-context';
 
 import { cookies } from "next/headers";
 
@@ -78,6 +79,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       }
     }
 
+    rememberAuthorization(user.uid, user.authorizationVersion ?? 0);
     return user;
   } catch (error) {
     logCurrentUserFailure(stage, error);
