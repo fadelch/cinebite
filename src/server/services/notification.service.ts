@@ -101,6 +101,7 @@ function dto(
 ): NotificationDto {
   const payload = row.outbox.payload as Record<string, string>;
   let href: string | null = null;
+  if(row.entityType==="USER")href=role==="CINEMA_ADMIN"?`/admin/staff/${encodeURIComponent(row.entityId)}`:role==="KITCHEN_STAFF"?"/kitchen":role==="DELIVERY_STAFF"?"/delivery":"/admin";
   if (customerCode)
     href = `/customer/orders/${encodeURIComponent(customerCode)}`;
   else if (row.entityType === "ORDER") {

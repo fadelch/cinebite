@@ -43,11 +43,37 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 17 — Notifications & Alerts**
+**Phase 18 — Organization Settings & Staff Management**
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
 Phase 16 adds server-calculated, tenant-safe concession analytics, operational timings, inventory consumption reports and authorized CSV export from existing PostgreSQL records. It does not implement real-money merchant onboarding, chargebacks, accounting/tax reporting, profit/COGS, FX, predictions or a BI warehouse. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+
+## Phase 18 organization settings and staff management
+
+Cinema Admin can manage their own cinema at `/admin/settings`, edit existing location names/addresses/IANA timezones at `/admin/settings/locations/[locationId]`, and administer staff through `/admin/staff`, `/admin/staff/invite` and `/admin/staff/[userId]`. Location Managers can view scoped settings but cannot change organization-wide settings or staff permissions. Kitchen/Delivery and platform Super Admin do not gain tenant-settings mutations.
+
+The existing `Organization.name` remains the administrative name; optional `customerFacingName` explicitly separates the public cinema identity. Public cinema support email/phone/HTTPS website and three controlled accents (AMBER, TEAL, VIOLET) support safe branding. No arbitrary HTML/CSS/JS, remote logo URL, white theme, marketing or new locale system is introduced. Scan confirmation and the secure customer menu/cart/payment/order layout use the branding while retaining CineBite identity and readable payment/status visuals. Logos gracefully fall back if missing/broken; customer session authorization is unchanged. Historical order snapshots and UTC schedule/event timestamps are not rewritten by name/timezone edits.
+
+Logo upload reuses the Sharp raster pipeline with authorization before parsing, bounded multipart bodies, JPEG/PNG/WebP MIME/content checks, a 5 MB file limit, decoder pixel limits, metadata stripping and normalized WebP. UUID paths are server controlled: `organizations/{organizationId}/branding/{uuid}.webp`. A new object uploads before a version-checked database update; failed updates compensate only the new object. Old files are removed after successful commit. `/api/branding/[organizationId]/logo` serves only the active cinema's current normalized object through the server—no Firebase download token, client-supplied object path or Admin credential is exposed. A safe preview shows the same customer component.
+
+Firebase continues to own identity/passwords; PostgreSQL owns current role, activity, organization status and location grants. There is no new auth model or public staff signup. Invitation is Cinema Admin-only, uses a server-derived organization and allows only CINEMA_ADMIN, LOCATION_MANAGER, KITCHEN_STAFF or DELIVERY_STAFF. Non-admin roles require explicitly selected active own-cinema locations; Cinema Admin gets organization-wide access with obsolete individual grants normalized away. Duplicate members and pre-existing/unclaimed/cross-organization Firebase identities are rejected rather than blindly linked. Shared legacy multi-membership identities are visible in their own-tenant list but read-only for these lifecycle actions.
+
+Invitation creates an Auth identity, role claims, a Firebase setup/reset link and one atomic PostgreSQL User/membership/location/audit transaction. A failure compensates only an exclusively new, uncommitted Auth identity—not existing staff. The private link is returned to the authorized admin for deliberate secure handoff in an ephemeral dialog; it is not saved in PostgreSQL, audit, local storage or screenshots. **No application email delivery provider is configured, and no invitation email is claimed as sent.** Complete/restart setup using the private Firebase link or the established Firebase reset flow. The actual provider generates action links; delivery is a separate responsibility. [Firebase email-action documentation](https://firebase.google.com/docs/auth/admin/email-action-links).
+
+`INVITED` means no completed CineBite sign-in yet, not stored password truth. A verified Firebase session exchange moves setup to READY; active+READY displays ACTIVE. Invited admins do not count as operational replacements. Staff email stays read-only; display-name changes preserve immutable actor references. Role/access edits, suspension/reactivation and setup restarts use strict schemas, version checks, same-origin protection and safe audit events. Lists have server-side role/status/location/name/email filtering and 20-row pagination; details show the latest 20 relevant safe audit records, never invented last-login data.
+
+Sensitive staff writes serialize under an organization row lock, then reread the actor's current PG role/activity/security version, target and grant ownership. A ready active admin cannot be demoted/suspended if that would leave none; self-demotion/self-suspension is disallowed. Suspension immediately blocks the next protected request through PG activity. Role changes/suspension/reactivation also increment a security version checked against verified token claims, so reactivation cannot revive old cookies. Same-role location changes take effect on the next request without waiting for new claims. Historical users, orders, refunds, stock movements and audits are retained; no normal hard-delete endpoint exists.
+
+Firebase refresh-token revocation/claim synchronization happens outside business transactions, with a persistent pending flag, safe error code and 10-minute per-user lease. Stale claims fail closed even if synchronization fails. Staff detail offers an authorized **Retry identity sync** action; a killed worker's lease expires rather than relying on in-memory state. There is no automatic background identity-sync schedule in this phase. Reactivation never silently overrides a Firebase/platform-disabled identity. Role changes and reactivation require a fresh sign-in after successful synchronization.
+
+Phase 17 is reused—not rebuilt—for target-only, durable role/location-change notifications. These security-relevant categories cannot be disabled; setup-link delivery remains distinct from in-app messages. Settings/staff data remain PostgreSQL-authoritative with no normal Firestore business writes. Payroll, shifts, HR, attendance, marketing, ticket sales and loyalty are not included.
+
+![Full CineBite staff administration page with fictional staff, roles, location permissions and status](linkedin/phase-18/04-staff-management.png)
+
+Read the [62-topic architecture and design rationale](docs/phase-18-architecture.md), [executed verification/reproduction/deployment guide](docs/phase-18-verification.md), [individual A–AL results](docs/phase-18-integration-results.json) and [eight native full-page high-density screenshots](linkedin/phase-18/README.md).
+
+**Deployment:** after user review/merge, apply the additive Phase 18 migration with the reviewed direct connection (`npm run prisma:migrate:deploy`) **before running the updated server**; the login/profile query needs the new User columns. Do not reset Neon or use destructive db push. Keep Auth/Storage Admin credentials server-only, configure the existing Firebase bucket/password setup domains, retain the Phase 17 notification processor schedule, and review pending identity sync on the staff detail page. Production has not been migrated, seeded or used by the isolated tests. Phase 19 has not begun.
 
 ## Phase 17 notifications
 
@@ -67,7 +93,7 @@ Only **in-app** delivery is implemented. `NotificationChannelProvider` is the ad
 
 ![CineBite persistent staff notification center with stock, refund and order-issue updates](linkedin/phase-17/01-notification-center.png)
 
-See the [62-topic architecture explanation](docs/phase-17-architecture.md), [executed checks and deployment guide](docs/phase-17-verification.md), [individual A–AN results](docs/phase-17-integration-results.json) and [eight native full-page screenshots](linkedin/phase-17/README.md). Production has not been migrated or seeded by the verification runner. Phase 18 has not been started.
+See the [62-topic architecture explanation](docs/phase-17-architecture.md), [executed checks and deployment guide](docs/phase-17-verification.md), [individual A–AN results](docs/phase-17-integration-results.json) and [eight native full-page screenshots](linkedin/phase-17/README.md). Production has not been migrated or seeded by the verification runner. Phase 18 extends this notification layer as described above.
 
 ## Phase 16 analytics
 

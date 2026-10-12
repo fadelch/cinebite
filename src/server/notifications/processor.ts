@@ -33,6 +33,7 @@ export async function resolveRecipients(
     return [];
   return tx.organizationMembership.findMany({
     where: {
+      ...(["STAFF_ROLE_CHANGED","STAFF_ACCESS_CHANGED"].includes(event.type)?{userId:event.entityId}:{}),
       organizationId: event.organizationId,
       organization: { status: "ACTIVE" },
       user: { active: true },
@@ -69,6 +70,8 @@ export function eventText(
 ) {
   const p = event.payload as Record<string, string>;
   const titles: Record<NotificationOutbox["type"], string> = {
+    STAFF_ROLE_CHANGED:"Your staff role changed",
+    STAFF_ACCESS_CHANGED:"Your location access changed",
     NEW_ORDER: "New kitchen order",
     ORDER_ACCEPTED: "Order accepted",
     ORDER_PREPARING: "Order preparing",
@@ -86,6 +89,8 @@ export function eventText(
     SCREENING_CANCELED: "Screening canceled",
   };
   const messages: Record<NotificationOutbox["type"], string> = {
+    STAFF_ROLE_CHANGED:`Your staff role changed from ${p.previousRole} to ${p.newRole}. Sign in again to refresh your permissions.`,
+    STAFF_ACCESS_CHANGED:"Your assigned cinema locations changed. Access is determined by your current server-authorized grants.",
     NEW_ORDER: `${p.code ?? "Order"} · ${p.hall ?? "Hall"} · Seat ${p.seat ?? ""}. An eligible order entered the kitchen.`,
     ORDER_ACCEPTED: "Your order was accepted by the kitchen.",
     ORDER_PREPARING: "Your order is being prepared.",

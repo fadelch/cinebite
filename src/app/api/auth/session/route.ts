@@ -15,6 +15,7 @@ import { getAdminAuth } from "@/lib/firebase/admin";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { getUserProfile } from "@/server/auth/user-profile";
 import { getOrganizationById } from "@/server/repositories/organizations.repository";
+import {prisma} from "@/lib/db/prisma";
 import { sessionRequestSchema } from "@/validation/auth";
 
 export const runtime = "nodejs";
@@ -112,6 +113,11 @@ export async function POST(request: Request) {
       parsed.data.idToken,
       { expiresIn: SESSION_DURATION_MS },
     );
+    // A verified Firebase sign-in completes invitation setup, never reactivation.
+    // Recheck state/version after the external cookie RPC to close lifecycle races.
+    const fresh=await getUserProfile(token.uid,profile.organizationId);
+    if(!fresh?.active||!claimsMatchProfile(token,fresh))return errorResponse(403);
+    await prisma.user.updateMany({where:{firebaseUid:token.uid,active:true,authorizationVersion:fresh.authorizationVersion??0,setupState:"INVITED"},data:{setupState:"READY"}});
     const response = NextResponse.json(
       {
         status: "ok",

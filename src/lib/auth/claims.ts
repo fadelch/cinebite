@@ -1,6 +1,7 @@
 import type { UserProfile } from "@/types/user";
 
 interface TokenProfileClaims {
+  readonly authorizationVersion?: unknown;
   readonly email?: string;
   readonly role?: unknown;
   readonly organizationId?: unknown;
@@ -8,7 +9,7 @@ interface TokenProfileClaims {
 
 type ProfileClaims = Pick<
   UserProfile,
-  "email" | "role" | "organizationId"
+  "email" | "role" | "organizationId" | "authorizationVersion"
 >;
 
 /**
@@ -22,6 +23,7 @@ export function claimsMatchProfile(
 ): boolean {
   return (
     token.role === profile.role &&
+    (token.authorizationVersion ?? 0) === (profile.authorizationVersion ?? 0) &&
     (token.organizationId ?? null) === profile.organizationId &&
     token.email?.toLowerCase() === profile.email.toLowerCase()
   );

@@ -1,4 +1,6 @@
 export const NOTIFICATION_TYPES = [
+  "STAFF_ROLE_CHANGED",
+  "STAFF_ACCESS_CHANGED",
   "NEW_ORDER",
   "ORDER_ACCEPTED",
   "ORDER_PREPARING",
@@ -28,7 +30,7 @@ export function categoryFor(type: NotificationKind): Category {
     return "INVENTORY";
   if (["PAYMENT_FAILED", "REFUND_FAILED", "REFUND_SUCCEEDED"].includes(type))
     return "FINANCIAL";
-  if (["ORDER_ISSUE_REPORTED", "SCREENING_CANCELED"].includes(type))
+  if (["ORDER_ISSUE_REPORTED", "SCREENING_CANCELED","STAFF_ROLE_CHANGED","STAFF_ACCESS_CHANGED"].includes(type))
     return "EXCEPTIONS";
   return "ORDERS";
 }
@@ -38,6 +40,8 @@ export function mandatory(type: NotificationKind) {
     "REFUND_FAILED",
     "ORDER_ISSUE_REPORTED",
     "SCREENING_CANCELED",
+    "STAFF_ROLE_CHANGED",
+    "STAFF_ACCESS_CHANGED",
   ].includes(type);
 }
 export function severityFor(
@@ -51,6 +55,7 @@ export function severityFor(
   return "INFO";
 }
 export function recipientsFor(type: NotificationKind): string[] {
+  if(["STAFF_ROLE_CHANGED","STAFF_ACCESS_CHANGED"].includes(type))return ["CINEMA_ADMIN","LOCATION_MANAGER","KITCHEN_STAFF","DELIVERY_STAFF"];
   if (type === "NEW_ORDER") return ["KITCHEN_STAFF"];
   if (type === "ORDER_READY") return ["DELIVERY_STAFF"];
   if (

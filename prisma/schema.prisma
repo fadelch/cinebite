@@ -23,6 +23,17 @@ enum MembershipRole {
   DELIVERY_STAFF
 }
 
+enum StaffSetupState {
+  INVITED
+  READY
+}
+
+enum BrandAccent {
+  AMBER
+  TEAL
+  VIOLET
+}
+
 enum OrganizationStatus {
   ACTIVE
   SUSPENDED
@@ -167,6 +178,16 @@ enum OrderIssueStatus {
 }
 
 enum AuditAction {
+  STAFF_INVITED
+  STAFF_ROLE_CHANGED
+  STAFF_LOCATION_ACCESS_CHANGED
+  STAFF_SUSPENDED
+  STAFF_REACTIVATED
+  STAFF_PROFILE_UPDATED
+  STAFF_SETUP_RESTARTED
+  ORGANIZATION_SETTINGS_UPDATED
+  ORGANIZATION_BRANDING_UPDATED
+  LOCATION_SETTINGS_UPDATED
   NOTIFICATION_PREFERENCES_CHANGED
   REPORT_EXPORTED
   ORDER_CANCELED
@@ -261,14 +282,20 @@ enum AuditEntityType {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  firebaseUid  String       @unique
-  email        String       @unique
-  displayName  String
-  active       Boolean      @default(true)
-  platformRole PlatformRole @default(USER)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                     String          @id @default(cuid())
+  firebaseUid            String          @unique
+  email                  String          @unique
+  displayName            String
+  active                 Boolean         @default(true)
+  platformRole           PlatformRole    @default(USER)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  setupState             StaffSetupState @default(READY)
+  authorizationVersion   Int             @default(0)
+  identitySyncPending    Boolean         @default(false)
+  identitySyncLease      String?
+  identitySyncLeaseUntil DateTime?       @db.Timestamptz(3)
+  identitySyncErrorCode  String?
 
   memberships             OrganizationMembership[]
   notifications           Notification[]
@@ -286,13 +313,20 @@ model User {
 }
 
 model Organization {
-  id          String             @id @default(cuid())
-  name        String
-  slug        String             @unique
-  paymentMode OrderPaymentPolicy @default(ONLINE_REQUIRED)
-  status      OrganizationStatus @default(ACTIVE)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id                 String             @id @default(cuid())
+  name               String
+  slug               String             @unique
+  paymentMode        OrderPaymentPolicy @default(ONLINE_REQUIRED)
+  status             OrganizationStatus @default(ACTIVE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  customerFacingName String?            @db.VarChar(120)
+  supportEmail       String?            @db.VarChar(254)
+  supportPhone       String?            @db.VarChar(40)
+  website            String?            @db.VarChar(2048)
+  brandAccent        BrandAccent        @default(AMBER)
+  logoStoragePath    String?
+  settingsVersion    Int                @default(0)
 
   memberships         OrganizationMembership[]
   notifications       Notification[]
@@ -319,6 +353,7 @@ model OrganizationMembership {
   allLocations   Boolean        @default(false)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  revision       Int            @default(0)
 
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -328,23 +363,25 @@ model OrganizationMembership {
   @@unique([id, organizationId])
   @@index([userId])
   @@index([organizationId])
+  @@index([organizationId, role, createdAt])
   @@map("organization_memberships")
 }
 
 model Location {
-  id             String         @id @default(cuid())
-  organizationId String
-  name           String
-  slug           String
-  addressLine1   String
-  addressLine2   String?
-  postalCode     String?
-  city           String
-  country        String
-  timezone       String
-  status         LocationStatus @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id              String         @id @default(cuid())
+  organizationId  String
+  name            String
+  slug            String
+  addressLine1    String
+  addressLine2    String?
+  postalCode      String?
+  city            String
+  country         String
+  timezone        String
+  status          LocationStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  settingsVersion Int            @default(0)
 
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   halls               Hall[]
@@ -1012,6 +1049,8 @@ model AuditLog {
 }
 
 enum NotificationType {
+  STAFF_ROLE_CHANGED
+  STAFF_ACCESS_CHANGED
   NEW_ORDER
   ORDER_ACCEPTED
   ORDER_PREPARING

@@ -19,6 +19,8 @@ const navigation = [
   { href: "/admin/screenings", label: "Screenings", exact: false },
   { href: "/admin/orders", label: "Orders", exact: false },
   { href: "/admin/analytics", label: "Analytics", exact: false },
+  { href: "/admin/settings", label: "Settings", exact: false },
+  { href: "/admin/staff", label: "Staff", exact: false },
   { href: "/kitchen", label: "Kitchen operations", exact: false },
   { href: "/delivery", label: "Delivery operations", exact: false },
 ] as const;
@@ -39,7 +41,7 @@ export function AdminShell({
         <AdminBrand organizationName={context.organizationName} />
         <div className="mt-4"><NotificationBell /></div>
         <nav aria-label="Cinema Admin navigation" className="mt-10 space-y-1">
-          {navigation.map((item) => {
+          {navigation.filter(item=>item.href!=="/admin/staff"||context.user.role==="CINEMA_ADMIN").map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link
@@ -79,7 +81,7 @@ export function AdminShell({
           <div className="flex flex-wrap justify-end gap-2"><NotificationBell /><LogoutButton /></div>
         </div>
         <nav aria-label="Cinema Admin mobile navigation" className="mt-3 flex gap-2 overflow-x-auto pb-1">
-          {navigation.map((item) => {
+          {navigation.filter(item=>item.href!=="/admin/staff"||context.user.role==="CINEMA_ADMIN").map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link

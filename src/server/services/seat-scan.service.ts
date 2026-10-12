@@ -5,6 +5,7 @@ import { resolveActiveScreeningForSeatRecord } from "@/server/repositories/scree
 import { findSeatQrByHashRecord } from "@/server/repositories/seat-qr.repository";
 import type { SeatScanResult } from "@/types/seat-qr";
 import { seatQrCredentialSchema } from "@/validation/seat-qr";
+import {publicBranding} from "./organization-settings.service";
 
 export async function resolveSeatCredential(credentialInput: string, now = new Date()) {
   const parsed = seatQrCredentialSchema.safeParse(credentialInput);
@@ -28,6 +29,7 @@ export async function resolveSeatScan(credentialInput: string, now = new Date())
   if (resolution.active.state === "NO_ACTIVE_SCREENING") {
     return {
       state: "NO_ACTIVE_SCREENING",
+      branding:publicBranding(resolution.seat.hall.location.organization),
       organizationName: resolution.seat.hall.location.organization.name,
       locationName: resolution.seat.hall.location.name,
       hallName: resolution.seat.hall.name,
@@ -37,6 +39,7 @@ export async function resolveSeatScan(credentialInput: string, now = new Date())
   return {
     state: "READY",
     context: {
+      branding:publicBranding(resolution.seat.hall.location.organization),
       organizationName: resolution.active.organization.name,
       locationName: resolution.active.location.name,
       timezone: resolution.active.location.timezone,

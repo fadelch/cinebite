@@ -2,6 +2,7 @@ import type { DatabaseTimestamp } from "@/types/database";
 import type { UserRole } from "@/types/status";
 
 export interface UserProfile {
+  authorizationVersion?: number;
   uid: string;
   organizationId: string | null;
   locationIds: string[];

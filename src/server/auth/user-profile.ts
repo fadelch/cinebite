@@ -32,6 +32,7 @@ export async function getUserProfile(
       locationIds: [],
       allLocations: false,
       active: user.active,
+      authorizationVersion:user.authorizationVersion,
       createdAt: toDatabaseTimestamp(user.createdAt),
       updatedAt: toDatabaseTimestamp(user.updatedAt),
     };
@@ -56,6 +57,7 @@ export async function getUserProfile(
     locationIds: membership.locationAccess.map((access) => access.locationId),
     allLocations: membership.allLocations,
     active: user.active,
+    authorizationVersion:user.authorizationVersion,
     createdAt: toDatabaseTimestamp(user.createdAt),
     updatedAt: toDatabaseTimestamp(user.updatedAt),
   };
@@ -63,6 +65,7 @@ export async function getUserProfile(
 
 export function toAuthenticatedUser(profile: UserProfile): AuthenticatedUser {
   return {
+    authorizationVersion:profile.authorizationVersion??0,
     uid: profile.uid,
     email: profile.email,
     displayName: profile.displayName,
