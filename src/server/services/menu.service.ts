@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -159,7 +160,7 @@ export async function replaceMenuProductImage(productIdInput: string, file: File
   try {
     const result = await setProductImageRecord(actor.uid, organization.id, productId, uploaded);
     if (result.oldPath) await deleteProductImage(organization.id, productId, result.oldPath).catch((error: unknown) => {
-      console.error("[menu/media] Old image cleanup failed.", { name: error instanceof Error ? error.name : "UnknownError" });
+      log("error","src.server.services.menu.service.ts.failure",{ name: error instanceof Error ? error.name : "UnknownError" });
     });
     return { imageUrl: uploaded.url };
   } catch (error) {
@@ -176,7 +177,7 @@ export async function removeMenuProductImage(productIdInput: string) {
   if (!existing) throw new ServiceError("PRODUCT_NOT_FOUND", 404, "Product not found.");
   const result = await setProductImageRecord(actor.uid, organization.id, productId, null);
   if (result.oldPath) await deleteProductImage(organization.id, productId, result.oldPath).catch((error: unknown) => {
-    console.error("[menu/media] Removed image cleanup failed.", { name: error instanceof Error ? error.name : "UnknownError" });
+    log("error","src.server.services.menu.service.ts.failure",{ name: error instanceof Error ? error.name : "UnknownError" });
   });
   return { removed: true };
 }

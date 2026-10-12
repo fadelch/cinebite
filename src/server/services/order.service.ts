@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation, log } from "@/lib/observability/logger";
 
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getAdminOrderRecord, getCustomerOrderRecord, placeOrderRecord } from "@/server/repositories/order.repository";
@@ -13,13 +14,14 @@ import { paymentConfig } from "@/lib/payments/config";
 import { expirePaymentReservations, initializeProviderPayment, limitPaymentRequests } from "@/server/repositories/payment.repository";
 
 export async function placeCustomerOrder(rawToken: string | undefined, input: unknown, now = new Date()) {
-  const parsed = checkoutSchema.parse(input);
-  const session = await validateCustomerSession(rawToken, now);
+  const parsed = await observedOperation("checkout.input_validation", async () => checkoutSchema.parse(input));
+  const session = await observedOperation("checkout.session_validation", () => validateCustomerSession(rawToken, now));
   paymentConfig();
   await limitPaymentRequests(session.id, "initiate");
   await expirePaymentReservations(now);
-  const result = await placeOrderRecord({ customerSessionId: session.id, idempotencyKey: parsed.idempotencyKey, customerNote: parsed.customerNote || null, now });
-  await initializeProviderPayment(session.id, result.order.publicOrderCode);
+  const result = await observedOperation("checkout.order_transaction", () => placeOrderRecord({ customerSessionId: session.id, idempotencyKey: parsed.idempotencyKey, customerNote: parsed.customerNote || null, now }));
+  await observedOperation("checkout.payment_initialization", () => initializeProviderPayment(session.id, result.order.publicOrderCode), { publicOrderCode: result.order.publicOrderCode });
+  log("info", "checkout.completed", { publicOrderCode: result.order.publicOrderCode, duplicate: result.replayed });
   return result;
 }
 

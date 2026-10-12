@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toOrganizationDetailDto } from "@/lib/super-admin/dto";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { ServiceError } from "@/server/services/service-error";
@@ -5,7 +6,7 @@ import { getOrganizationForSuperAdmin } from "@/server/services/organization-man
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function GETHandler(
   _request: Request,
   context: { params: Promise<{ organizationId: string }> },
 ) {
@@ -26,3 +27,5 @@ export async function GET(
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.super-admin.organizations.organizationId", GETHandler);

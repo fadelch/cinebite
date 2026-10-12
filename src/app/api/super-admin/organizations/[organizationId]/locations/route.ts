@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toLocationDto } from "@/lib/super-admin/dto";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import {
@@ -10,7 +11,7 @@ import { addOrganizationLocation } from "@/server/services/organization-manageme
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function POSTHandler(
   request: Request,
   context: { params: Promise<{ organizationId: string }> },
 ) {
@@ -34,3 +35,5 @@ export async function POST(
     return apiError(error);
   }
 }
+
+export const POST = observedRoute("POST.api.super-admin.organizations.organizationId.locations", POSTHandler);

@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation } from "@/lib/observability/logger";
 
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -45,7 +46,7 @@ export async function applyStockMovementRecord(input: {
   movementId: string; type: Exclude<InventoryMovementType, "ORDER_CONSUMPTION" | "ORDER_CANCELLATION_RESTOCK">; quantity: string; reason: string | null; note: string | null;
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
-  return prisma.$transaction(async (tx) => {
+  return observedOperation("inventory.stock_movement", () => prisma.$transaction(async (tx) => {
     const existing = await tx.locationInventory.findFirst({
       where: { id: input.locationInventoryId, organizationId: input.organizationId, locationId: input.locationId },
       include: { inventoryItem: { select: { id: true, name: true, sku: true, unit: true, status: true } } },
@@ -80,7 +81,7 @@ export async function applyStockMovementRecord(input: {
       },
     } });
     return { movement: movementDto(movement), quantityOnHand: refreshed.quantityOnHand.toFixed(3) };
-  });
+  }), { organizationId: input.organizationId, locationId: input.locationId });
 }
 
 export async function listInventoryMovementsRecord(organizationId: string, permittedIds: readonly string[] | null, query: MovementQuery) {

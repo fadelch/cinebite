@@ -1,9 +1,10 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { NextResponse } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 
-export function POST(request: Request) {
+function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json(
       { error: "Unable to log out." },
@@ -28,3 +29,5 @@ export function POST(request: Request) {
 
   return response;
 }
+
+export const POST = observedRoute("POST.api.auth.logout", POSTHandler);

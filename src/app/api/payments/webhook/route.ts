@@ -1,7 +1,8 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { receivePaymentWebhook } from "@/server/services/payment.service";
 export const runtime = "nodejs";
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   // Raw body is authenticated BEFORE JSON parsing. No cookie/Origin required.
   if (Number(request.headers.get("content-length") ?? 0) > 16384) return new Response(null, { status: 413 });
   try {
@@ -19,3 +20,5 @@ export async function POST(request: Request) {
     return apiSuccess(await receivePaymentWebhook(raw, request.headers.get("x-cinebite-sandbox-signature")));
   } catch (error) { return apiError(error); }
 }
+
+export const POST = observedRoute("POST.api.payments.webhook", POSTHandler);

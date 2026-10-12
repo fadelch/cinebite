@@ -1,4 +1,7 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
+import { normalizeError } from "@/lib/observability/errors";
+import { ServiceError } from "@/server/services/service-error";
 
 import { cookies } from "next/headers";
 
@@ -20,18 +23,8 @@ type CurrentUserStage =
   | "load-organization";
 
 function logCurrentUserFailure(stage: CurrentUserStage, error: unknown) {
-  const details =
-    typeof error === "object" && error !== null
-      ? {
-          name: "name" in error ? String(error.name) : "UnknownError",
-          code: "code" in error ? String(error.code) : undefined,
-        }
-      : { name: typeof error, code: undefined };
-
-  console.error("[auth/current-user] Session verification failed.", {
-    stage,
-    ...details,
-  });
+  const failure = normalizeError(error);
+  log(failure.status >= 500 ? "error" : "warn", "auth.failure", { stage, errorCode: failure.code, errorType: failure.type, retryable: failure.retryable });
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
@@ -56,7 +49,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     );
 
     if (!profile?.active || !claimsMatchProfile(token, profile)) {
-      console.warn("[auth/current-user] Session profile check failed.", {
+      log("warn","src.server.auth.current.user.ts.failure",{
         profileExists: Boolean(profile),
         active: profile?.active ?? false,
         roleMatches: profile ? token.role === profile.role : false,
@@ -77,7 +70,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
         : null;
 
       if (!canUseOrganization(user, organization?.status ?? null)) {
-        console.warn("[auth/current-user] Tenant organization access denied.", {
+        log("warn","src.server.auth.current.user.ts.failure",{
           organizationExists: Boolean(organization),
           organizationOperational: organization?.status === "ACTIVE",
         });
@@ -88,6 +81,8 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     return user;
   } catch (error) {
     logCurrentUserFailure(stage, error);
+    const failure = normalizeError(error);
+    if (failure.status >= 500) throw new ServiceError(failure.code === "DATABASE_UNAVAILABLE" ? "DATABASE_UNAVAILABLE" : "IDENTITY_UNAVAILABLE", 503, "Staff access is temporarily unavailable.");
     // Verification, revocation, disabled users, and malformed profiles fail closed.
     return null;
   }

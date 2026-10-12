@@ -36,9 +36,9 @@ export function getServerEnv(): ServerEnv {
       .map((issue) => issue.path.join("."))
       .join(", ");
 
-    throw new Error(
+    throw Object.assign(new Error(
       `Missing or invalid server environment variables: ${invalidVariables}. Check .env.local or your Vercel project settings.`,
-    );
+    ), { code: "CONFIGURATION_UNAVAILABLE" });
   }
 
   cachedServerEnv = {

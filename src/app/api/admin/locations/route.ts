@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toTenantLocationDto } from "@/lib/tenant-admin/dto";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { apiError, apiSuccess, forbiddenOrigin, invalidRequestBody } from "@/server/http/api-response";
@@ -5,7 +6,7 @@ import { createLocationForTenant, listLocationsForTenantUser } from "@/server/se
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const locations = await listLocationsForTenantUser();
     return apiSuccess({ locations: locations.map(toTenantLocationDto) });
@@ -14,7 +15,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   let input: unknown;
   try {
@@ -29,3 +30,6 @@ export async function POST(request: Request) {
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.admin.locations", GETHandler);
+export const POST = observedRoute("POST.api.admin.locations", POSTHandler);

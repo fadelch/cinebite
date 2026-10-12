@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -177,7 +178,7 @@ export function createOrganizationOnboardingService(
         try {
           await dependencies.deleteAdministrator(createdAdministrator.uid);
         } catch (cleanupError) {
-          console.error("[onboarding] Firebase Auth cleanup failed.", {
+          log("error","src.server.services.organization.onboarding.service.ts.failure",{
             code: errorCode(cleanupError),
           });
         }

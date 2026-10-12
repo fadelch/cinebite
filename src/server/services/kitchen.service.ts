@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation } from "@/lib/observability/logger";
 
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getKitchenOrderRecord, getKitchenQueueRecord, listKitchenLocationsRecord, transitionKitchenOrderRecord } from "@/server/repositories/kitchen.repository";
@@ -28,5 +29,5 @@ export async function transitionKitchenOrder(publicCodeInput: string, input: unk
   const publicCode = orderCodeSchema.parse(publicCodeInput);
   const transition = orderTransitionSchema.parse(input);
   const actor = requireKitchenActor(await getCurrentUser());
-  return transitionKitchenOrderRecord({ actor, publicCode, ...transition });
+  return observedOperation("kitchen.transition", () => transitionKitchenOrderRecord({ actor, publicCode, ...transition }), { publicOrderCode: publicCode, organizationId: actor.organizationId });
 }

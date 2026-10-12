@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
 import { Prisma, type NotificationOutbox } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -237,6 +238,7 @@ export async function processNotificationOutbox({
         const event = rows[0];
         if (!event) return null;
         const attempt = event.attemptCount + 1;
+        log("info", "outbox.attempt", { eventId: event.id, attemptCount: attempt });
         await tx.$executeRaw`SAVEPOINT notification_delivery`;
         try {
           await deliverEvent(tx, event, provider, now);
@@ -250,10 +252,12 @@ export async function processNotificationOutbox({
             },
           });
           await tx.$executeRaw`RELEASE SAVEPOINT notification_delivery`;
+          log("info", "outbox.delivered", { eventId: event.id, attemptCount: attempt });
           return "processed" as const;
         } catch {
           await tx.$executeRaw`ROLLBACK TO SAVEPOINT notification_delivery`;
           const policy = retryPolicy(attempt, now);
+          log("warn", "outbox.delivery_failed", { eventId: event.id, attemptCount: attempt, errorCode: "OUTBOX_PROCESSING_FAILED", retryable: policy.status !== "FAILED" });
           await tx.notificationOutbox.update({
             where: { id: event.id },
             data: {

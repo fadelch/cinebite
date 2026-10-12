@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toOrganizationDto } from "@/lib/super-admin/dto";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import {
@@ -13,7 +14,7 @@ import { onboardOrganization } from "@/server/services/organization-onboarding.s
 
 export const runtime = "nodejs";
 
-export async function GET() {
+async function GETHandler() {
   try {
     const organizations = await listOrganizationsForSuperAdmin();
     return apiSuccess({ organizations: organizations.map(toOrganizationDto) });
@@ -22,7 +23,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) {
     return forbiddenOrigin();
   }
@@ -42,3 +43,6 @@ export async function POST(request: Request) {
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.super-admin.organizations", GETHandler);
+export const POST = observedRoute("POST.api.super-admin.organizations", POSTHandler);

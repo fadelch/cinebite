@@ -1,0 +1,183 @@
+{
+  "executedAt": "2026-10-12T14:20:18.551Z",
+  "environment": "Isolated PostgreSQL 17, official Firebase emulators, sandbox payment, production Next and Chromium",
+  "provider": "Local structured logging only",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Actual HTTP response and structured server log share a server-generated request reference; untrusted upstream ID ignored."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Eight independent actual requests receive distinct cryptographic request IDs."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Actual logger serialization redacts all specified secret keys, including nested data."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Real customer API denial with a cookie present emits no raw session token."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Invalid real QR/session-start request is rejected without logging its credential."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "Actual successful/invalid/failed webhook logs contain no provider/webhook secret."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Environment/database error fixture remains classified without logging database URLs or credentials."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Actual liveness returns minimal no-store status only, with no database/provider topology or expensive dependency work."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Actual isolated database shutdown leaves liveness responsive, readiness/API safely unavailable and production UI in a friendly recovery boundary without stack or false success."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Actual liveness returns minimal no-store status only, with no database/provider topology or expensive dependency work."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Authorized operational API measures real database probe latency without hostname or SQL."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Valid signed sandbox webhook is received, verified and processed, reflected in the authoritative event journal and scrubbed stage logs."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Invalid actual webhook signature is rejected and classified as a warning without raw payload or authentication material."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Actual duplicate webhook is classified as idempotent replay, with one journal row and no duplicate settlement."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Actual SQL-injected webhook failure rolls back settlement/journal changes and is visible as a safe operational incident; replay succeeds after fixture removal."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Actual sandbox refund failure persists FAILED, reuses cinema-scoped notifications/issues and is visible in the restricted operational queue."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Actual aged pending outbox event increases pending count and degrades notification health at the configured threshold."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Actual aged pending outbox event increases pending count and degrades notification health at the configured threshold."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Actual failing notification adapter preserves the committed order, retains retry state and records a PARTIAL job with safe failure count."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Real authorized scheduled processor recovers the event and records correlated start/success/duration/processed counts; backlog becomes healthy."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Real authorized scheduled processor recovers the event and records correlated start/success/duration/processed counts; backlog becomes healthy."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Actual failing notification adapter preserves the committed order, retains retry state and records a PARTIAL job with safe failure count."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Concurrent actual processor runs use existing row locks/SKIP LOCKED and retain one notification per dedupe key."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Controlled actual checkout validation failure correlates response, request and checkout stage with safe code, without cookie/cart data."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Actual last-stock concurrent checkout has one reservation winner; insufficient stock is a normal conflict warning, not catastrophic failure."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Actual double kitchen acceptance has one winner and one ordinary 409 warning, not a critical platform exception."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Two real delivery workers compete for one order; one succeeds and the other is a safe business conflict."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Cross-location denial is safe and logged by code, without unauthorized tenant/entity details."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Actual isolated database shutdown leaves liveness responsive, readiness/API safely unavailable and production UI in a friendly recovery boundary without stack or false success."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Actual isolated database shutdown leaves liveness responsive, readiness/API safely unavailable and production UI in a friendly recovery boundary without stack or false success."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Actual sandbox provider-create failure returns safe retryable 503 with durable pending order/reservation; same-key recovery reuses the order rather than charging twice."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Actual failing notification adapter preserves the committed order, retains retry state and records a PARTIAL job with safe failure count."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Both cinema admins are denied platform operations; verified Super Admin obtains the safe platform snapshot."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Both cinema admins are denied platform operations; verified Super Admin obtains the safe platform snapshot."
+    },
+    "AI": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No optional Cinema Admin operational endpoint is implemented. Both tenants are denied the platform API/page; existing tenant financial views remain separately authorized."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Actual serialized logger rejects multiline event/operation injection and drops note content."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Long malicious demo customer note is stored only as business data and absent from standard operational logs."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "Actual server telemetry includes explicit test environment and safe release label."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Actual server telemetry includes explicit test environment and safe release label."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Real 390x844 operations page has readable loaded cards and no horizontal overflow."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Operational jobs/incidents persist in actual PostgreSQL; Phase 19 server modules contain no Firestore dependency/writes."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "Eight real high-density app-only full-page PNGs captured with synthetic operational records; application logs scanned against ephemeral credentials."
+    },
+    "EXTRA_RELIABILITY": {
+      "status": "PASS",
+      "evidence": "Actual incident deduplication/recovery and bounded telemetry retention passed without deleting orders; injected external tracking adapter receives only a scrubbed envelope and failure is isolated."
+    },
+    "EXTERNAL_MONITORING": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No external error/alert provider or production credentials are configured; only local JSON logs and an injected scrubbed-adapter failure were tested. No live ingestion/delivery claimed."
+    }
+  }
+}

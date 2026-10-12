@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation, log } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -14,9 +15,9 @@ import { stageRefund } from "./refund-domain";
 
 export async function serial<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let retry = 0; ; retry++) {
-    try { return await prisma.$transaction(operation, { isolationLevel: "Serializable", timeout: 15000 }); }
+    try { return await observedOperation("database.financial_transaction", () => prisma.$transaction(operation, { isolationLevel: "Serializable", timeout: 15000 })); }
     catch (error) {
-      if (retry < 4 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) continue;
+      if (retry < 4 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "financial.transaction_retry", { retryCount: retry + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); continue; }
       if (isRetryableTransactionError(error)) throw new ServiceError("PAYMENT_CONFLICT", 409, "Payment is being updated. Please try again.");
       throw error;
     }
@@ -253,6 +254,7 @@ export async function requestProviderCancellation(tx: Prisma.TransactionClient, 
 }
 export async function drainProviderCancellations(now = new Date(), attemptId?: string) {
   const requests = await prisma.paymentWebhookEvent.findMany({ where: { provider: "sandbox-internal", status: "CANCEL_PENDING", ...(attemptId ? { providerEventId: `cancel:${attemptId}` } : {}) }, orderBy: { receivedAt: "asc" }, take: attemptId ? 1 : 100 });
+  let cancellationRetries = 0;
   for (const request of requests) {
     try {
       const attempt = await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: request.providerEventId.slice(7) }, include: { payment: true } });
@@ -269,8 +271,10 @@ export async function drainProviderCancellations(now = new Date(), attemptId?: s
     } catch {
       // Durable request is intentionally retained for the next sweep. No raw
       // provider error or secret is logged; scheduler receives the backlog count.
+      cancellationRetries++;
       await prisma.paymentWebhookEvent.updateMany({ where: { id: request.id, status: "CANCEL_PENDING" }, data: { failureCode: "PROVIDER_CANCELLATION_RETRY" } });
+      log("warn", "payment.cancellation_retry", { eventId: request.id, errorCode: "PAYMENT_PROVIDER_UNAVAILABLE", retryable: true });
     }
   }
-  return { cancellationsPending: await prisma.paymentWebhookEvent.count({ where: { provider: "sandbox-internal", status: "CANCEL_PENDING" } }) };
+  return { cancellationRetries, cancellationsPending: await prisma.paymentWebhookEvent.count({ where: { provider: "sandbox-internal", status: "CANCEL_PENDING" } }) };
 }

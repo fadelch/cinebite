@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { optionalSessionData } from "@/server/http/page-failure";
 import type { ReactNode } from "react";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
 import { validateCustomerSession } from "@/server/services/customer-session.service";
@@ -12,9 +13,8 @@ export default async function CustomerLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await validateCustomerSession(
-    (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value,
-  ).catch(() => null);
+  const token = (await cookies()).get(CUSTOMER_SESSION_COOKIE)?.value;
+  const session = await optionalSessionData(() => validateCustomerSession(token));
   const brand = session
     ? publicBranding(session.seat.hall.location.organization)
     : null;

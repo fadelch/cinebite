@@ -1,0 +1,11 @@
+{
+  "storage": { "rules": "phase-18-test-storage.rules" },
+  "emulators": {
+    "auth": { "host": "127.0.0.1", "port": 9144 },
+    "storage": { "host": "127.0.0.1", "port": 9198 },
+    "ui": { "enabled": false },
+    "hub": { "host": "127.0.0.1", "port": 4444 },
+    "logging": { "host": "127.0.0.1", "port": 4544 },
+    "singleProjectMode": true
+  }
+}

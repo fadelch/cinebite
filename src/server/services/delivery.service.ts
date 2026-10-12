@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation } from "@/lib/observability/logger";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDeliveryOrderRecord, getDeliveryQueueRecord, listDeliveryLocationsRecord, listDeliveryStaffRecord, transitionDeliveryOrderRecord } from "@/server/repositories/delivery.repository";
@@ -17,4 +18,4 @@ export async function getDeliveryContext() {
 }
 export async function getDeliveryQueue(input: unknown) { return getDeliveryQueueRecord(await currentActor(), deliveryQueueQuerySchema.parse(input)); }
 export async function getDeliveryOrder(code: string) { return getDeliveryOrderRecord(await currentActor(), orderCodeSchema.parse(code)); }
-export async function transitionDeliveryOrder(code: string, input: unknown) { return transitionDeliveryOrderRecord({ actor: await currentActor(), publicCode: orderCodeSchema.parse(code), ...deliveryTransitionSchema.parse(input) }); }
+export async function transitionDeliveryOrder(code: string, input: unknown) { const actor = await currentActor(), publicCode = orderCodeSchema.parse(code), transition = deliveryTransitionSchema.parse(input); return observedOperation("delivery.transition", () => transitionDeliveryOrderRecord({ actor, publicCode, ...transition }), { publicOrderCode: publicCode, organizationId: actor.organizationId }); }

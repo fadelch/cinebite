@@ -1,4 +1,5 @@
 import "server-only";
+import { observedOperation, log } from "@/lib/observability/logger";
 
 import { randomBytes, randomUUID } from "node:crypto";
 
@@ -87,9 +88,11 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
         const live = session.screening.status === "SCHEDULED" && session.screening.hallId === session.hallId
           && input.now >= session.screening.startsAt && input.now < session.screening.endsAt;
         if (!operational || !live) throw new ServiceError("CUSTOMER_SESSION_EXPIRED", 401, "This screening is no longer accepting orders.");
+        log("info", "checkout.stage", { stage: "cart_validation" });
         const cartItems = session.cart?.items ?? [];
         if (!cartItems.length) throw new ServiceError("CART_EMPTY", 409, "Your cart is empty.");
 
+        log("info", "checkout.stage", { stage: "price_validation" });
         const changed: Array<{ id: string; price: Prisma.Decimal; currency: string; name: string }> = [];
         const checkoutLines = cartItems.map((item) => {
           const offer = item.product.productLocations.find((entry) => entry.locationId === location.id);
@@ -143,7 +146,7 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
           include: orderInclude,
         });
 
-        await reserveInventory(tx, { orderId, attemptId, organizationId: location.organizationId, locationId: location.id, expiresAt, requirements });
+        await observedOperation("checkout.inventory_reservation", () => reserveInventory(tx, { orderId, attemptId, organizationId: location.organizationId, locationId: location.id, expiresAt, requirements }), { orderId, organizationId: location.organizationId, locationId: location.id });
         for (const action of ["PAYMENT_CREATED", ...(requirements.size ? ["INVENTORY_RESERVED"] : [])] as const) await tx.auditLog.create({ data: {
           action: action as "PAYMENT_CREATED" | "INVENTORY_RESERVED", entityType: "ORDER", entityId: orderId,
           organizationId: location.organizationId, locationId: location.id, metadata: { attemptNumber: 1, provider: "sandbox" },
@@ -159,7 +162,7 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
       if (result.kind === "price-changed") throw new ServiceError("PRICE_CHANGED", 409, `Prices changed for: ${result.products.join(", ")}. Review your cart and place the order again.`);
       return result;
     } catch (error) {
-      if (attempt < 2 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) continue;
+      if (attempt < 2 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "checkout.transaction_retry", { attemptCount: attempt + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); continue; }
       if (isRetryableTransactionError(error)) throw new ServiceError("CHECKOUT_CONFLICT", 409, "Checkout is busy. Please try again.");
       throw error;
     }

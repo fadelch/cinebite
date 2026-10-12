@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -39,7 +40,7 @@ export async function storeMoviePoster(organizationId: string, movieId: string, 
       throw error;
     }
   } catch (error) {
-    console.error("[movies/media] Poster storage failed.", {
+    log("error","src.server.media.movie.poster.ts.failure",{
       name: error instanceof Error ? error.name : "UnknownError",
       code: typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined,
     });

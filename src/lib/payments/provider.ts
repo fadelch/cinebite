@@ -1,4 +1,5 @@
 import "server-only";
+import { providerOperation } from "@/server/observability/payment";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
@@ -81,7 +82,19 @@ class SandboxProvider implements PaymentProvider {
     return { providerPaymentId: row.id, attemptId: row.attemptId, amountMinor: row.amountMinor, currencyCode: row.currencyCode, status: row.status };
   }
 }
-export function getPaymentProvider(): PaymentProvider { paymentConfig(); return new SandboxProvider(); }
+export function getPaymentProvider(): PaymentProvider {
+  paymentConfig();
+  const provider = new SandboxProvider();
+  return {
+    name: provider.name,
+    create: input => providerOperation("provider.payment_create", () => provider.create(input)),
+    retrieve: id => providerOperation("provider.payment_retrieve", () => provider.retrieve(id)),
+    cancel: id => providerOperation("provider.payment_cancel", () => provider.cancel(id)),
+    createRefund: input => providerOperation("provider.refund_create", () => provider.createRefund(input), { refundId: input.refundId }),
+    retrieveRefund: id => providerOperation("provider.refund_retrieve", () => provider.retrieveRefund(id)),
+    verifyWebhook: (raw, signature) => provider.verifyWebhook(raw, signature),
+  };
+}
 export function sandboxSignature(raw: string, time = Math.floor(Date.now() / 1000)): string {
   return `${time}.${createHmac("sha256", paymentConfig().secret).update(`${time}.${raw}`).digest("hex")}`;
 }

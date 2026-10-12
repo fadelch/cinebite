@@ -1,3 +1,7 @@
+import { log } from "@/lib/observability/logger";
+import { observedRoute } from "@/server/http/observed-route";
+import { normalizeError } from "@/lib/observability/errors";
+import { currentObservation } from "@/lib/observability/context";
 import { NextResponse } from "next/server";
 
 import {
@@ -29,28 +33,18 @@ type SessionStage =
   | "create-session-cookie";
 
 function logSessionFailure(stage: SessionStage, error: unknown) {
-  const details =
-    typeof error === "object" && error !== null
-      ? {
-          name: "name" in error ? String(error.name) : "UnknownError",
-          code: "code" in error ? String(error.code) : undefined,
-        }
-      : { name: typeof error, code: undefined };
-
-  console.error("[auth/session] Session creation failed.", {
-    stage,
-    ...details,
-  });
+  const failure = normalizeError(error);
+  log(failure.status >= 500 ? "error" : "warn", "auth.failure", { stage, errorCode: failure.code, errorType: failure.type, retryable: failure.retryable });
 }
 
 function errorResponse(status: number) {
   return NextResponse.json(
-    { error: "Unable to create session." },
+    { error: "Unable to create session.", requestId: currentObservation().requestId },
     { status, headers: { "Cache-Control": "no-store" } },
   );
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) {
     return errorResponse(403);
   }
@@ -66,7 +60,7 @@ export async function POST(request: Request) {
   const parsed = sessionRequestSchema.safeParse(input);
 
   if (!parsed.success) {
-    console.warn("[auth/session] Invalid session request body.", {
+    log("warn","src.app.api.auth.session.route.ts.failure",{
       issuePaths: parsed.error.issues.map((issue) => issue.path.join(".")),
     });
     return errorResponse(400);
@@ -139,6 +133,8 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     logSessionFailure(stage, error);
-    return errorResponse(stage === "verify-id-token" ? 401 : 500);
+    return errorResponse(normalizeError(error).status === 503 ? 503 : stage === "verify-id-token" ? 401 : 500);
   }
 }
+
+export const POST = observedRoute("POST.api.auth.session", POSTHandler);

@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import {
   apiError,
@@ -10,7 +11,7 @@ import { changeOrganizationStatus } from "@/server/services/organization-managem
 
 export const runtime = "nodejs";
 
-export async function PATCH(
+async function PATCHHandler(
   request: Request,
   context: { params: Promise<{ organizationId: string }> },
 ) {
@@ -34,3 +35,5 @@ export async function PATCH(
     return apiError(error);
   }
 }
+
+export const PATCH = observedRoute("PATCH.api.super-admin.organizations.organizationId.status", PATCHHandler);

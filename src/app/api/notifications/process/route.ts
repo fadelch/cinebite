@@ -1,3 +1,5 @@
+import { observedRoute } from "@/server/http/observed-route";
+import { runObservedJob } from "@/server/observability/jobs";
 import { timingSafeEqual } from "node:crypto";
 import {
   processNotificationOutbox,
@@ -7,7 +9,7 @@ import { apiError, apiSuccess } from "@/server/http/api-response";
 import { notificationJobSecret } from "@/lib/notifications/config";
 export const runtime = "nodejs";
 export const maxDuration = 60;
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   const secret = notificationJobSecret(),
     supplied = request.headers.get("authorization") ?? "",
     expected = `Bearer ${secret}`;
@@ -19,11 +21,13 @@ export async function POST(request: Request) {
   )
     return new Response(null, { status: 401 });
   try {
-    return apiSuccess({
+    return apiSuccess(await runObservedJob("NOTIFICATIONS", async () => ({
       ...(await processNotificationOutbox()),
       ...(await pruneNotifications()),
-    });
+    }), result => ({ processed: result.processed, failed: result.failed + result.retry })));
   } catch (error) {
     return apiError(error);
   }
 }
+
+export const POST = observedRoute("POST.api.notifications.process", POSTHandler);

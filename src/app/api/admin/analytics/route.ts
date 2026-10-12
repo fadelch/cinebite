@@ -1,6 +1,7 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { getAnalytics } from "@/server/services/analytics.service";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const params = new URL(request.url).searchParams;
     const input: Record<string, string | string[]> = {};
@@ -13,3 +14,5 @@ export async function GET(request: Request) {
   }
 }
 export const runtime = "nodejs";
+
+export const GET = observedRoute("GET.api.admin.analytics", GETHandler);

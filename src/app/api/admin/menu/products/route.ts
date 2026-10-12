@@ -1,17 +1,18 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { apiError, apiSuccess, forbiddenOrigin, invalidRequestBody } from "@/server/http/api-response";
 import { createMenuProduct, getProductsForMenu } from "@/server/services/menu.service";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     const query = Object.fromEntries(new URL(request.url).searchParams.entries());
     return apiSuccess(await getProductsForMenu(query));
   } catch (error) { return apiError(error); }
 }
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   try {
     const form = await request.formData();
@@ -23,3 +24,6 @@ export async function POST(request: Request) {
     return apiSuccess({ product: await createMenuProduct(input, image instanceof File ? image : null) }, 201);
   } catch (error) { return apiError(error); }
 }
+
+export const GET = observedRoute("GET.api.admin.menu.products", GETHandler);
+export const POST = observedRoute("POST.api.admin.menu.products", POSTHandler);
