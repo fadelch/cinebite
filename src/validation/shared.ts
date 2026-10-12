@@ -13,9 +13,9 @@ export const documentIdSchema = z
   .string()
   .trim()
   .min(1, "Document ID is required.")
-  .max(1_500, "Document ID is too long.")
-  .refine((value) => !value.includes("/"), {
-    message: "Document ID cannot contain a slash.",
+  .max(128, "Document ID is too long.")
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, {
+    message: "Document ID must be a safe identifier.",
   });
 
 export const databaseTimestampSchema = z.custom<{

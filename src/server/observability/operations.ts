@@ -38,7 +38,7 @@ export async function operationalSnapshot() {
     };
   const data = await prisma.$transaction(
     async (tx) => {
-      await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '3000ms'");
+      await tx.$executeRaw`SET LOCAL statement_timeout = '3000ms'`;
       const [
         webhooks,
         pending,
@@ -286,6 +286,9 @@ export async function refreshOperationalIncidents() {
 
 /** Only terminal operational telemetry; no business/audit/outbox history is touched. */
 export async function pruneOperationalTelemetry(now = new Date()) {
+  // Ephemeral keyed counters only; do not retain anonymous network history.
+  await prisma.$executeRaw`DELETE FROM security_rate_limits WHERE key IN
+    (SELECT key FROM security_rate_limits WHERE "expiresAt" < ${now} ORDER BY "expiresAt" LIMIT 1000)`;
   const before = new Date(now.getTime() - 30 * 86400000);
   const [jobs, incidents] = await Promise.all([
     prisma.jobRun.findMany({

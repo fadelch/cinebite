@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -143,6 +144,7 @@ export async function createScreeningRecord(input: {
   const actorUserId = await scheduleActorId(input.actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
       await requireSchedulingResources(tx, input);
       await assertNoFriendlyOverlap(tx, input);
       const created = await tx.screening.create({ data: {
@@ -168,8 +170,10 @@ export async function updateScreeningRecord(input: {
   const now = input.now ?? new Date();
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
       const existing = await tx.screening.findFirst({ where: { id: input.screeningId, hall: { location: { organizationId: input.organizationId } } }, include: screeningInclude });
       if (!existing) throw new ServiceError("SCREENING_NOT_FOUND", 404, "Screening not found.");
+      await assertMutationActor(tx, input.actorUid, input.organizationId, existing.hall.locationId);
       if (getScreeningTemporalState({ status: existing.status, startsAt: existing.startsAt, endsAt: existing.endsAt, now }) !== "UPCOMING") {
         throw new ServiceError("SCREENING_EDIT_LOCKED", 409, "Only upcoming screenings can change movie, hall, or schedule.");
       }
@@ -193,11 +197,13 @@ export async function cancelScreeningRecord(input: { actorUid: string; organizat
   const actorUserId = await scheduleActorId(input.actorUid);
   const now = input.now ?? new Date();
   const row = await prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, undefined);
     const existing = await tx.screening.findFirst({ where: {
       id: input.screeningId,
       hall: { location: { organizationId: input.organizationId, ...(input.permittedIds === null ? {} : { id: { in: [...input.permittedIds] } }) } },
     }, include: screeningInclude });
     if (!existing) throw new ServiceError("SCREENING_NOT_FOUND", 404, "Screening not found.");
+    await assertMutationActor(tx, input.actorUid, input.organizationId, existing.hall.locationId);
     if (existing.status === "CANCELLED") throw new ServiceError("NO_STATUS_CHANGE", 409, "This screening is already cancelled.");
     if (getScreeningTemporalState({ status: existing.status, startsAt: existing.startsAt, endsAt: existing.endsAt, now }) === "ENDED") {
       throw new ServiceError("SCREENING_EDIT_LOCKED", 409, "Ended screenings are historical and cannot be cancelled.");

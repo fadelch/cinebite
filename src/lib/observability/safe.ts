@@ -87,7 +87,7 @@ export function redact(value: unknown, depth = 0): unknown {
       value === null
       ? value
       : "[omitted]";
-  const output: Record<string, unknown> = {};
+  const output: Record<string, unknown> = Object.create(null);
   for (const [key, entry] of Object.entries(value).slice(0, 50)) {
     if (secretKey.test(key)) {
       output[key.replace(/[\r\n\x00-\x1f]/g, "").slice(0, 80)] = "[redacted]";

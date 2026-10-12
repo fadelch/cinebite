@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -128,6 +129,7 @@ export async function createTenantLocationRecord(
   const userId = await actorUserId(input.actorUid);
   try {
     const location = await prisma.$transaction(async (transaction) => {
+      await assertMutationActor(transaction, input.actorUid, input.organizationId, undefined, true);
       const organization = await transaction.organization.findUnique({
         where: { id: input.organizationId },
         select: { status: true },
@@ -194,6 +196,7 @@ export async function createHallRecord(input: CreateHallRecordInput): Promise<Ha
   const userId = await actorUserId(input.actorUid);
   try {
     const hall = await prisma.$transaction(async (transaction) => {
+      await assertMutationActor(transaction, input.actorUid, input.organizationId, input.locationId);
       const location = await transaction.location.findFirst({
         where: { id: input.locationId, organizationId: input.organizationId },
         include: { organization: { select: { status: true } } },
@@ -256,6 +259,7 @@ export interface SetHallStatusRecordInput {
 export async function setHallStatusRecord(input: SetHallStatusRecordInput): Promise<Hall> {
   const userId = await actorUserId(input.actorUid);
   const hall = await prisma.$transaction(async (transaction) => {
+    await assertMutationActor(transaction, input.actorUid, input.organizationId, input.locationId);
     const existing = await transaction.hall.findFirst({
       where: {
         id: input.hallId,
@@ -311,6 +315,7 @@ export async function generateSeatsRecord(input: GenerateSeatsRecordInput): Prom
   const userId = await actorUserId(input.actorUid);
   try {
     const created = await prisma.$transaction(async (transaction) => {
+      await assertMutationActor(transaction, input.actorUid, input.organizationId, input.locationId);
       const hall = await transaction.hall.findFirst({
         where: {
           id: input.hallId,
@@ -390,6 +395,7 @@ export interface SetSeatStatusRecordInput {
 export async function setSeatStatusRecord(input: SetSeatStatusRecordInput): Promise<Seat> {
   const userId = await actorUserId(input.actorUid);
   const seat = await prisma.$transaction(async (transaction) => {
+    await assertMutationActor(transaction, input.actorUid, input.organizationId, input.locationId);
     const existing = await transaction.seat.findUnique({
       where: { hallId_id: { hallId: input.hallId, id: input.seatId } },
       include: { hall: { include: { location: { include: { organization: true } } } } },

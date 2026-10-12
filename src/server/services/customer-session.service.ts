@@ -10,7 +10,7 @@ import {
 } from "@/server/repositories/customer-session.repository";
 import { resolveSeatCredential } from "@/server/services/seat-scan.service";
 import { ServiceError } from "@/server/services/service-error";
-import { customerSessionStartSchema } from "@/validation/seat-qr";
+import { customerSessionStartSchema, seatQrCredentialSchema } from "@/validation/seat-qr";
 
 export async function startCustomerSession(input: unknown, now = new Date()) {
   const { credential } = customerSessionStartSchema.parse(input);
@@ -22,6 +22,8 @@ export async function startCustomerSession(input: unknown, now = new Date()) {
   const rawToken = createOpaqueToken();
   const expiresAt = customerSessionExpiry(new Date(resolution.active.screening.endsAt), now);
   await createCustomerSessionRecord({
+    qrId: resolution.qr.id,
+    qrHash: resolution.qr.tokenHash,
     tokenHash: hashOpaqueToken(rawToken),
     hallId: resolution.active.hall.id,
     seatId: resolution.active.seat.id,
@@ -33,7 +35,7 @@ export async function startCustomerSession(input: unknown, now = new Date()) {
 }
 
 export async function validateCustomerSession(rawToken: string | undefined, now = new Date()) {
-  if (!rawToken) throw new ServiceError("CUSTOMER_SESSION_INVALID", 401, "Your seat session is unavailable.");
+  if (!rawToken || !seatQrCredentialSchema.safeParse(rawToken).success) throw new ServiceError("CUSTOMER_SESSION_INVALID", 401, "Your seat session is unavailable.");
   const session = await getCustomerSessionByHashRecord(hashOpaqueToken(rawToken));
   if (!session || session.status !== "ACTIVE") {
     throw new ServiceError("CUSTOMER_SESSION_INVALID", 401, "Your seat session is unavailable.");
@@ -57,5 +59,5 @@ export async function validateCustomerSession(rawToken: string | undefined, now 
 }
 
 export async function endCustomerSession(rawToken: string | undefined, now = new Date()) {
-  if (rawToken) await revokeCustomerSessionByHashRecord(hashOpaqueToken(rawToken), now);
+  if (rawToken && seatQrCredentialSchema.safeParse(rawToken).success) await revokeCustomerSessionByHashRecord(hashOpaqueToken(rawToken), now);
 }

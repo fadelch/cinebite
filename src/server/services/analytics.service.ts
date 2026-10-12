@@ -48,9 +48,9 @@ export async function getAnalytics(
           await tx.$executeRaw`SET LOCAL TIME ZONE 'UTC'`;
           const user = await tx.user.findUnique({
             where: { firebaseUid: actor.uid },
-            select: { id: true, active: true },
+            select: { id: true, active: true, authorizationVersion: true, platformRole: true },
           });
-          const membership = user?.active
+          const membership = user?.active && user.platformRole === 'USER' && (user.authorizationVersion ?? 0) === (actor.authorizationVersion ?? 0)
             ? await tx.organizationMembership.findUnique({
                 where: {
                   userId_organizationId: {

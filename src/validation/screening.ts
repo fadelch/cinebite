@@ -12,7 +12,7 @@ const localDateTimeSchema = z.string().trim().regex(
   "Use a complete local date and time.",
 );
 
-export const movieInputSchema = z.object({
+export const movieInputSchema = z.strictObject({
   title: z.string().trim().min(1).max(160),
   slug: slugSchema,
   synopsis: optionalText(4_000),
@@ -27,14 +27,14 @@ export const movieUpdateSchema = movieInputSchema.partial().refine(
   "At least one movie field must be provided.",
 );
 
-export const movieListQuerySchema = z.object({
+export const movieListQuerySchema = z.strictObject({
   search: z.string().trim().max(100).default(""),
   status: optionalQueryField(z.enum(["ACTIVE", "INACTIVE"])),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });
 
-export const screeningInputSchema = z.object({
+export const screeningInputSchema = z.strictObject({
   locationId: documentIdSchema,
   hallId: documentIdSchema,
   movieId: documentIdSchema,
@@ -47,12 +47,12 @@ export const screeningUpdateSchema = screeningInputSchema.partial().refine(
   "At least one screening field must be provided.",
 );
 
-export const scheduleListQuerySchema = z.object({
+export const scheduleListQuerySchema = z.strictObject({
   date: optionalQueryField(z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/)),
   locationId: optionalQueryField(documentIdSchema),
   hallId: optionalQueryField(documentIdSchema),
   movieId: optionalQueryField(documentIdSchema),
   state: optionalQueryField(z.enum(["MANAGEABLE", "UPCOMING", "LIVE", "ENDED", "CANCELLED"])),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(30),
 });

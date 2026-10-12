@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -42,6 +43,7 @@ export async function addRecipeComponentRecord(input: {
   const actorUserId = await inventoryActorId(input.actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
       const [product, item] = await Promise.all([
         tx.product.findFirst({ where: { id: input.productId, organizationId: input.organizationId } }),
         tx.inventoryItem.findFirst({ where: { id: input.inventoryItemId, organizationId: input.organizationId, status: "ACTIVE" } }),
@@ -68,6 +70,7 @@ export async function updateRecipeComponentRecord(input: {
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   const row = await prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
     const existing = await tx.productRecipeComponent.findFirst({ where: {
       id: input.componentId, organizationId: input.organizationId, productId: input.productId,
     } });
@@ -88,6 +91,7 @@ export async function removeRecipeComponentRecord(input: {
 }) {
   const actorUserId = await inventoryActorId(input.actorUid);
   await prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
     const existing = await tx.productRecipeComponent.findFirst({ where: {
       id: input.componentId, organizationId: input.organizationId, productId: input.productId,
     } });

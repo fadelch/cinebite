@@ -15,8 +15,8 @@ export async function customerPaymentStatus(rawToken: string | undefined, public
   const publicCode = orderCodeSchema.parse(publicCodeInput);
   const session = await validateCustomerSession(rawToken);
   await limitPaymentRequests(session.id, "status");
-  await expirePaymentReservations();
-  await initializeProviderPayment(session.id, publicCode);
+  // GET is a read, not a provider/reconciliation trigger. Checkout/retry POST,
+  // signed webhooks and authenticated recovery jobs own business mutations.
   return getOwnedPayment(session.id, publicCode);
 }
 export async function retryCustomerPayment(rawToken: string | undefined, codeInput: string, input: unknown) {

@@ -82,7 +82,7 @@ export async function transitionDeliveryOrderRecord(input: { actor: DeliveryActo
     return await prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({ where: { firebaseUid: input.actor.uid }, include: { memberships: { where: { organizationId: input.actor.organizationId }, include: { locationAccess: true, organization: { select: { status: true } } } } } });
       const membership = user?.memberships[0];
-      if (!user?.active || !membership || membership.organization.status !== "ACTIVE") throw new ServiceError("AUTHORIZATION_DENIED", 403, "Delivery access is no longer available.");
+      if (!user?.active || (user.authorizationVersion ?? 0) !== (input.actor.authorizationVersion ?? 0) || user.platformRole === 'SUPER_ADMIN' || !membership || membership.role !== input.actor.role || membership.organization.status !== "ACTIVE") throw new ServiceError("AUTHORIZATION_DENIED", 403, "Delivery access is no longer available.");
       const actor = requireDeliveryActor({ ...input.actor, role: membership.role, active: user.active, allLocations: membership.allLocations, locationIds: membership.locationAccess.map((g) => g.locationId) }, user.id);
       requireDeliveryWorker(actor);
       const ids = deliveryPermittedLocationIds(actor);

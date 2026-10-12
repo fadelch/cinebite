@@ -1,30 +1,31 @@
-function firstHeaderValue(value: string | null): string | null {
-  return value?.split(",", 1)[0]?.trim() || null;
-}
-
+/** Browser mutations accept explicit deployment origins, never forwarded headers. */
 export function isSameOriginRequest(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-
+  const raw = request.headers.get("origin");
+  if (
+    !raw ||
+    raw.length > 300 ||
+    request.headers.get("sec-fetch-site") === "cross-site"
+  )
+    return false;
   try {
-    const originUrl = new URL(origin);
-    if (originUrl.protocol !== "http:" && originUrl.protocol !== "https:") return false;
-
-    const requestUrl = new URL(request.url);
-    if (originUrl.origin === requestUrl.origin) return true;
-
-    // Next.js can construct request.url with its bind hostname (for example
-    // localhost) even when the browser reached the server through a LAN IP.
-    // Compare the browser Origin with the public request headers as a safe
-    // fallback, while retaining protocol validation for reverse proxies.
-    const host = firstHeaderValue(request.headers.get("x-forwarded-host"))
-      ?? firstHeaderValue(request.headers.get("host"));
-    if (!host) return false;
-    const protocol = firstHeaderValue(request.headers.get("x-forwarded-proto"))
-      ?? requestUrl.protocol.slice(0, -1);
-    if (protocol !== "http" && protocol !== "https") return false;
-
-    return originUrl.origin === new URL(`${protocol}://${host}`).origin;
+    const origin = new URL(raw);
+    if (!["http:", "https:"].includes(origin.protocol) || origin.origin !== raw)
+      return false;
+    if (process.env.NODE_ENV === "production" && origin.protocol !== "https:") {
+      const isolatedDemo =
+        process.env.FIREBASE_ADMIN_PROJECT_ID?.startsWith("demo-") &&
+        ["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname);
+      if (!isolatedDemo) return false;
+    }
+    const configured = [
+      process.env.CINEBITE_APP_ORIGIN,
+      ...(process.env.CINEBITE_ALLOWED_ORIGINS ?? "").split(","),
+    ]
+      .filter(Boolean)
+      .map((value) => new URL(value!.trim()).origin);
+    if (configured.includes(origin.origin)) return true;
+    if (process.env.NODE_ENV === "production") return false;
+    return new URL(request.url).origin === origin.origin;
   } catch {
     return false;
   }

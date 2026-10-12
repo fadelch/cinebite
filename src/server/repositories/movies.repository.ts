@@ -1,4 +1,5 @@
 import "server-only";
+import { assertMutationActor } from "@/server/auth/mutation-scope";
 
 import { isPrismaError } from "@/lib/db/errors";
 import { prisma } from "@/lib/db/prisma";
@@ -64,6 +65,7 @@ export async function createMovieRecord(input: { actorUid: string; organizationI
   const actorUserId = await scheduleActorId(input.actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
       const created = await tx.movie.create({ data: {
         id: input.movieId, organizationId: input.organizationId, ...input.movie,
         posterStoragePath: input.poster?.storagePath, posterUrl: input.poster?.url,
@@ -82,6 +84,7 @@ export async function updateMovieRecord(input: { actorUid: string; organizationI
   const actorUserId = await scheduleActorId(input.actorUid);
   try {
     const row = await prisma.$transaction(async (tx) => {
+      await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
       const existing = await tx.movie.findFirst({ where: { id: input.movieId, organizationId: input.organizationId } });
       if (!existing) throw new ServiceError("MOVIE_NOT_FOUND", 404, "Movie not found.");
       const updated = await tx.movie.update({ where: { id: existing.id }, data: input.movie, include: movieInclude(new Date()) });
@@ -105,6 +108,7 @@ export async function getMoviePosterRecord(organizationId: string, movieId: stri
 export async function setMoviePosterRecord(input: { actorUid: string; organizationId: string; movieId: string; poster: { storagePath: string; url: string } | null }) {
   const actorUserId = await scheduleActorId(input.actorUid);
   return prisma.$transaction(async (tx) => {
+    await assertMutationActor(tx, input.actorUid, input.organizationId, undefined, true);
     const existing = await tx.movie.findFirst({ where: { id: input.movieId, organizationId: input.organizationId }, select: { id: true, posterStoragePath: true } });
     if (!existing) throw new ServiceError("MOVIE_NOT_FOUND", 404, "Movie not found.");
     const movie = await tx.movie.update({ where: { id: existing.id }, data: { posterStoragePath: input.poster?.storagePath ?? null, posterUrl: input.poster?.url ?? null } });

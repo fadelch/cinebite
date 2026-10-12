@@ -29,7 +29,7 @@ export const inventorySkuSchema = z
   .max(40)
   .regex(/^[A-Z0-9][A-Z0-9_-]*$/, "SKU may contain letters, numbers, hyphens, and underscores.");
 
-export const inventoryItemInputSchema = z.object({
+export const inventoryItemInputSchema = z.strictObject({
   name: z.string().trim().min(2).max(100),
   sku: inventorySkuSchema,
   unit: z.enum(["EACH", "GRAM", "MILLILITER"]),
@@ -40,24 +40,23 @@ export const inventoryItemUpdateSchema = inventoryItemInputSchema
   .partial()
   .refine((input) => Object.keys(input).length > 0, "At least one field must be provided.");
 
-export const inventoryItemListQuerySchema = z.object({
+export const inventoryItemListQuerySchema = z.strictObject({
   search: z.string().trim().max(100).default(""),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(24),
 });
 
-export const configureLocationInventorySchema = z.object({
+export const configureLocationInventorySchema = z.strictObject({
   inventoryItemId: z.string().trim().min(1).max(128),
   lowStockThreshold: inventoryQuantitySchema,
 });
 
-export const updateInventoryThresholdSchema = z.object({
+export const updateInventoryThresholdSchema = z.strictObject({
   lowStockThreshold: inventoryQuantitySchema,
 });
 
-export const stockMovementInputSchema = z
-  .object({
+export const stockMovementInputSchema = z.strictObject({
     type: z.enum(["RECEIVE", "ADJUSTMENT_IN", "ADJUSTMENT_OUT", "WASTE"]),
     quantity: positiveInventoryQuantitySchema,
     reason: z.string().trim().max(160).optional().transform((value) => value || null),
@@ -73,24 +72,24 @@ export const stockMovementInputSchema = z
     }
   });
 
-export const inventoryMovementListQuerySchema = z.object({
+export const inventoryMovementListQuerySchema = z.strictObject({
   locationId: z.string().trim().min(1).max(128).optional(),
   inventoryItemId: z.string().trim().min(1).max(128).optional(),
   type: z.enum(["RECEIVE", "ADJUSTMENT_IN", "ADJUSTMENT_OUT", "WASTE", "ORDER_CONSUMPTION", "ORDER_CANCELLATION_RESTOCK"]).optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(30),
 }).refine((input) => !input.from || !input.to || input.from <= input.to, {
   path: ["to"],
   message: "End date must be after the start date.",
 });
 
-export const recipeComponentInputSchema = z.object({
+export const recipeComponentInputSchema = z.strictObject({
   inventoryItemId: z.string().trim().min(1).max(128),
   quantityRequired: positiveInventoryQuantitySchema,
 });
 
-export const recipeComponentUpdateSchema = z.object({
+export const recipeComponentUpdateSchema = z.strictObject({
   quantityRequired: positiveInventoryQuantitySchema,
 });

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// Repository write behavior is isolated here; the real guard has its own adversarial suite.
+vi.mock("@/server/auth/mutation-scope", () => ({ assertMutationActor: vi.fn().mockResolvedValue(undefined) }));
 
 const { prismaMock } = vi.hoisted(() => ({ prismaMock: {
   user: { findUnique: vi.fn() },

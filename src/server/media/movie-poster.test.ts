@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/firebase/admin", () => ({ getAdminStorageBucket: vi.fn() }));
-vi.mock("firebase-admin/storage", () => ({ getDownloadURL: vi.fn().mockResolvedValue("https://storage.example/poster.webp") }));
 
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
 import { createMoviePosterPath, storeMoviePoster } from "@/server/media/movie-poster";
@@ -18,7 +17,7 @@ describe("movie poster media safety", () => {
 
   it("reuses normalized WebP storage and stable Firebase delivery", async () => {
     const image = await sharp({ create: { width: 20, height: 30, channels: 3, background: "#111114" } }).png().toBuffer();
-    const object = { save: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
+    const object = { bucket: { name: 'demo-bucket' }, save: vi.fn().mockResolvedValue(undefined), delete: vi.fn() };
     vi.mocked(getAdminStorageBucket).mockReturnValue({ file: vi.fn().mockReturnValue(object) } as never);
     const result = await storeMoviePoster("org-1", "movie-1", new File([image], "poster.png"));
     expect(result.storagePath).toContain("organizations/org-1/movies/movie-1/");

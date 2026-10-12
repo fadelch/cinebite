@@ -1,4 +1,5 @@
 import "server-only";
+import { assertPlatformMutation } from '@/server/auth/mutation-scope';
 
 import { randomUUID } from "node:crypto";
 
@@ -127,6 +128,7 @@ function productionDependencies(): OrganizationManagementDependencies {
     async addLocation(input) {
       try {
         const location = await prisma.$transaction(async (transaction) => {
+          await assertPlatformMutation(transaction, input.actorUid);
           const [organization, actor] = await Promise.all([
             transaction.organization.findUnique({
               where: { id: input.organizationId },
@@ -204,6 +206,7 @@ function productionDependencies(): OrganizationManagementDependencies {
     },
     async updateStatus(input) {
       const organization = await prisma.$transaction(async (transaction) => {
+        await assertPlatformMutation(transaction, input.actorUid);
         const [existing, actor] = await Promise.all([
           transaction.organization.findUnique({
             where: { id: input.organizationId },
