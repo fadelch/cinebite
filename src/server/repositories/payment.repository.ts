@@ -1,6 +1,7 @@
 import "server-only";
 import { observedOperation, log } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
+import { waitForTransactionRetry } from '@/lib/performance/transaction-retry';
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isPrismaError, isRetryableTransactionError } from "@/lib/db/errors";
@@ -17,7 +18,7 @@ export async function serial<T>(operation: (tx: Prisma.TransactionClient) => Pro
   for (let retry = 0; ; retry++) {
     try { return await observedOperation("database.financial_transaction", () => prisma.$transaction(operation, { isolationLevel: "Serializable", timeout: 15000 })); }
     catch (error) {
-      if (retry < 4 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "financial.transaction_retry", { retryCount: retry + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); continue; }
+      if (retry < 4 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "financial.transaction_retry", { retryCount: retry + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); await waitForTransactionRetry(retry); continue; }
       if (isRetryableTransactionError(error)) throw new ServiceError("PAYMENT_CONFLICT", 409, "Payment is being updated. Please try again.");
       throw error;
     }
@@ -221,12 +222,15 @@ export async function processVerifiedPaymentEvent(event: ProviderEvent, now = ne
 }
 
 // Durable sweep: deployment cron + opportunistic before checkout/status/retry.
-export async function expirePaymentReservations(now = new Date()) {
+export async function expirePaymentReservations(now = new Date(), budget: { limit?: number; maxDurationMs?: number } = {}) {
+  const limit=Math.min(100,Math.max(1,Math.floor(budget.limit??100)));
+  const deadline=Date.now()+Math.min(20000,Math.max(1,budget.maxDurationMs??20000));
   const candidates = await prisma.paymentAttempt.findMany({ where: { payment: { order: { status: { not: "CANCELED" } } }, status: { in: ["PENDING", "PROCESSING"] }, OR: [
     { expiresAt: { lte: now } }, { payment: { order: { screening: { OR: [{ status: "CANCELLED" }, { endsAt: { lte: now } }] } } } },
-  ] }, orderBy: { expiresAt: "asc" }, take: 100 });
+  ] }, orderBy: { expiresAt: "asc" }, take: limit });
   let expired = 0;
   for (const candidate of candidates) {
+    if (Date.now()>=deadline) break;
     const expiredAttempt = await serial(async (tx) => {
       await lockPayment(tx, candidate.paymentId);
       const attempt = await tx.paymentAttempt.findUniqueOrThrow({ where: { id: candidate.id }, include: { payment: { include: { order: { include: contextInclude } } } } });
@@ -241,9 +245,9 @@ export async function expirePaymentReservations(now = new Date()) {
     });
     if (expiredAttempt) expired++;
   }
-  const cancellation = await drainProviderCancellations(now);
+  const cancellation = await drainProviderCancellations(now, undefined, {limit,deadline});
   await prisma.paymentRateLimit.deleteMany({ where: { expiresAt: { lt: now } } });
-  return { expired, batchLimit: 100, ...cancellation };
+  return { expired, batchLimit: limit, ...cancellation };
 }
 
 // Transactional cancellation outbox reuses the event journal with a distinct
@@ -252,10 +256,12 @@ export async function requestProviderCancellation(tx: Prisma.TransactionClient, 
   await tx.paymentWebhookEvent.upsert({ where: { provider_providerEventId: { provider: "sandbox-internal", providerEventId: `cancel:${attemptId}` } },
     create: { provider: "sandbox-internal", providerEventId: `cancel:${attemptId}`, eventType: "CANCELED", status: "CANCEL_PENDING" }, update: {} });
 }
-export async function drainProviderCancellations(now = new Date(), attemptId?: string) {
-  const requests = await prisma.paymentWebhookEvent.findMany({ where: { provider: "sandbox-internal", status: "CANCEL_PENDING", ...(attemptId ? { providerEventId: `cancel:${attemptId}` } : {}) }, orderBy: { receivedAt: "asc" }, take: attemptId ? 1 : 100 });
+export async function drainProviderCancellations(now = new Date(), attemptId?: string, budget: {limit?:number;deadline?:number}={}) {
+  const deadline=budget.deadline??Date.now()+20000;
+  const requests = await prisma.paymentWebhookEvent.findMany({ where: { provider: "sandbox-internal", status: "CANCEL_PENDING", ...(attemptId ? { providerEventId: `cancel:${attemptId}` } : {}) }, orderBy: { receivedAt: "asc" }, take: attemptId ? 1 : budget.limit??100 });
   let cancellationRetries = 0;
   for (const request of requests) {
+    if (Date.now()>=deadline) break;
     try {
       const attempt = await prisma.paymentAttempt.findUniqueOrThrow({ where: { id: request.providerEventId.slice(7) }, include: { payment: true } });
       const provider = getPaymentProvider();

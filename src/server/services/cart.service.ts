@@ -4,7 +4,7 @@ import { lineTotal, orderSubtotal } from "@/lib/orders/calculations";
 import { getCartRecord, getCustomerProductOfferRecord, setCartItemRecord } from "@/server/repositories/cart.repository";
 import { validateCustomerSession } from "@/server/services/customer-session.service";
 import { ServiceError } from "@/server/services/service-error";
-import { getEffectiveProductAvailability } from "@/server/services/stock-availability.service";
+import { getEffectiveProductAvailability, getEffectiveProductAvailabilities } from "@/server/services/stock-availability.service";
 import type { CustomerCart } from "@/types/order";
 import { cartItemUpdateSchema } from "@/validation/order";
 
@@ -12,9 +12,10 @@ type CartRecord = NonNullable<Awaited<ReturnType<typeof getCartRecord>>>;
 
 async function cartDto(record: CartRecord | null, organizationId: string, locationId: string): Promise<CustomerCart> {
   if (!record) return { items: [], itemCount: 0, subtotal: "0.00", currencyCode: null };
+  const available = await getEffectiveProductAvailabilities(organizationId, record.items.map(item => item.productId), locationId);
   const items = await Promise.all(record.items.map(async (item) => {
     const offer = item.product.productLocations?.find?.((entry: { locationId: string }) => entry.locationId === locationId);
-    const availability = await getEffectiveProductAvailability(organizationId, item.productId, locationId).catch(() => null);
+    const availability = available.get(item.productId);
     const unitPrice = offer?.price?.toFixed(2) ?? item.reviewedUnitPrice.toFixed(2);
     return {
       productSlug: item.product.slug,

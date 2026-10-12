@@ -18,7 +18,7 @@ export async function placeCustomerOrder(rawToken: string | undefined, input: un
   const session = await observedOperation("checkout.session_validation", () => validateCustomerSession(rawToken, now));
   paymentConfig();
   await limitPaymentRequests(session.id, "initiate");
-  await expirePaymentReservations(now);
+  await expirePaymentReservations(now, {limit:5,maxDurationMs:200});
   const result = await observedOperation("checkout.order_transaction", () => placeOrderRecord({ customerSessionId: session.id, idempotencyKey: parsed.idempotencyKey, customerNote: parsed.customerNote || null, now }));
   await observedOperation("checkout.payment_initialization", () => initializeProviderPayment(session.id, result.order.publicOrderCode), { publicOrderCode: result.order.publicOrderCode });
   log("info", "checkout.completed", { publicOrderCode: result.order.publicOrderCode, duplicate: result.replayed });

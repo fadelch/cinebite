@@ -1,7 +1,7 @@
 import "server-only";
 
 import { isEffectivelyAvailable, projectedProductAvailability } from "@/lib/inventory/stock-calculations";
-import { getStockAvailabilityInputsRecord } from "@/server/repositories/stock-availability.repository";
+import { getStockAvailabilityInputsRecord, getStockAvailabilityBatchRecord } from "@/server/repositories/stock-availability.repository";
 
 export async function getEffectiveProductAvailability(organizationId: string, productId: string, locationId: string) {
   const offer = await getStockAvailabilityInputsRecord(organizationId, productId, locationId);
@@ -19,4 +19,16 @@ export async function getEffectiveProductAvailability(organizationId: string, pr
       inventory,
     }),
   };
+}
+
+export async function getEffectiveProductAvailabilities(organizationId: string, productIds: readonly string[], locationId: string) {
+  const offers = await getStockAvailabilityBatchRecord(organizationId, productIds, locationId);
+  return new Map(offers.map(offer => {
+    const inventory = projectedProductAvailability(offer.product.recipeComponents.map(component => ({
+      quantityRequired: component.quantityRequired.toFixed(3),
+      quantityOnHand: component.inventoryItem.locationInventories[0]?.quantityOnHand.toFixed(3) ?? '0.000',
+      quantityReserved: component.inventoryItem.locationInventories[0]?.quantityReserved.toFixed(3) ?? '0.000',
+    })));
+    return [offer.productId, { inventory, effectiveAvailable: isEffectivelyAvailable({productActive: offer.product.status === 'ACTIVE',manualLocationAvailable: offer.isAvailable,inventory}) }] as const;
+  }));
 }

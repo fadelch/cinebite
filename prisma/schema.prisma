@@ -1139,6 +1139,7 @@ model Notification {
   customerSession   CustomerSession?     @relation(fields: [customerSessionId], references: [id], onDelete: Cascade)
 
   @@index([recipientUserId, readAt, createdAt])
+  @@index([recipientUserId, createdAt, id])
   @@index([customerSessionId, createdAt])
   @@index([organizationId, locationId, type, createdAt])
   @@index([expiresAt])

@@ -4,6 +4,7 @@ import { documentIdSchema } from "./shared";
 export const notificationQuerySchema = z
   .object({
     view: z.enum(["all", "unread"]).default("all"),
+    summary: z.literal('count').optional(),
     type: z.enum(NOTIFICATION_TYPES).optional(),
     page: z.coerce.number().int().min(1).max(10000).default(1),
   })

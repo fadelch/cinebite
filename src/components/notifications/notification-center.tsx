@@ -310,12 +310,13 @@ export function NotificationCenter({
   );
 }
 export function NotificationBell() {
+  const [expanded,setExpanded]=useState(false);
   const { data, error, refresh } = usePolling(
-    "/api/notifications?view=unread",
+    expanded ? "/api/notifications?view=unread" : "/api/notifications?summary=count",
     emptyNotificationFeed,
   );
   return (
-    <details className="relative">
+    <details className="relative" onToggle={event=>setExpanded(event.currentTarget.open)}>
       <summary
         onClick={() => void refresh()}
         className="cb-button-secondary min-h-11 cursor-pointer list-none gap-2"

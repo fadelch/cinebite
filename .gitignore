@@ -20,6 +20,7 @@
 /.phase18-test/
 /.phase19-test/
 /.phase20-test/
+/.phase21-test/
 /firebase-debug.log
 /ui-debug.log
 
@@ -76,6 +77,10 @@
 /linkedin/phase-20/*
 !/linkedin/phase-20/*.png
 !/linkedin/phase-20/README.md
+!/linkedin/phase-21/
+/linkedin/phase-21/*
+!/linkedin/phase-21/*.png
+!/linkedin/phase-21/README.md
 
 # debug
 npm-debug.log*

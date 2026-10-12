@@ -5,6 +5,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { getServerEnv } from "@/lib/env.server";
+import { runtimePoolConfig } from './pool-config';
 
 const prismaGlobal = globalThis as unknown as {
   cinebitePrisma?: PrismaClient;
@@ -16,8 +17,8 @@ function createPrismaClient(): PrismaClient {
   // Local PostgreSQL uses TCP; hosted Neon keeps its established serverless driver.
   // This enables real, isolated SQL tests without connecting test writes to Neon.
   const adapter = ["127.0.0.1", "localhost", "[::1]"].includes(hostname)
-    ? new PrismaPg({ connectionString, connectionTimeoutMillis: 2500 })
-    : new PrismaNeon({ connectionString, connectionTimeoutMillis: 2500 });
+    ? new PrismaPg({ connectionString, ...runtimePoolConfig() })
+    : new PrismaNeon({ connectionString, ...runtimePoolConfig() });
 
   return new PrismaClient({ adapter });
 }

@@ -1,0 +1,265 @@
+{
+  "recordedAt": "2026-10-12 22:51:03 UTC",
+  "branch": "phase-21-performance-scalability",
+  "baselineCommit": "55a426d",
+  "scope": "Local implementation and verification complete; hosted deployment/capacity remains partially executable.",
+  "verification": {
+    "stagedSecretCheck": "PASS: 65 staged files; no private artifacts or local server-secret matches",
+    "repositoryHistoryClientScan": "PASS: no findings; environment remains ignored",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "fullRegression": {
+      "status": "PASS",
+      "tests": 601,
+      "files": 73
+    },
+    "securityRegression": {
+      "status": "PASS",
+      "tests": 34,
+      "files": 5
+    },
+    "performanceRegression": {
+      "status": "PASS",
+      "tests": 11,
+      "files": 1
+    },
+    "prisma": {
+      "validate": "PASS",
+      "generate": "PASS",
+      "migrationStatus": "21 applied; up to date",
+      "drift": "No difference detected"
+    },
+    "productionDependencyAudit": {
+      "vulnerabilities": 0
+    },
+    "developmentDependencyAudit": {
+      "high": 5,
+      "packages": [
+        "@next/eslint-plugin-next",
+        "braces",
+        "eslint-config-next",
+        "fast-glob",
+        "micromatch"
+      ]
+    },
+    "privateConfigurationInspection": {
+      "runtimeNeonPooled": true,
+      "migrationDirect": true,
+      "distinct": true,
+      "noConnectionMade": true
+    }
+  },
+  "measured": {
+    "timedCohorts": 57,
+    "logicalIterations": 2566,
+    "httpAttempts": 1651,
+    "unexpectedErrors": 0,
+    "shortSamples": true,
+    "productionSla": false
+  },
+  "tests": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Warm secure production HTML menu measured at 20/100/500 offered products before/after optimization; query statistics exclude sampler SQL."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "100 simultaneous local menu readers retain cinema products and prices."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "100 independent authorized carts measured at 20 in flight without cross-session data."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "20 independent checkout workflows at 10 in flight complete with bounded same-key retries, distinct orders and correct reservations."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Ten concurrent identical checkout keys yield one order, one attempt and one reservation per ingredient."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "100 buyers against ten portions: exactly ten committed orders/reservations, nonnegative physical stock, remaining requests fail safely."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Mixed one/two-unit products share the same ingredient; committed reservation sum matches winners and never exceeds physical stock."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Twenty concurrent unique signed settlements consume each ingredient once; twenty late failure events cannot undo verified success."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "100 signed concurrent replays retain one journal entry and one consumption per component."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Ten competing partial refund workflows preserve capture exposure; conflicts are counted separately from infrastructure errors."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Fifty conditional kitchen polls reauthorize and query fresh data, return 304 without unchanged payload; no server authorization cache. Browser verifies hidden pause, visible resume, unmount cleanup, 503 backoff and terminal denial stop."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Sixty independent real kitchen transitions at ten in flight retain exactly one READY history per order."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Fifty fresh-authorized delivery polls suppress unchanged payloads."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Twenty workers/requests competing for one ready order have exactly one committed claim/history."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "200 owned status reads at 100 in flight preserve customer authorization and bounded histories."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Closed unread badge performs count-only polling; full center remains paginated and authorized."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Two concurrent bounded local processors drain 200 events; throughput and SQL work recorded, presentation duplicates remain prohibited."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Four overlapping workers process 100 events with SKIP LOCKED and unique recipient dedupe keys."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Overlapping authenticated expiry jobs clear actual expired test reservations without double release."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Seven-day analytics executed with paid historical fixture rows."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Thirty-day analytics executed."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Maximum 366-day range, 90-day view and revenue/product/movie/operations/inventory reports executed with tenant-scoped paid historical data."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Six in-flight mixed analytics/queue/checkout workflows complete without infrastructure errors; bounded business conflicts are separately classified."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Actual authenticated maximum 5000-row CSV export executes; time, SQL work, bytes and runner-memory delta recorded."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Large staff fixture has bounded distinct pages."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Large notification history pages are bounded and distinct."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Thousands of order-history rows remain paginated rather than loaded in one response."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Sampled local client connections stay within the two 10-connection pools (application plus fixture/sampler); no expected-load exhaustion. Hosted pooler behavior remains a separate acceptance test."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Product count grows 20→500 without one stock query per product; measured SQL calls remain bounded."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Kitchen SQL calls remain bounded per page, not per returned order."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Delivery relation loading is bounded per page rather than per delivery."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Admin history SQL work remains bounded per page and batched relations."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Actual mobile-loaded JavaScript bytes measured; fetched customer scripts contain no chart-library markers. Route splitting retained."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "CDP slow-4G menu hydration and complete customer sandbox workflow measured without external service access."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Mixed organization traffic returns only its current authorized tenant orders."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Beirut/Dbayeh staff traffic remains isolated; explicit unauthorized location filter is rejected."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Mixed customer carts remain scoped and a foreign public order code cannot be read."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "All API loads retain production logging; 1000 safe log-formatting iterations remain bounded and redacted. No disabled-logging benchmark is claimed."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Two bounded ingress buckets produce expected auth rejection/429 under concurrent requests with no shared-counter failure."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Sandbox provider-ledger delays of 300ms/12s leave queue reads responsive; the driver timeout returns safe 503 and same-key recovery retains one intent/order. Not a live-provider network claim."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Actual isolated PostgreSQL slowdown is canceled by a transaction-local statement timeout; no indefinite wait."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "390x844 DPR2 browser completes seat entry, add-to-cart, checkout, verified sandbox payment and progress navigation. Physical-phone validation remains a deployment check."
+    },
+    "AQ": {
+      "status": "PASS",
+      "evidence": "Executed final npm test: 601 tests / 73 files; lint, TypeScript and production build succeeded. Dedicated security 34 tests and performance regression 11 tests succeeded."
+    },
+    "AR": {
+      "status": "PASS",
+      "evidence": "PostgreSQL remains authoritative; browser Firestore initialization is absent and no test uses Firestore business writes."
+    },
+    "AS": {
+      "status": "PASS",
+      "evidence": "Eight native PNGs generated from actual numeric evidence / real synthetic mobile app and visually reviewed; seven labeled evidence panels, one full mobile app, no secrets or private infrastructure."
+    }
+  },
+  "notExecutable": [
+    {
+      "test": "Hosted Neon / Vercel pooler, compute wakeup, multi-instance connection limits, regional latency, sustained arrival-rate and soak",
+      "reason": "No dedicated authorized hosted deployment/telemetry configured; production load forbidden."
+    },
+    {
+      "test": "Live-provider network failure / timeout / merchant behavior",
+      "reason": "Only the existing explicit sandbox adapter is installed; local ledger delay/recovery was tested instead."
+    },
+    {
+      "test": "Physical phone and real cellular network",
+      "reason": "Browser/CDP mobile emulation completed; no physical-device control or deployed origin is available."
+    },
+    {
+      "test": "Remote image-heavy customer traffic / CDN cache performance",
+      "reason": "Synthetic menu deliberately has no remote product/poster media; no external production-media requests made."
+    },
+    {
+      "test": "Hosted server peak CPU/RSS and per-transaction lock-duration telemetry",
+      "reason": "Only local runner RSS deltas, aggregate SQL times and local client-connection samples collected; hosted instrumentation unavailable. No true server-peak claim."
+    }
+  ]
+}

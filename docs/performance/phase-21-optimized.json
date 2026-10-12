@@ -1,0 +1,1713 @@
+{
+  "recordedAt": "2026-10-12T22:40:56.095Z",
+  "stage": "optimized",
+  "environment": "Isolated local PostgreSQL 17 + demo Firebase Auth/Storage + production Next build; no production requests",
+  "dataset": {
+    "organization": 2,
+    "location": 3,
+    "hall": 3,
+    "seat": 300,
+    "product": 603,
+    "customerSession": 300,
+    "order": 6000,
+    "orderStatusEvent": 19200,
+    "notification": 5000,
+    "user": 160
+  },
+  "finalDataset": {
+    "organization": 2,
+    "location": 3,
+    "hall": 6,
+    "seat": 750,
+    "product": 603,
+    "customerSession": 302,
+    "order": 11074,
+    "orderStatusEvent": 19355,
+    "notification": 5900,
+    "user": 166
+  },
+  "startupMs": 1706,
+  "peakConnections": 20,
+  "connectionScope": "Total local test DB client connections including fixture/sampler pool",
+  "serverRssMiB": null,
+  "checkoutRetries": 329,
+  "measurements": [
+    {
+      "scenario": "menu-20",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 208,
+      "p50Ms": 23.94,
+      "p95Ms": 40.67,
+      "p99Ms": 40.67,
+      "throughputRps": 38.46,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 400434,
+      "databaseCalls": 272,
+      "databaseMs": 9.87,
+      "rssDeltaMiB": 0.79,
+      "status": "PASS"
+    },
+    {
+      "scenario": "menu-100",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 314,
+      "p50Ms": 32.44,
+      "p95Ms": 53.26,
+      "p99Ms": 53.26,
+      "throughputRps": 25.52,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 1521090,
+      "databaseCalls": 272,
+      "databaseMs": 16.06,
+      "rssDeltaMiB": 7.44,
+      "status": "PASS"
+    },
+    {
+      "scenario": "menu-500",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 536,
+      "p50Ms": 68.18,
+      "p95Ms": 74.42,
+      "p99Ms": 74.42,
+      "throughputRps": 14.91,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 7134978,
+      "databaseCalls": 272,
+      "databaseMs": 25.94,
+      "rssDeltaMiB": 34.46,
+      "status": "PASS"
+    },
+    {
+      "scenario": "cart-read",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 57,
+      "p50Ms": 6.59,
+      "p95Ms": 11.11,
+      "p99Ms": 11.11,
+      "throughputRps": 140.69,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 2168,
+      "databaseCalls": 136,
+      "databaseMs": 1.2,
+      "rssDeltaMiB": 0.09,
+      "status": "PASS"
+    },
+    {
+      "scenario": "cart-write",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 224,
+      "p50Ms": 20.83,
+      "p95Ms": 65.03,
+      "p99Ms": 65.03,
+      "throughputRps": 35.67,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 2168,
+      "databaseCalls": 480,
+      "databaseMs": 7.31,
+      "rssDeltaMiB": 0.12,
+      "status": "PASS"
+    },
+    {
+      "scenario": "checkout",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "201": 5
+      },
+      "responseCodes": {
+        "201": 5
+      },
+      "durationMs": 246,
+      "p50Ms": 29.78,
+      "p95Ms": 124.2,
+      "p99Ms": 124.2,
+      "throughputRps": 20.33,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 3670,
+      "databaseCalls": 490,
+      "databaseMs": 28.13,
+      "rssDeltaMiB": 0.03,
+      "status": "PASS"
+    },
+    {
+      "scenario": "webhook",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "200": 5
+      },
+      "responseCodes": {
+        "200": 5
+      },
+      "durationMs": 121,
+      "p50Ms": 15.8,
+      "p95Ms": 57.67,
+      "p99Ms": 57.67,
+      "throughputRps": 41.27,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 110,
+      "databaseCalls": 225,
+      "databaseMs": 19.93,
+      "rssDeltaMiB": 0.16,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-queue",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 199,
+      "p50Ms": 21.15,
+      "p95Ms": 45.66,
+      "p99Ms": 45.66,
+      "throughputRps": 40.21,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 718040,
+      "databaseCalls": 264,
+      "databaseMs": 23.34,
+      "rssDeltaMiB": 0.49,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-transition",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "200": 5
+      },
+      "responseCodes": {
+        "200": 5
+      },
+      "durationMs": 85,
+      "p50Ms": 14.54,
+      "p95Ms": 27.71,
+      "p99Ms": 27.71,
+      "throughputRps": 58.87,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 4055,
+      "databaseCalls": 190,
+      "databaseMs": 7.8,
+      "rssDeltaMiB": 0,
+      "status": "PASS"
+    },
+    {
+      "scenario": "delivery-queue",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 140,
+      "p50Ms": 14.09,
+      "p95Ms": 37.09,
+      "p99Ms": 37.09,
+      "throughputRps": 57.01,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 206624,
+      "databaseCalls": 264,
+      "databaseMs": 9.82,
+      "rssDeltaMiB": 0.32,
+      "status": "PASS"
+    },
+    {
+      "scenario": "delivery-claim",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "200": 5
+      },
+      "responseCodes": {
+        "200": 5
+      },
+      "durationMs": 101,
+      "p50Ms": 19.42,
+      "p95Ms": 22.97,
+      "p99Ms": 22.97,
+      "throughputRps": 49.28,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 7205,
+      "databaseCalls": 205,
+      "databaseMs": 11.42,
+      "rssDeltaMiB": 0.09,
+      "status": "PASS"
+    },
+    {
+      "scenario": "customer-status",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 74,
+      "p50Ms": 6.58,
+      "p95Ms": 14.67,
+      "p99Ms": 14.67,
+      "throughputRps": 108.79,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 8656,
+      "databaseCalls": 96,
+      "databaseMs": 1.6,
+      "rssDeltaMiB": 0.29,
+      "status": "PASS"
+    },
+    {
+      "scenario": "admin-orders",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 186,
+      "p50Ms": 18.36,
+      "p95Ms": 49.19,
+      "p99Ms": 49.19,
+      "throughputRps": 43.1,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 590160,
+      "databaseCalls": 176,
+      "databaseMs": 15.19,
+      "rssDeltaMiB": -384.1,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-7d",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "200": 5
+      },
+      "responseCodes": {
+        "200": 5
+      },
+      "durationMs": 455,
+      "p50Ms": 85.27,
+      "p95Ms": 109.55,
+      "p99Ms": 109.55,
+      "throughputRps": 10.99,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 35620,
+      "databaseCalls": 155,
+      "databaseMs": 284.62,
+      "rssDeltaMiB": 0.13,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-30d",
+      "concurrency": 1,
+      "requests": 5,
+      "httpRequests": 5,
+      "httpResponseCodes": {
+        "200": 5
+      },
+      "responseCodes": {
+        "200": 5
+      },
+      "durationMs": 481,
+      "p50Ms": 87.62,
+      "p95Ms": 128.12,
+      "p99Ms": 128.12,
+      "throughputRps": 10.39,
+      "success": 5,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 48040,
+      "databaseCalls": 155,
+      "databaseMs": 323.14,
+      "rssDeltaMiB": 0.74,
+      "status": "PASS"
+    },
+    {
+      "scenario": "staff-list",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 115,
+      "p50Ms": 12.66,
+      "p95Ms": 26.36,
+      "p99Ms": 26.36,
+      "throughputRps": 69.33,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 60944,
+      "databaseCalls": 144,
+      "databaseMs": 5.51,
+      "rssDeltaMiB": 1.14,
+      "status": "PASS"
+    },
+    {
+      "scenario": "notifications",
+      "concurrency": 1,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 153,
+      "p50Ms": 16.7,
+      "p95Ms": 35.93,
+      "p99Ms": 35.93,
+      "throughputRps": 52.21,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 48648,
+      "databaseCalls": 120,
+      "databaseMs": 55.4,
+      "rssDeltaMiB": 0.7,
+      "status": "PASS"
+    },
+    {
+      "scenario": "menu-load-100-users",
+      "concurrency": 100,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 1887,
+      "p50Ms": 1861.89,
+      "p95Ms": 1880.53,
+      "p99Ms": 1882.48,
+      "throughputRps": 52.98,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 19010733,
+      "databaseCalls": 3375,
+      "databaseMs": 189.6,
+      "rssDeltaMiB": 19.23,
+      "status": "PASS"
+    },
+    {
+      "scenario": "cart-load",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 384,
+      "p50Ms": 75.31,
+      "p95Ms": 94.91,
+      "p99Ms": 98.14,
+      "throughputRps": 260.73,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 26065,
+      "databaseCalls": 1675,
+      "databaseMs": 14.58,
+      "rssDeltaMiB": 2.09,
+      "status": "PASS"
+    },
+    {
+      "scenario": "checkout-load",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 40,
+      "httpResponseCodes": {
+        "201": 20,
+        "409": 20
+      },
+      "responseCodes": {
+        "201": 20
+      },
+      "durationMs": 942,
+      "p50Ms": 262.29,
+      "p95Ms": 880.69,
+      "p99Ms": 940.92,
+      "throughputRps": 21.24,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 14680,
+      "databaseCalls": 5206,
+      "databaseMs": 226.47,
+      "rssDeltaMiB": 4.95,
+      "status": "PASS"
+    },
+    {
+      "scenario": "webhook-unique-load",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 23,
+      "httpResponseCodes": {
+        "200": 20,
+        "409": 3
+      },
+      "responseCodes": {
+        "200": 20
+      },
+      "durationMs": 563,
+      "p50Ms": 183.1,
+      "p95Ms": 535.42,
+      "p99Ms": 558.5,
+      "throughputRps": 35.55,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 440,
+      "databaseCalls": 1845,
+      "databaseMs": 102,
+      "rssDeltaMiB": 3.75,
+      "status": "PASS"
+    },
+    {
+      "scenario": "webhook-out-of-order",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 22,
+      "httpResponseCodes": {
+        "200": 20,
+        "409": 2
+      },
+      "responseCodes": {
+        "200": 20
+      },
+      "durationMs": 527,
+      "p50Ms": 123.87,
+      "p95Ms": 510.22,
+      "p99Ms": 525.73,
+      "throughputRps": 37.92,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 400,
+      "databaseCalls": 1131,
+      "databaseMs": 18.98,
+      "rssDeltaMiB": 3.96,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-load-accepted",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 26,
+      "httpResponseCodes": {
+        "200": 20,
+        "409": 6
+      },
+      "responseCodes": {
+        "200": 20
+      },
+      "durationMs": 348,
+      "p50Ms": 77.1,
+      "p95Ms": 325.57,
+      "p99Ms": 347.7,
+      "throughputRps": 57.52,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 16220,
+      "databaseCalls": 986,
+      "databaseMs": 59.1,
+      "rssDeltaMiB": 2.72,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-load-preparing",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 30,
+      "httpResponseCodes": {
+        "200": 20,
+        "409": 10
+      },
+      "responseCodes": {
+        "200": 20
+      },
+      "durationMs": 717,
+      "p50Ms": 55.48,
+      "p95Ms": 369.23,
+      "p99Ms": 716.44,
+      "throughputRps": 27.9,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 19160,
+      "databaseCalls": 1135,
+      "databaseMs": 48.25,
+      "rssDeltaMiB": 3.15,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-load-ready",
+      "concurrency": 10,
+      "requests": 20,
+      "httpRequests": 29,
+      "httpResponseCodes": {
+        "200": 20,
+        "409": 9
+      },
+      "responseCodes": {
+        "200": 20
+      },
+      "durationMs": 364,
+      "p50Ms": 22.35,
+      "p95Ms": 350.55,
+      "p99Ms": 363.46,
+      "throughputRps": 54.97,
+      "success": 20,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 21940,
+      "databaseCalls": 1332,
+      "databaseMs": 52.36,
+      "rssDeltaMiB": 3.76,
+      "status": "PASS"
+    },
+    {
+      "scenario": "checkout-idempotency",
+      "concurrency": 10,
+      "requests": 10,
+      "httpRequests": 10,
+      "httpResponseCodes": {
+        "200": 9,
+        "201": 1
+      },
+      "responseCodes": {
+        "200": 9,
+        "201": 1
+      },
+      "durationMs": 112,
+      "p50Ms": 100.75,
+      "p95Ms": 111,
+      "p99Ms": 111,
+      "throughputRps": 89.57,
+      "success": 10,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 7341,
+      "databaseCalls": 575,
+      "databaseMs": 8.17,
+      "rssDeltaMiB": 1.18,
+      "status": "PASS"
+    },
+    {
+      "scenario": "last-stock-100-buyers",
+      "concurrency": 100,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "201": 10,
+        "409": 90
+      },
+      "responseCodes": {
+        "201": 10,
+        "409": 90
+      },
+      "durationMs": 1144,
+      "p50Ms": 976.89,
+      "p95Ms": 1139.84,
+      "p99Ms": 1140.91,
+      "throughputRps": 87.38,
+      "success": 10,
+      "expectedConflicts": 90,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 25760,
+      "databaseCalls": 10201,
+      "databaseMs": 273.93,
+      "rssDeltaMiB": -4.32,
+      "status": "PASS"
+    },
+    {
+      "scenario": "shared-ingredient",
+      "concurrency": 20,
+      "requests": 50,
+      "httpRequests": 117,
+      "httpResponseCodes": {
+        "201": 27,
+        "409": 90
+      },
+      "responseCodes": {
+        "201": 27,
+        "409": 23
+      },
+      "durationMs": 1963,
+      "p50Ms": 614.82,
+      "p95Ms": 1840.83,
+      "p99Ms": 1858.11,
+      "throughputRps": 25.48,
+      "success": 27,
+      "expectedConflicts": 23,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 24541,
+      "databaseCalls": 14344,
+      "databaseMs": 388.21,
+      "rssDeltaMiB": 1.19,
+      "status": "PASS"
+    },
+    {
+      "scenario": "duplicate-webhook-storm",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 327,
+      "p50Ms": 62.19,
+      "p95Ms": 80.63,
+      "p99Ms": 84.62,
+      "throughputRps": 305.47,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 3900,
+      "databaseCalls": 800,
+      "databaseMs": 7.99,
+      "rssDeltaMiB": 0.21,
+      "status": "PASS"
+    },
+    {
+      "scenario": "refund-contention",
+      "concurrency": 10,
+      "requests": 10,
+      "httpRequests": 10,
+      "httpResponseCodes": {
+        "200": 6,
+        "409": 4
+      },
+      "responseCodes": {
+        "200": 6,
+        "409": 4
+      },
+      "durationMs": 374,
+      "p50Ms": 294.54,
+      "p95Ms": 373.59,
+      "p99Ms": 373.59,
+      "throughputRps": 26.73,
+      "success": 6,
+      "expectedConflicts": 4,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 11719,
+      "databaseCalls": 1309,
+      "databaseMs": 971.45,
+      "rssDeltaMiB": 0.74,
+      "status": "PASS"
+    },
+    {
+      "scenario": "kitchen-conditional-poll",
+      "concurrency": 10,
+      "requests": 50,
+      "httpRequests": 50,
+      "httpResponseCodes": {
+        "304": 50
+      },
+      "responseCodes": {
+        "304": 50
+      },
+      "durationMs": 480,
+      "p50Ms": 93.75,
+      "p95Ms": 106.79,
+      "p99Ms": 114.03,
+      "throughputRps": 104.18,
+      "success": 50,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 0,
+      "databaseCalls": 1650,
+      "databaseMs": 146.74,
+      "rssDeltaMiB": 2.52,
+      "status": "PASS"
+    },
+    {
+      "scenario": "delivery-conditional-poll",
+      "concurrency": 10,
+      "requests": 50,
+      "httpRequests": 50,
+      "httpResponseCodes": {
+        "304": 50
+      },
+      "responseCodes": {
+        "304": 50
+      },
+      "durationMs": 301,
+      "p50Ms": 60.18,
+      "p95Ms": 68.17,
+      "p99Ms": 69.12,
+      "throughputRps": 166.32,
+      "success": 50,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 0,
+      "databaseCalls": 1650,
+      "databaseMs": 62.06,
+      "rssDeltaMiB": 2.53,
+      "status": "PASS"
+    },
+    {
+      "scenario": "delivery-claim-contention",
+      "concurrency": 20,
+      "requests": 20,
+      "httpRequests": 20,
+      "httpResponseCodes": {
+        "200": 1,
+        "409": 19
+      },
+      "responseCodes": {
+        "200": 1,
+        "409": 19
+      },
+      "durationMs": 96,
+      "p50Ms": 82.41,
+      "p95Ms": 94.07,
+      "p99Ms": 94.63,
+      "throughputRps": 209.07,
+      "success": 1,
+      "expectedConflicts": 19,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 5515,
+      "databaseCalls": 383,
+      "databaseMs": 6.38,
+      "rssDeltaMiB": 1.97,
+      "status": "PASS"
+    },
+    {
+      "scenario": "customer-poll-load",
+      "concurrency": 100,
+      "requests": 200,
+      "httpRequests": 200,
+      "httpResponseCodes": {
+        "200": 200
+      },
+      "responseCodes": {
+        "200": 200
+      },
+      "durationMs": 503,
+      "p50Ms": 233.15,
+      "p95Ms": 343.78,
+      "p99Ms": 357.92,
+      "throughputRps": 397.59,
+      "success": 200,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 216400,
+      "databaseCalls": 2400,
+      "databaseMs": 21.99,
+      "rssDeltaMiB": 16.06,
+      "status": "PASS"
+    },
+    {
+      "scenario": "unread-badge-load",
+      "concurrency": 10,
+      "requests": 50,
+      "httpRequests": 50,
+      "httpResponseCodes": {
+        "200": 50
+      },
+      "responseCodes": {
+        "200": 50
+      },
+      "durationMs": 179,
+      "p50Ms": 34.07,
+      "p95Ms": 49.76,
+      "p99Ms": 50.51,
+      "throughputRps": 279.86,
+      "success": 50,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 3100,
+      "databaseCalls": 600,
+      "databaseMs": 135.16,
+      "rssDeltaMiB": 2.79,
+      "status": "PASS"
+    },
+    {
+      "scenario": "tenant-mixed-load",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 1263,
+      "p50Ms": 224.79,
+      "p95Ms": 316.56,
+      "p99Ms": 327.76,
+      "throughputRps": 79.15,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 8985800,
+      "databaseCalls": 3300,
+      "databaseMs": 479.3,
+      "rssDeltaMiB": 22.07,
+      "status": "PASS"
+    },
+    {
+      "scenario": "location-mixed-load",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 1129,
+      "p50Ms": 219.88,
+      "p95Ms": 250.08,
+      "p99Ms": 263.24,
+      "throughputRps": 88.57,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 8975600,
+      "databaseCalls": 3300,
+      "databaseMs": 311.21,
+      "rssDeltaMiB": 25.92,
+      "status": "PASS"
+    },
+    {
+      "scenario": "customer-mixed-isolation",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "200": 100
+      },
+      "responseCodes": {
+        "200": 100
+      },
+      "durationMs": 360,
+      "p50Ms": 73.34,
+      "p95Ms": 95.84,
+      "p99Ms": 98.68,
+      "throughputRps": 277.42,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 22886,
+      "databaseCalls": 1620,
+      "databaseMs": 16.7,
+      "rssDeltaMiB": -49.02,
+      "status": "PASS"
+    },
+    {
+      "scenario": "outbox-200-events",
+      "concurrency": 2,
+      "requests": 8,
+      "httpRequests": 0,
+      "httpResponseCodes": {},
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 740,
+      "p50Ms": 1.33,
+      "p95Ms": 737.77,
+      "p99Ms": 737.77,
+      "throughputRps": 10.8,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 0,
+      "databaseCalls": 4618,
+      "databaseMs": 136.19,
+      "rssDeltaMiB": 27.99,
+      "status": "PASS"
+    },
+    {
+      "scenario": "outbox-worker-overlap",
+      "concurrency": 4,
+      "requests": 8,
+      "httpRequests": 0,
+      "httpResponseCodes": {},
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 285,
+      "p50Ms": 21.4,
+      "p95Ms": 284.2,
+      "p99Ms": 284.2,
+      "throughputRps": 28.05,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 0,
+      "databaseCalls": 2318,
+      "databaseMs": 65.55,
+      "rssDeltaMiB": 1.56,
+      "status": "PASS"
+    },
+    {
+      "scenario": "reservation-expiry-batch",
+      "concurrency": 2,
+      "requests": 3,
+      "httpRequests": 3,
+      "httpResponseCodes": {
+        "200": 3
+      },
+      "responseCodes": {
+        "200": 3
+      },
+      "durationMs": 519,
+      "p50Ms": 483.1,
+      "p95Ms": 513.56,
+      "p99Ms": 513.56,
+      "throughputRps": 5.78,
+      "success": 3,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 493,
+      "databaseCalls": 2502,
+      "databaseMs": 66.24,
+      "rssDeltaMiB": 0,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-max-range",
+      "concurrency": 1,
+      "requests": 3,
+      "httpRequests": 3,
+      "httpResponseCodes": {
+        "200": 3
+      },
+      "responseCodes": {
+        "200": 3
+      },
+      "durationMs": 659,
+      "p50Ms": 224.18,
+      "p95Ms": 227.03,
+      "p99Ms": 227.03,
+      "throughputRps": 4.55,
+      "success": 3,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 137289,
+      "databaseCalls": 93,
+      "databaseMs": 538.08,
+      "rssDeltaMiB": 0.01,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-revenue",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 207,
+      "p50Ms": 95.42,
+      "p95Ms": 112.07,
+      "p99Ms": 112.07,
+      "throughputRps": 9.64,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 84432,
+      "databaseCalls": 56,
+      "databaseMs": 149.45,
+      "rssDeltaMiB": 0,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-products",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 214,
+      "p50Ms": 95.39,
+      "p95Ms": 119.09,
+      "p99Ms": 119.09,
+      "throughputRps": 9.32,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 83638,
+      "databaseCalls": 56,
+      "databaseMs": 145.68,
+      "rssDeltaMiB": 0.01,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-movies",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 236,
+      "p50Ms": 117.57,
+      "p95Ms": 118.55,
+      "p99Ms": 118.55,
+      "throughputRps": 8.47,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 85264,
+      "databaseCalls": 56,
+      "databaseMs": 179.88,
+      "rssDeltaMiB": 0.02,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-operations",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 192,
+      "p50Ms": 95.57,
+      "p95Ms": 96.85,
+      "p99Ms": 96.85,
+      "throughputRps": 10.39,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 85378,
+      "databaseCalls": 56,
+      "databaseMs": 139.79,
+      "rssDeltaMiB": 0.15,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-inventory",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 123,
+      "p50Ms": 60.51,
+      "p95Ms": 62.33,
+      "p99Ms": 62.33,
+      "throughputRps": 16.28,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 84280,
+      "databaseCalls": 56,
+      "databaseMs": 60.6,
+      "rssDeltaMiB": 0.17,
+      "status": "PASS"
+    },
+    {
+      "scenario": "analytics-90d",
+      "concurrency": 1,
+      "requests": 2,
+      "httpRequests": 2,
+      "httpResponseCodes": {
+        "200": 2
+      },
+      "responseCodes": {
+        "200": 2
+      },
+      "durationMs": 234,
+      "p50Ms": 116.63,
+      "p95Ms": 117.03,
+      "p99Ms": 117.03,
+      "throughputRps": 8.56,
+      "success": 2,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 32340,
+      "databaseCalls": 62,
+      "databaseMs": 172.7,
+      "rssDeltaMiB": 0.03,
+      "status": "PASS"
+    },
+    {
+      "scenario": "operational-plus-analytics",
+      "concurrency": 6,
+      "requests": 24,
+      "httpRequests": 24,
+      "httpResponseCodes": {
+        "200": 16,
+        "201": 8
+      },
+      "responseCodes": {
+        "200": 16,
+        "201": 8
+      },
+      "durationMs": 729,
+      "p50Ms": 59.75,
+      "p95Ms": 354.07,
+      "p99Ms": 363.84,
+      "throughputRps": 32.93,
+      "success": 24,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 1090016,
+      "databaseCalls": 1416,
+      "databaseMs": 2306.95,
+      "rssDeltaMiB": 2.21,
+      "status": "PASS"
+    },
+    {
+      "scenario": "csv-5000-rows",
+      "concurrency": 1,
+      "requests": 1,
+      "httpRequests": 1,
+      "httpResponseCodes": {
+        "200": 1
+      },
+      "responseCodes": {
+        "200": 1
+      },
+      "durationMs": 264,
+      "p50Ms": 264.28,
+      "p95Ms": 264.28,
+      "p99Ms": 264.28,
+      "throughputRps": 3.78,
+      "success": 1,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 830219,
+      "databaseCalls": 33,
+      "databaseMs": 198.75,
+      "rssDeltaMiB": 2.44,
+      "status": "PASS"
+    },
+    {
+      "scenario": "order-history-pages",
+      "concurrency": 2,
+      "requests": 8,
+      "httpRequests": 8,
+      "httpResponseCodes": {
+        "200": 8
+      },
+      "responseCodes": {
+        "200": 8
+      },
+      "durationMs": 133,
+      "p50Ms": 29.86,
+      "p95Ms": 41.99,
+      "p99Ms": 41.99,
+      "throughputRps": 60.07,
+      "success": 8,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 590996,
+      "databaseCalls": 176,
+      "databaseMs": 24.1,
+      "rssDeltaMiB": 2.45,
+      "status": "PASS"
+    },
+    {
+      "scenario": "safe-log-formatting",
+      "concurrency": 1,
+      "requests": 1000,
+      "httpRequests": 0,
+      "httpResponseCodes": {},
+      "responseCodes": {
+        "200": 1000
+      },
+      "durationMs": 9,
+      "p50Ms": 0.01,
+      "p95Ms": 0.01,
+      "p99Ms": 0.02,
+      "throughputRps": 115372.19,
+      "success": 1000,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 207000,
+      "databaseCalls": 0,
+      "databaseMs": 0,
+      "rssDeltaMiB": 0.19,
+      "status": "PASS"
+    },
+    {
+      "scenario": "shared-limiter-load",
+      "concurrency": 20,
+      "requests": 100,
+      "httpRequests": 100,
+      "httpResponseCodes": {
+        "400": 60,
+        "429": 40
+      },
+      "responseCodes": {
+        "400": 60,
+        "429": 40
+      },
+      "durationMs": 163,
+      "p50Ms": 31.28,
+      "p95Ms": 35.91,
+      "p99Ms": 37.18,
+      "throughputRps": 612.65,
+      "success": 100,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 11480,
+      "databaseCalls": 100,
+      "databaseMs": 3.38,
+      "rssDeltaMiB": 0.94,
+      "status": "PASS"
+    },
+    {
+      "scenario": "qr-50-seats",
+      "concurrency": 1,
+      "requests": 1,
+      "httpRequests": 1,
+      "httpResponseCodes": {
+        "201": 1
+      },
+      "responseCodes": {
+        "201": 1
+      },
+      "durationMs": 2269,
+      "p50Ms": 2269.08,
+      "p95Ms": 2269.08,
+      "p99Ms": 2269.08,
+      "throughputRps": 0.44,
+      "success": 1,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 10171,
+      "databaseCalls": 775,
+      "databaseMs": 24.37,
+      "rssDeltaMiB": 0,
+      "status": "PASS"
+    },
+    {
+      "scenario": "qr-100-seats",
+      "concurrency": 1,
+      "requests": 1,
+      "httpRequests": 1,
+      "httpResponseCodes": {
+        "201": 1
+      },
+      "responseCodes": {
+        "201": 1
+      },
+      "durationMs": 4011,
+      "p50Ms": 4011.48,
+      "p95Ms": 4011.48,
+      "p99Ms": 4011.48,
+      "throughputRps": 0.25,
+      "success": 1,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 20078,
+      "databaseCalls": 1525,
+      "databaseMs": 37.49,
+      "rssDeltaMiB": 0.59,
+      "status": "PASS"
+    },
+    {
+      "scenario": "qr-300-seats",
+      "concurrency": 1,
+      "requests": 3,
+      "httpRequests": 3,
+      "httpResponseCodes": {
+        "201": 3
+      },
+      "responseCodes": {
+        "201": 3
+      },
+      "durationMs": 13392,
+      "p50Ms": 4561.83,
+      "p95Ms": 4620.36,
+      "p99Ms": 4620.36,
+      "throughputRps": 0.22,
+      "success": 3,
+      "expectedConflicts": 0,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 175740,
+      "databaseCalls": 4575,
+      "databaseMs": 125.35,
+      "rssDeltaMiB": 0.11,
+      "status": "PASS"
+    },
+    {
+      "scenario": "image-concurrency",
+      "concurrency": 16,
+      "requests": 16,
+      "httpRequests": 0,
+      "httpResponseCodes": {},
+      "responseCodes": {
+        "200": 10,
+        "429": 6
+      },
+      "durationMs": 229,
+      "p50Ms": 52.16,
+      "p95Ms": 227.92,
+      "p99Ms": 227.92,
+      "throughputRps": 69.88,
+      "success": 10,
+      "expectedConflicts": 6,
+      "unexpectedErrors": 0,
+      "unexpectedErrorRate": 0,
+      "bytes": 17960,
+      "databaseCalls": 0,
+      "databaseMs": 0,
+      "rssDeltaMiB": 2.16,
+      "status": "PASS"
+    }
+  ],
+  "tests": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Warm secure production HTML menu measured at 20/100/500 offered products before/after optimization; query statistics exclude sampler SQL."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "100 simultaneous local menu readers retain cinema products and prices."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "100 independent authorized carts measured at 20 in flight without cross-session data."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "20 independent checkout workflows at 10 in flight complete with bounded same-key retries, distinct orders and correct reservations."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Ten concurrent identical checkout keys yield one order, one attempt and one reservation per ingredient."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "100 buyers against ten portions: exactly ten committed orders/reservations, nonnegative physical stock, remaining requests fail safely."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Mixed one/two-unit products share the same ingredient; committed reservation sum matches winners and never exceeds physical stock."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "Twenty concurrent unique signed settlements consume each ingredient once; twenty late failure events cannot undo verified success."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "100 signed concurrent replays retain one journal entry and one consumption per component."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Ten competing partial refund workflows preserve capture exposure; conflicts are counted separately from infrastructure errors."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Fifty conditional kitchen polls reauthorize and query fresh data, return 304 without unchanged payload; no server authorization cache. Browser verifies hidden pause, visible resume, unmount cleanup, 503 backoff and terminal denial stop."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Sixty independent real kitchen transitions at ten in flight retain exactly one READY history per order."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Fifty fresh-authorized delivery polls suppress unchanged payloads."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Twenty workers/requests competing for one ready order have exactly one committed claim/history."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "200 owned status reads at 100 in flight preserve customer authorization and bounded histories."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Closed unread badge performs count-only polling; full center remains paginated and authorized."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Two concurrent bounded local processors drain 200 events; throughput and SQL work recorded, presentation duplicates remain prohibited."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Four overlapping workers process 100 events with SKIP LOCKED and unique recipient dedupe keys."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Overlapping authenticated expiry jobs clear actual expired test reservations without double release."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Seven-day analytics executed with paid historical fixture rows."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Thirty-day analytics executed."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Maximum 366-day range, 90-day view and revenue/product/movie/operations/inventory reports executed with tenant-scoped paid historical data."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Six in-flight mixed analytics/queue/checkout workflows complete without infrastructure errors; bounded business conflicts are separately classified."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Actual authenticated maximum 5000-row CSV export executes; time, SQL work, bytes and runner-memory delta recorded."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Large staff fixture has bounded distinct pages."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "Large notification history pages are bounded and distinct."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Thousands of order-history rows remain paginated rather than loaded in one response."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Sampled local client connections stay within the two 10-connection pools (application plus fixture/sampler); no expected-load exhaustion. Hosted pooler behavior remains a separate acceptance test."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Product count grows 20→500 without one stock query per product; measured SQL calls remain bounded."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Kitchen SQL calls remain bounded per page, not per returned order."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Delivery relation loading is bounded per page rather than per delivery."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Admin history SQL work remains bounded per page and batched relations."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Actual mobile-loaded JavaScript bytes measured; fetched customer scripts contain no chart-library markers. Route splitting retained."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "CDP slow-4G menu hydration and complete customer sandbox workflow measured without external service access."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "Mixed organization traffic returns only its current authorized tenant orders."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "Beirut/Dbayeh staff traffic remains isolated; explicit unauthorized location filter is rejected."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Mixed customer carts remain scoped and a foreign public order code cannot be read."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "All API loads retain production logging; 1000 safe log-formatting iterations remain bounded and redacted. No disabled-logging benchmark is claimed."
+    },
+    "AM": {
+      "status": "PASS",
+      "evidence": "Two bounded ingress buckets produce expected auth rejection/429 under concurrent requests with no shared-counter failure."
+    },
+    "AN": {
+      "status": "PASS",
+      "evidence": "Sandbox provider-ledger delays of 300ms/12s leave queue reads responsive; the driver timeout returns safe 503 and same-key recovery retains one intent/order. Not a live-provider network claim."
+    },
+    "AO": {
+      "status": "PASS",
+      "evidence": "Actual isolated PostgreSQL slowdown is canceled by a transaction-local statement timeout; no indefinite wait."
+    },
+    "AP": {
+      "status": "PASS",
+      "evidence": "390x844 DPR2 browser completes seat entry, add-to-cart, checkout, verified sandbox payment and progress navigation. Physical-phone validation remains a deployment check."
+    },
+    "AQ": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "Not reached in this invocation."
+    },
+    "AR": {
+      "status": "PASS",
+      "evidence": "PostgreSQL remains authoritative; browser Firestore initialization is absent and no test uses Firestore business writes."
+    },
+    "AS": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "Not reached in this invocation."
+    }
+  }
+}

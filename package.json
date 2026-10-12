@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:security": "vitest run src/security",
+    "test:performance": "tsx --conditions=react-server tests/performance/run.ts --local",
+    "test:performance:regression": "vitest run src/performance",
     "security:scan": "node scripts/security-scan.mjs",
     "verify:phase20": "tsx --conditions=react-server scripts/verify-phase-20.ts --local",
     "postinstall": "prisma generate",

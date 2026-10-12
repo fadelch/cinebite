@@ -1,0 +1,32 @@
+{
+  "recordedAt": "2026-10-12T22:40:55.796Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "dpr": 2
+  },
+  "network": {
+    "method": "Chrome CDP emulation",
+    "latencyMs": 150,
+    "downloadBitsPerSecond": 1600000,
+    "uploadBitsPerSecond": 750000
+  },
+  "usefulMenuMs": 3133,
+  "cartToPaidProgressMs": 3284,
+  "javascriptBytes": 1287557,
+  "javascriptCount": 20,
+  "chartMarkers": 0,
+  "externalRequests": 0,
+  "polling": {
+    "hiddenPause": true,
+    "visibleResume": true,
+    "unmountCleanup": true,
+    "failureBackoff": true,
+    "terminalDenialStops": true
+  },
+  "limits": [
+    "Browser emulation, not a physical phone.",
+    "JS bytes are decoded response bodies, not compressed transfer size.",
+    "Synthetic menu has no remote product/poster images; image-heavy mobile traffic requires staging validation."
+  ]
+}

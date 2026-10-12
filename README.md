@@ -43,7 +43,13 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 20 — Security Hardening**
+**Phase 21 — Performance and Scalability Testing**
+
+Phase 21 measures the secured application using isolated synthetic data, batches customer-menu/cart stock reads, bounds connection/image/job work, and reduces unchanged polling payloads without caching permissions or financial state. PostgreSQL remains authoritative; payment, inventory and tenant guards remain enforced. No production load or real-money transactions were performed.
+
+See the [performance report and detailed architecture walkthrough](docs/performance/phase-21-performance-report.md), [repeatable test harness](tests/performance/README.md) and [safe performance gallery](linkedin/phase-21/README.md). Hosted Neon/Vercel capacity and physical-phone/image-heavy network tests require separate staging acceptance; local measurements are not production SLAs.
+
+Before deploying this branch, apply the additive notification-history index migration with the established direct migration connection. Runtime `DATABASE_URL` should use Neon's pooled endpoint; `DIRECT_URL` remains migration-only. Per-warm-instance defaults are 10 connections, 2.5-second acquisition and 10-second query timeout. Optional `DB_POOL_MAX`, `DB_QUERY_TIMEOUT_MS` and `NOTIFICATION_BATCH_SIZE` are bounded; tune only with staging evidence. Keep all Phase 20 security configuration below.
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 

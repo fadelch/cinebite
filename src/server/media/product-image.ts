@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 
 import { publicImageUrl } from './public-image-url';
 import sharp from "sharp";
+import { imageCapacity } from './capacity';
 
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
 import { ServiceError } from "@/server/services/service-error";
@@ -14,10 +15,15 @@ export const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 const allowedFormats = new Set(["jpeg", "png", "webp"]);
 // Disable dangerous non-raster loaders before even metadata parsing.
 sharp.block({ operation: ["VipsForeignLoadSvg", "VipsForeignLoadPdf"] });
+sharp.concurrency(2);
+sharp.cache({memory:32,files:0,items:64});
 
 export interface StoredProductImage { storagePath: string; url: string }
 
 export async function normalizeProductImage(file: File): Promise<Buffer> {
+  return imageCapacity.run(()=>normalizeRaster(file));
+}
+async function normalizeRaster(file: File): Promise<Buffer> {
   if (file.size <= 0 || file.size > MAX_PRODUCT_IMAGE_BYTES) {
     throw new ServiceError("IMAGE_UPLOAD_INVALID", 400, "Choose a JPEG, PNG, or WebP image no larger than 5 MB.");
   }
