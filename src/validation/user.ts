@@ -15,6 +15,7 @@ export const userProfileDocumentSchema = z
     locationIds: z.array(documentIdSchema).max(100),
     allLocations: z.boolean(),
     active: z.boolean(),
+    authorizationVersion:z.number().int().nonnegative().optional(),
     createdAt: databaseTimestampSchema,
     updatedAt: databaseTimestampSchema,
   })

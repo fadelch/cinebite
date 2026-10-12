@@ -2,17 +2,21 @@ import Image from "next/image";
 
 import { StartOrderingButton } from "@/components/customer/start-ordering-button";
 import { resolveSeatScan } from "@/server/services/seat-scan.service";
+import {CustomerBrand,CustomerSupport} from "@/components/customer/customer-brand";
 
 export const metadata = { title: "Scan your seat | CineBite" };
 
 export default async function SeatScanPage({ params }: { params: Promise<{ credential: string }> }) {
   const { credential } = await params;
   const result = await resolveSeatScan(credential);
+  const brand=result.state==="READY"?result.context.branding:result.state==="NO_ACTIVE_SCREENING"?result.branding:null;
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(244,185,66,0.12),transparent_35%),#09090b] px-4 py-8 sm:py-14">
       <div className="mx-auto w-full max-w-md">
         <Brand />
+        {brand?<div className="mb-6"><CustomerBrand branding={brand}/></div>:null}
         {result.state === "READY" ? <ReadyCard credential={credential} context={result.context} /> : result.state === "NO_ACTIVE_SCREENING" ? <UnavailableCard title="No screening is active" message="No screening is currently active for this seat. Please try again once your movie begins." details={`${result.locationName} · ${result.hallName} · Seat ${result.seatLabel}`} /> : <UnavailableCard title="Seat access unavailable" message="This seat code is invalid, inactive, or has been replaced. Please ask a cinema team member for help." />}
+        {brand?<CustomerSupport branding={brand}/>:null}
       </div>
     </main>
   );

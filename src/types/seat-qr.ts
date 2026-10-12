@@ -27,6 +27,7 @@ export interface SeatQrHallDto {
 }
 
 export interface SeatScanContext {
+  branding?:import("./settings").PublicBranding;
   organizationName: string;
   locationName: string;
   timezone: string;
@@ -41,5 +42,5 @@ export interface SeatScanContext {
 
 export type SeatScanResult =
   | { state: "INVALID" }
-  | { state: "NO_ACTIVE_SCREENING"; organizationName: string; locationName: string; hallName: string; seatLabel: string }
+  | { state: "NO_ACTIVE_SCREENING"; organizationName: string; locationName: string; hallName: string; seatLabel: string;branding?:import("./settings").PublicBranding }
   | { state: "READY"; context: SeatScanContext };

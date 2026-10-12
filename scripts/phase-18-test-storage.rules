@@ -1,0 +1,7 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Test-only rules. All writes go through trusted Admin SDK pipelines.
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

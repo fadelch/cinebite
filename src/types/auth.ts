@@ -2,6 +2,7 @@ import type { UserRole } from "@/types/status";
 
 /** Trusted authorization context built only from a verified session and profile. */
 export interface AuthenticatedUser {
+  authorizationVersion?: number;
   uid: string;
   email: string;
   displayName: string;

@@ -1,0 +1,171 @@
+{
+  "executedAt": "2026-10-12T12:57:57.604Z",
+  "environment": "Isolated PostgreSQL 17 / official Firebase Auth+Storage emulators / verified sandbox payment / production Next build / Chromium",
+  "invitationDelivery": "Manual private Firebase setup link; no email provider",
+  "results": {
+    "A": {
+      "status": "PASS",
+      "evidence": "Cinema Admin saves separate customer display name and public demo support contact in PostgreSQL; customer application verified in F/AH."
+    },
+    "B": {
+      "status": "PASS",
+      "evidence": "Organization is derived from actor; forged foreign organizationId is rejected and foreign settings remain unchanged."
+    },
+    "C": {
+      "status": "PASS",
+      "evidence": "Location Manager cannot mutate organization-wide profile or branding."
+    },
+    "D": {
+      "status": "PASS",
+      "evidence": "Valid PNG decoded/normalized to WebP and saved in actual local Storage emulator under a server-generated branding path; PG reference and public logo route verified."
+    },
+    "E": {
+      "status": "PASS",
+      "evidence": "Fake content, unsupported MIME, SVG and oversized logo rejected before publishing or replacing branding."
+    },
+    "F": {
+      "status": "PASS",
+      "evidence": "Real seat QR resolution and session-start flow show configured public name/logo on scan and customer menu with safe CineBite identity."
+    },
+    "G": {
+      "status": "PASS",
+      "evidence": "Removing logo commits null reference then removes previous object; fallback header/menu/cart stay functional."
+    },
+    "H": {
+      "status": "PASS",
+      "evidence": "HTML/script/CSS/unsafe URL mutation rejected; direct legacy malicious text also renders escaped in real customer browser without execution."
+    },
+    "I": {
+      "status": "PASS",
+      "evidence": "Invited kitchen user: actual Auth identity/reset link/password setup/password login, PG User/membership/location grants and READY onboarding after verified sign-in; real kitchen acceptance succeeds."
+    },
+    "J": {
+      "status": "PASS",
+      "evidence": "Delivery invitation/password setup grants only selected Beirut operational queue; Dbayeh request denied."
+    },
+    "K": {
+      "status": "PASS",
+      "evidence": "Invited manager's fresh password-backed session can read Beirut but not Dbayeh."
+    },
+    "L": {
+      "status": "PASS",
+      "evidence": "Second Cinema Admin invitation explicitly grants tenant-wide access, no redundant location rows, and becomes eligible admin only after successful sign-in."
+    },
+    "M": {
+      "status": "PASS",
+      "evidence": "Manually forged SUPER_ADMIN invitation and role-change requests are rejected server-side."
+    },
+    "N": {
+      "status": "PASS",
+      "evidence": "Duplicate invitation creates no duplicate Firebase identity, PG User, membership or location access."
+    },
+    "O": {
+      "status": "PASS",
+      "evidence": "Existing unclaimed Firebase identity is safely rejected, not blindly duplicated or automatically linked."
+    },
+    "P": {
+      "status": "PASS",
+      "evidence": "Identity already belonging to another organization cannot be reassigned/attached through tenant invitations."
+    },
+    "Q": {
+      "status": "PASS",
+      "evidence": "Kitchen-to-manager role change atomically updates PG, increments security version, synchronizes claims/revokes refresh tokens; old session fails, fresh password session uses new permissions."
+    },
+    "R": {
+      "status": "PASS",
+      "evidence": "Location grants added/removed take effect on the very next protected requests with the same unchanged-role session, using fresh PG grants."
+    },
+    "S": {
+      "status": "PASS",
+      "evidence": "Foreign-organization location ID rejected; existing member/grants unchanged."
+    },
+    "T": {
+      "status": "PASS",
+      "evidence": "Location Manager cannot promote self or mutate staff roles/access."
+    },
+    "U": {
+      "status": "PASS",
+      "evidence": "Active kitchen staff suspended without deleting User, membership or historical order actor event."
+    },
+    "V": {
+      "status": "PASS",
+      "evidence": "Already-open kitchen identity is denied on next read/write immediately, without waiting for token expiration; order state unchanged."
+    },
+    "W": {
+      "status": "PASS",
+      "evidence": "Reactivation restores only configured kitchen/Beirut grants; old pre-suspension cookie remains invalid, fresh password login succeeds."
+    },
+    "X": {
+      "status": "PASS",
+      "evidence": "Single active Cinema Admin cannot be suspended or demoted; self-role policy also conservative."
+    },
+    "Y": {
+      "status": "PASS",
+      "evidence": "Actual concurrent mutual-admin suspension requests serialize under organization lock; exactly one succeeds and at least one active ready admin remains."
+    },
+    "Z": {
+      "status": "PASS",
+      "evidence": "No staff hard-delete route or UI action; DELETE is 405."
+    },
+    "AA": {
+      "status": "PASS",
+      "evidence": "Role audit records actor/target and safe previous/new role values."
+    },
+    "AB": {
+      "status": "PASS",
+      "evidence": "Actual add/remove location changes have scoped audit records, not duplicated identity data."
+    },
+    "AC": {
+      "status": "PASS",
+      "evidence": "Suspension records verified actor/target/status; all tenant audit metadata inspected for raw setup URLs/passwords/tokens—none present."
+    },
+    "AD": {
+      "status": "PASS",
+      "evidence": "Staff list/detail strictly tenant scoped; foreign member hidden and arbitrary organization selection rejected."
+    },
+    "AE": {
+      "status": "PASS",
+      "evidence": "Actual role/status/location/name-search filters return only correctly scoped matching staff."
+    },
+    "AF": {
+      "status": "PASS",
+      "evidence": "Real sufficient Auth/PG fixtures produce complete stable two-page staff list with no duplicates/missing rows."
+    },
+    "AG": {
+      "status": "PASS",
+      "evidence": "Invalid/fixed-zone policy rejected; confirmed IANA timezone edit changes current customer timeline display while historical UTC screening instants remain unchanged."
+    },
+    "AH": {
+      "status": "PASS",
+      "evidence": "Native 390x844 customer menu/cart/order progress retain readable configured logo/name and no horizontal page overflow."
+    },
+    "AI": {
+      "status": "PASS",
+      "evidence": "390px admin settings and staff screens tested for usable responsive controls/full content/no page overflow; full loaded mobile settings captured."
+    },
+    "AJ": {
+      "status": "PASS",
+      "evidence": "New staff/settings business records persisted in actual PostgreSQL only; implementation contains no Firestore writes."
+    },
+    "AK": {
+      "status": "PASS",
+      "evidence": "Source diff and actual audit metadata scanned against ephemeral private key/job/webhook/session/setup/password secrets; none embedded. Native visual review and staged local-secret scan follow."
+    },
+    "AL": {
+      "status": "PASS",
+      "evidence": "Eight real full-page native browser PNGs captured with fictional reserved-domain demo contacts, no desktop/browser chrome or setup-link UI."
+    },
+    "EXTRA_CONCURRENCY_SECURITY": {
+      "status": "PASS",
+      "evidence": "Executed real concurrent settings CAS/one conflict, staff CAS/one conflict, logo replacement/one conflict with one live object and old/losing cleanup; manager/foreign location denial, CSRF, email-edit denial, private setup restart and target-only Phase 17 staff-change notifications."
+    },
+    "EXTRA_LIFECYCLE_RACES": {
+      "status": "PASS",
+      "evidence": "Actual role-vs-suspension race preserves one revision winner; membership/location uniqueness and cross-tenant FK rejection verified; held identity lease leaves stale Firebase claims denied until explicit repair; Firebase-disabled identity cannot be silently reactivated."
+    },
+    "REAL_INVITATION_EMAIL": {
+      "status": "NOT EXECUTABLE",
+      "evidence": "No approved application email provider configured; actual Firebase setup/reset/password sign-in executed on emulator, but no production invitation email sent or claimed."
+    }
+  }
+}
