@@ -56,16 +56,18 @@ export async function dispatchRefund(refundId: string) {
   });
   await processVerifiedRefundEvent({ ...result, kind: "refund", eventId: `refund-retrieval:${result.providerRefundId}:${result.status}` });
 }
-export async function drainRefundRequests(orderId?: string) {
+export async function drainRefundRequests(orderId?: string, deadline=Date.now()+20000) {
   const refunds = await prisma.refund.findMany({ where: { status: { in: ["PENDING", "PROCESSING"] }, ...(orderId ? { orderId } : {}) }, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: 100 });
-  let pendingRecovery = 0;
+  let pendingRecovery = 0, attempted=0;
   for (const refund of refunds) {
+    if(Date.now()>=deadline)break;
+    attempted++;
     try { await dispatchRefund(refund.id); } catch { pendingRecovery++; log("warn", "refund.dispatch_retry", { refundId: refund.id, orderId: refund.orderId, errorCode: "REFUND_PROCESSING_FAILED", retryable: true }); }
     // Rotate processed/temporarily unavailable intents so an old provider outage
     // cannot permanently starve later refunds in bounded recovery batches.
     await prisma.refund.updateMany({ where: { id: refund.id, status: { in: ["PENDING", "PROCESSING"] } }, data: { updatedAt: new Date() } });
   }
-  return { pendingRecovery, attempted: refunds.length, dispatched: refunds.length - pendingRecovery, batchLimit: 100 };
+  return { pendingRecovery, attempted, dispatched: attempted - pendingRecovery, batchLimit: 100 };
 }
 export async function processVerifiedRefundEvent(event: ProviderRefundEvent, now = new Date()) {
   return serial(async tx => {

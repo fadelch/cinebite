@@ -79,6 +79,8 @@ export function normalizeError(error: unknown) {
         "ENOTFOUND",
         "57P01",
         "53300",
+        "57014",
+        "55P03",
         "CONFIGURATION_UNAVAILABLE",
       ].includes(code),
     )

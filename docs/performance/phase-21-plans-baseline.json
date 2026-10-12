@@ -1,0 +1,71 @@
+{
+  "scope": "Synthetic local EXPLAIN ANALYZE summaries; query text and predicates deliberately omitted",
+  "summaries": [
+    {
+      "name": "notification-history",
+      "executionMs": 1.563,
+      "planningMs": 0.165,
+      "nodes": [
+        {
+          "type": "Limit",
+          "index": null,
+          "rows": 20
+        },
+        {
+          "type": "Sort",
+          "index": null,
+          "rows": 20
+        },
+        {
+          "type": "Seq Scan",
+          "index": null,
+          "rows": 5000
+        }
+      ]
+    },
+    {
+      "name": "kitchen-oldest",
+      "executionMs": 0.149,
+      "planningMs": 4.039,
+      "nodes": [
+        {
+          "type": "Limit",
+          "index": null,
+          "rows": 25
+        },
+        {
+          "type": "Incremental Sort",
+          "index": null,
+          "rows": 25
+        },
+        {
+          "type": "Index Scan",
+          "index": "orders_locationId_status_createdAt_idx",
+          "rows": 26
+        }
+      ]
+    },
+    {
+      "name": "delivery-ready",
+      "executionMs": 0.526,
+      "planningMs": 0.116,
+      "nodes": [
+        {
+          "type": "Limit",
+          "index": null,
+          "rows": 20
+        },
+        {
+          "type": "Incremental Sort",
+          "index": null,
+          "rows": 20
+        },
+        {
+          "type": "Index Scan",
+          "index": "orders_locationId_status_readyAt_idx",
+          "rows": 251
+        }
+      ]
+    }
+  ]
+}

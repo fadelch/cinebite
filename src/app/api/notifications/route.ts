@@ -1,4 +1,5 @@
 import { observedRoute } from "@/server/http/observed-route";
+import { conditionalJson } from '@/server/http/conditional-json';
 import {
   getStaffNotifications,
   markStaffNotificationsRead,
@@ -17,7 +18,7 @@ import { isSameOriginRequest } from "@/server/auth/request-security";
 export const runtime = "nodejs";
 async function GETHandler(request: Request) {
   try {
-    return apiSuccess(await getStaffNotifications(notificationQuery(request)));
+    return conditionalJson(request, await getStaffNotifications(notificationQuery(request)));
   } catch (error) {
     return apiError(error);
   }

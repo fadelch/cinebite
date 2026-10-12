@@ -141,6 +141,10 @@ export async function getStaffNotifications(
   return prisma.$transaction(
     async (tx) => {
       const scope = await staffScope(tx, value);
+      if (query.summary === 'count') {
+        const unread = await tx.notification.count({where:{...scope.where,readAt:null}});
+        return {items:[],total:unread,unread,page:1,pageSize};
+      }
       const where = {
         ...scope.where,
         ...(query.view === "unread" ? { readAt: null } : {}),

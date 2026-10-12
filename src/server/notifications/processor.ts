@@ -3,6 +3,7 @@ import { log } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
 import { Prisma, type NotificationOutbox } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { notificationBatchSize } from '@/lib/notifications/config';
 import {
   categoryFor,
   customerKinds,
@@ -214,7 +215,7 @@ async function deliverEvent(
  * without leases or unbounded workers. A savepoint preserves retry state after
  * delivery errors without rolling back the already-committed business event. */
 export async function processNotificationOutbox({
-  limit = 25,
+  limit = notificationBatchSize(),
   provider = inAppNotificationProvider,
   now = new Date(),
   organizationId,

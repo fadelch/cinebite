@@ -2,6 +2,7 @@ import "server-only";
 import { observedOperation, log } from "@/lib/observability/logger";
 
 import { randomBytes, randomUUID } from "node:crypto";
+import { waitForTransactionRetry } from '@/lib/performance/transaction-retry';
 
 import { Prisma } from "@/generated/prisma/client";
 import { aggregateRecipeRequirements, lineTotal, orderSubtotal } from "@/lib/orders/calculations";
@@ -162,7 +163,7 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
       if (result.kind === "price-changed") throw new ServiceError("PRICE_CHANGED", 409, `Prices changed for: ${result.products.join(", ")}. Review your cart and place the order again.`);
       return result;
     } catch (error) {
-      if (attempt < 2 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "checkout.transaction_retry", { attemptCount: attempt + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); continue; }
+      if (attempt < 2 && (isRetryableTransactionError(error) || isPrismaError(error, "P2002"))) { log("warn", "checkout.transaction_retry", { attemptCount: attempt + 1, errorCode: "TRANSACTION_CONFLICT", retryable: true }); await waitForTransactionRetry(attempt); continue; }
       if (isRetryableTransactionError(error)) throw new ServiceError("CHECKOUT_CONFLICT", 409, "Checkout is busy. Please try again.");
       throw error;
     }
