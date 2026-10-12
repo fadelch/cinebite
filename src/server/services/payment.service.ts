@@ -1,4 +1,5 @@
 import "server-only";
+import { log, observedOperation } from "@/lib/observability/logger";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { getPaymentProvider, sandboxSignature } from "@/lib/payments/provider";
@@ -29,9 +30,16 @@ export async function retryCustomerPayment(rawToken: string | undefined, codeInp
   return getOwnedPayment(session.id, code);
 }
 export async function receivePaymentWebhook(raw: string, signature: string | null) {
-  const event = getPaymentProvider().verifyWebhook(raw, signature);
-  if ("kind" in event) return processVerifiedRefundEvent(event);
-  const result = await processVerifiedPaymentEvent(event);
+  log("info", "webhook.received");
+  const event = await observedOperation("webhook.verify", async () => getPaymentProvider().verifyWebhook(raw, signature));
+  log("info", "webhook.verified");
+  if ("kind" in event) {
+    const result = await observedOperation("webhook.refund_processing", () => processVerifiedRefundEvent(event));
+    log(result.status === "REJECTED" ? "warn" : "info", result.duplicate ? "webhook.duplicate" : "webhook.processed", { outcome: result.status });
+    return result;
+  }
+  const result = await observedOperation("webhook.payment_processing", () => processVerifiedPaymentEvent(event));
+  log(["REJECTED", "REVIEW"].includes(result.status) ? "warn" : "info", result.duplicate ? "webhook.duplicate" : "webhook.processed", { outcome: result.status });
   const { cancellationAttemptId, ...publicResult } = result;
   // Only this event's related compensation; do not drain unrelated work on a webhook.
   if (cancellationAttemptId) await drainProviderCancellations(new Date(), cancellationAttemptId);

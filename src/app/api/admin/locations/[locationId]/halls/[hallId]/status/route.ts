@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toHallDto } from "@/lib/tenant-admin/dto";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { apiError, apiSuccess, forbiddenOrigin, invalidRequestBody } from "@/server/http/api-response";
@@ -5,7 +6,7 @@ import { changeTenantHallStatus } from "@/server/services/tenant-structure.servi
 
 export const runtime = "nodejs";
 
-export async function PATCH(
+async function PATCHHandler(
   request: Request,
   context: { params: Promise<{ locationId: string; hallId: string }> },
 ) {
@@ -24,3 +25,5 @@ export async function PATCH(
     return apiError(error);
   }
 }
+
+export const PATCH = observedRoute("PATCH.api.admin.locations.locationId.halls.hallId.status", PATCHHandler);

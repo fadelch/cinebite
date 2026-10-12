@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toHallDto } from "@/lib/tenant-admin/dto";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 import { apiError, apiSuccess, forbiddenOrigin, invalidRequestBody } from "@/server/http/api-response";
@@ -5,7 +6,7 @@ import { createHallForTenant } from "@/server/services/tenant-structure.service"
 
 export const runtime = "nodejs";
 
-export async function POST(
+async function POSTHandler(
   request: Request,
   context: { params: Promise<{ locationId: string }> },
 ) {
@@ -24,3 +25,5 @@ export async function POST(
     return apiError(error);
   }
 }
+
+export const POST = observedRoute("POST.api.admin.locations.locationId.halls", POSTHandler);

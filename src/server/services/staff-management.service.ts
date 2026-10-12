@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -381,9 +382,7 @@ export async function inviteStaff(input: unknown) {
       }))
     )
       await auth.deleteUser(uid).catch(() => {
-        console.warn(
-          "[staff] New identity compensation requires operator review.",
-        );
+        log("warn","src.server.services.staff.management.service.ts.failure",{});
       });
     if (error instanceof ServiceError) throw error;
     if (

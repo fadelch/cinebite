@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { NextResponse } from "next/server";
 
 import { CUSTOMER_SESSION_COOKIE, customerSessionCookieOptions } from "@/lib/customer-session/policy";
@@ -7,7 +8,7 @@ import { startCustomerSession } from "@/server/services/customer-session.service
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   let input: unknown;
   try { input = await request.json(); } catch { return invalidRequestBody(); }
@@ -18,3 +19,5 @@ export async function POST(request: Request) {
     return response;
   } catch (error) { return apiError(error); }
 }
+
+export const POST = observedRoute("POST.api.customer.session", POSTHandler);

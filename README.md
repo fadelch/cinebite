@@ -43,11 +43,35 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 18 — Organization Settings & Staff Management**
+**Phase 19 — Reliability & Observability**
 
 Phases 1–14 provide administration, stock, screenings, seat sessions, immutable order snapshots, payment-gated preparation/delivery, signed webhooks and inventory reservations. Phase 15 adds customer/staff order cancellation, full/partial refunds, original-consumption restoration, operational issues and previewed screening reconciliation. No real-money adapter is installed: the explicit sandbox accepts no card details and cannot charge or refund anyone's actual money.
 
 Phase 16 adds server-calculated, tenant-safe concession analytics, operational timings, inventory consumption reports and authorized CSV export from existing PostgreSQL records. It does not implement real-money merchant onboarding, chargebacks, accounting/tax reporting, profit/COGS, FX, predictions or a BI warehouse. Cancelling an order, cancelling an unpaid payment and refunding a captured charge remain separate operations.
+
+## Phase 19 reliability and observability
+
+`/super-admin/operations` and its safe API are restricted to current verified SUPER_ADMIN accounts. The dashboard reports database latency, the existing verified webhook journal, notification backlog/age/retries/final failures, unresolved failed or old pending refunds, processor runs and sanitized incident references. It is operational health, not financial analytics. No optional tenant infrastructure dashboard or cross-tenant Cinema Admin bypass is added.
+
+Server telemetry uses one-line JSON with deliberate debug/info/warn/error levels, environment/release and safe operation/entity identifiers. All application API handlers generate a fresh cryptographic `REQ-` reference, return `X-Request-ID`, and share context through AsyncLocalStorage. Error responses include a safe reference for support. Incoming IDs are not trusted, and identifiers are never authentication. Scheduled processing adds `JOB-` correlation and persisted RUNNING/SUCCEEDED/FAILED/PARTIAL JobRun records. Routine 409 stock/kitchen/delivery races are warnings; unauthenticated traffic is not logged as critical failure.
+
+Logging is deny-by-default: no request bodies, full URLs/query strings, cookies, authorization headers, passwords, private emails/phones, customer notes, SQL parameters, provider payloads, QR/session credentials or raw exception messages/stacks. Normalization distinguishes safe validation/auth/not-found/conflict/rate-limit/unavailable/internal outcomes. The Next server error hook and recovery boundaries provide safe references. Customer pages now distinguish a database outage from an ended seat session instead of swallowing every error.
+
+`GET /api/health` is lightweight runtime liveness and returns only `{ "status": "ok" }`. `GET /api/ready` checks critical configuration and a bounded PostgreSQL probe; unavailable returns 503 without topology or credentials. Public probes do not write audit/notification/incident records. External Auth/Storage/payment reachability is not probed on every request and is explicitly UNKNOWN rather than inferred from configuration.
+
+Existing `POST /api/notifications/process` and `POST /api/payments/expire` retain their dedicated bearer secrets and original locking/idempotency. Configure a scheduler for the new `POST /api/operations/monitor` with a separate server-only `OBSERVABILITY_JOB_SECRET` of at least 32 characters. It evaluates deduplicated incidents/recovery and removes only terminal JobRun/resolved incident telemetry older than 30 days, at most 1,000 rows of each per run. It never cleans business/audit/financial/inventory history. No scheduler is provisioned automatically; opportunistic financial work has operation spans but is not falsely presented as a scheduled job.
+
+Threshold defaults: slow request 2,000 ms, degraded database 500 ms, outbox backlog 120 seconds, old refund/running work 900 seconds, stale scheduled processor 300 seconds. They are configurable diagnostics, not contractual SLAs. Failed/pending refund attention is measured from creation because recovery intentionally rotates its update time. Completed refund retry chains are not treated as unresolved predecessor failures.
+
+Observability provider: **local structured logging only**. A reviewed server startup adapter may use `configureErrorTrackingProvider`; it receives only a scrubbed envelope through the real request/render reporting boundary. No SDK, DSN, external error ingestion, pager, email, SMS or production alert delivery is installed or claimed. Existing cinema-scoped refund alerts reuse Phase 17. Incident opening/recovery logs are deduplicated; platform monitoring is not queued through the same potentially failing notification outbox.
+
+Set server-only `OBSERVABILITY_ENVIRONMENT` and optional safe `OBSERVABILITY_RELEASE` (or deployment commit SHA). Configure private log collection/retention in the hosting platform; raw infrastructure/framework/vendor logs require their own review. PostgreSQL is critical; new paid checkout also needs its configured provider. Optional media, notification delivery and analytics failures must not rewrite committed order/payment truth.
+
+![Real full-page operational dashboard with synthetic test health and incident data](linkedin/phase-19/01-operations-dashboard.png)
+
+Read the [75-topic architecture](docs/phase-19-architecture.md), [executed verification](docs/phase-19-verification.md), [individual A–AP results](docs/phase-19-integration-results.json), [operations/retry runbook](docs/operations/README.md) and [eight native screenshot originals](linkedin/phase-19/README.md).
+
+After user review/merge, deploy the additive Phase 19 migration before using operations/jobs telemetry. Do not reset Neon or rewrite previous migrations. Production was not migrated, seeded or used for verification. New commerce/payment features, order states, business KPIs, scaling, load testing, CI/CD, final penetration hardening and Phase 20 are not implemented.
 
 ## Phase 18 organization settings and staff management
 
@@ -73,7 +97,7 @@ Phase 17 is reused—not rebuilt—for target-only, durable role/location-change
 
 Read the [62-topic architecture and design rationale](docs/phase-18-architecture.md), [executed verification/reproduction/deployment guide](docs/phase-18-verification.md), [individual A–AL results](docs/phase-18-integration-results.json) and [eight native full-page high-density screenshots](linkedin/phase-18/README.md).
 
-**Deployment:** after user review/merge, apply the additive Phase 18 migration with the reviewed direct connection (`npm run prisma:migrate:deploy`) **before running the updated server**; the login/profile query needs the new User columns. Do not reset Neon or use destructive db push. Keep Auth/Storage Admin credentials server-only, configure the existing Firebase bucket/password setup domains, retain the Phase 17 notification processor schedule, and review pending identity sync on the staff detail page. Production has not been migrated, seeded or used by the isolated tests. Phase 19 has not begun.
+**Deployment:** after user review/merge, apply the additive Phase 18 migration with the reviewed direct connection (`npm run prisma:migrate:deploy`) **before running the updated server**; the login/profile query needs the new User columns. Do not reset Neon or use destructive db push. Keep Auth/Storage Admin credentials server-only, configure the existing Firebase bucket/password setup domains, retain the Phase 17 notification processor schedule, and review pending identity sync on the staff detail page. Production has not been migrated, seeded or used by the isolated tests. Phase 19 adds observability around these existing flows.
 
 ## Phase 17 notifications
 

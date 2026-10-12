@@ -1,10 +1,11 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { toHallDto, toSeatDto, toTenantLocationDto } from "@/lib/tenant-admin/dto";
 import { apiError, apiSuccess } from "@/server/http/api-response";
 import { getTenantHallDetail } from "@/server/services/tenant-structure.service";
 
 export const runtime = "nodejs";
 
-export async function GET(
+async function GETHandler(
   _request: Request,
   context: { params: Promise<{ locationId: string; hallId: string }> },
 ) {
@@ -21,3 +22,5 @@ export async function GET(
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.admin.locations.locationId.halls.hallId", GETHandler);

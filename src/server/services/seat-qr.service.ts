@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 
 import { getCurrentUser } from "@/server/auth/current-user";
@@ -80,7 +81,7 @@ async function prepareImage(input: { organizationId: string; locationId: string;
     await storeSeatQrImage(storagePath, image);
     return { tokenHash, storagePath, imageData: null };
   } catch (error) {
-    console.warn("[seat-qr/media] Firebase Storage unavailable; using protected PostgreSQL image storage.", { name: error instanceof Error ? error.name : "UnknownError" });
+    log("warn","src.server.services.seat.qr.service.ts.failure",{ name: error instanceof Error ? error.name : "UnknownError" });
     return { tokenHash, storagePath: null, imageData: Uint8Array.from(image) };
   }
 }

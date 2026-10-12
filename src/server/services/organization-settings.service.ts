@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -161,7 +162,7 @@ export async function replaceOrganizationLogo(
   }
   if (oldPath)
     await deleteOrganizationLogo(actor.organizationId!, oldPath).catch(() => {
-      console.warn("[branding] Old logo cleanup requires operator retry.");
+      log("warn","src.server.services.organization.settings.service.ts.failure",{});
     });
   return getOrganizationSettings();
 }

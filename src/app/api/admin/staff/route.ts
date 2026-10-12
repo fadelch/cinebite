@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import {
   listStaff,
   inviteStaff,
@@ -7,9 +8,12 @@ import {
   settingsMutation,
   settingsQuery,
 } from "@/server/http/settings-request";
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   return settingsGet(() => listStaff(settingsQuery(request)));
 }
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   return settingsMutation(request, inviteStaff, 201);
 }
+
+export const GET = observedRoute("GET.api.admin.staff", GETHandler);
+export const POST = observedRoute("POST.api.admin.staff", POSTHandler);

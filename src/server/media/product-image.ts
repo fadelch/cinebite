@@ -1,3 +1,4 @@
+import { log } from "@/lib/observability/logger";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -64,7 +65,7 @@ export async function storeProductImage(
       throw error;
     }
   } catch (error) {
-    console.error("[menu/media] Product image storage failed.", {
+    log("error","src.server.media.product.image.ts.failure",{
       name: error instanceof Error ? error.name : "UnknownError",
       code: typeof error === "object" && error !== null && "code" in error
         ? String(error.code)

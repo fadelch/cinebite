@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { optionalSessionData } from "@/server/http/page-failure";
 import { cookies } from "next/headers";
 
 import { EndSessionButton } from "@/components/customer/end-session-button";
@@ -11,11 +12,7 @@ import type { CustomerMenuContext } from "@/types/customer-menu";
 export const metadata = { title: "Your cinema menu | CineBite" };
 
 async function loadMenu(token: string | undefined): Promise<CustomerMenuContext | null> {
-  try {
-    return await getCustomerMenu(token);
-  } catch {
-    return null;
-  }
+  return optionalSessionData(() => getCustomerMenu(token));
 }
 
 export default async function CustomerMenuPage() {

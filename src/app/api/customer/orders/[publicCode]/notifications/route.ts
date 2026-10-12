@@ -1,8 +1,9 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { cookies } from "next/headers";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
 import { getCustomerNotifications } from "@/server/services/notification.service";
 import { apiError, apiSuccess } from "@/server/http/api-response";
-export async function GET(
+async function GETHandler(
   _request: Request,
   { params }: { params: Promise<{ publicCode: string }> },
 ) {
@@ -17,3 +18,5 @@ export async function GET(
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.customer.orders.publicCode.notifications", GETHandler);

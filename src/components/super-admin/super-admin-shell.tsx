@@ -10,6 +10,7 @@ import { joinClassNames } from "@/lib/utils";
 
 const navigation = [
   { href: "/super-admin", label: "Overview", exact: true },
+  { href: "/super-admin/operations", label: "Operations", exact: false },
   {
     href: "/super-admin/organizations",
     label: "Organizations",

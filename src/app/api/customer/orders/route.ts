@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { cookies } from "next/headers";
 
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
@@ -7,7 +8,7 @@ import { placeCustomerOrder } from "@/server/services/order.service";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   let input: unknown;
   try { input = await request.json(); } catch { return invalidRequestBody(); }
@@ -16,3 +17,5 @@ export async function POST(request: Request) {
     return apiSuccess({ ...result, destination: `/customer/payments/${result.order.publicOrderCode}` }, result.replayed ? 200 : 201);
   } catch (error) { return apiError(error); }
 }
+
+export const POST = observedRoute("POST.api.customer.orders", POSTHandler);

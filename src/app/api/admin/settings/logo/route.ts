@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { replaceOrganizationLogo } from "@/server/services/organization-settings.service";
 import {
   settingsMutation,
@@ -12,7 +13,7 @@ import {
   invalidRequestBody,
 } from "@/server/http/api-response";
 export const runtime = "nodejs";
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   if (Number(request.headers.get("content-length") ?? 0) > 6 * 1024 * 1024)
     return invalidRequestBody();
@@ -39,8 +40,11 @@ export async function POST(request: Request) {
     return apiError(error);
   }
 }
-export async function DELETE(request: Request) {
+async function DELETEHandler(request: Request) {
   return settingsMutation(request, (input) =>
     replaceOrganizationLogo(input, null),
   );
 }
+
+export const POST = observedRoute("POST.api.admin.settings.logo", POSTHandler);
+export const DELETE = observedRoute("DELETE.api.admin.settings.logo", DELETEHandler);

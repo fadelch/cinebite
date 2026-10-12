@@ -906,6 +906,7 @@ model PaymentWebhookEvent {
 
   @@unique([provider, providerEventId])
   @@index([provider, status, receivedAt])
+  @@index([receivedAt])
   @@map("payment_webhook_events")
 }
 
@@ -986,6 +987,7 @@ model Refund {
   @@unique([paymentId, idempotencyKey])
   @@index([orderId, createdAt])
   @@index([status, updatedAt])
+  @@index([status, createdAt])
   @@index([status, succeededAt])
   @@map("refunds")
 }
@@ -1108,6 +1110,7 @@ model NotificationOutbox {
   notifications  Notification[]
 
   @@index([status, nextAttemptAt, createdAt])
+  @@index([status, createdAt])
   @@index([organizationId, createdAt])
   @@map("notification_outbox")
 }
@@ -1151,4 +1154,53 @@ model NotificationPreference {
 
   @@id([userId, category])
   @@map("notification_preferences")
+}
+
+enum OperationalJobStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  PARTIAL
+}
+
+enum OperationalIncidentStatus {
+  OPEN
+  RESOLVED
+}
+
+model JobRun {
+  id             String               @id
+  jobType        String               @db.VarChar(40)
+  requestId      String?              @db.VarChar(40)
+  startedAt      DateTime             @default(now()) @db.Timestamptz(3)
+  completedAt    DateTime?             @db.Timestamptz(3)
+  status         OperationalJobStatus @default(RUNNING)
+  processedCount Int                  @default(0)
+  failedCount    Int                  @default(0)
+  durationMs     Int?
+  safeErrorCode  String?              @db.VarChar(60)
+  environment    String               @db.VarChar(16)
+  release        String?              @db.VarChar(80)
+
+  @@index([jobType, startedAt])
+  @@index([status, startedAt])
+  @@index([startedAt])
+  @@map("job_runs")
+}
+
+model OperationalIncident {
+  id          String                    @id @default(uuid())
+  key         String                    @unique @db.VarChar(64)
+  domain      String                    @db.VarChar(120)
+  errorCode   String                    @db.VarChar(60)
+  requestId   String?                   @db.VarChar(40)
+  jobRunId    String?                   @db.VarChar(40)
+  status      OperationalIncidentStatus @default(OPEN)
+  firstSeenAt DateTime                  @default(now()) @db.Timestamptz(3)
+  lastSeenAt  DateTime                  @default(now()) @db.Timestamptz(3)
+  resolvedAt  DateTime?                 @db.Timestamptz(3)
+  occurrences Int                       @default(1)
+
+  @@index([status, lastSeenAt])
+  @@map("operational_incidents")
 }

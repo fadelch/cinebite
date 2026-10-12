@@ -1,9 +1,10 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { apiError } from "@/server/http/api-response";
 import { getSeatQrImage } from "@/server/services/seat-qr.service";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, context: { params: Promise<{ locationId: string; hallId: string; seatId: string }> }) {
+async function GETHandler(_request: Request, context: { params: Promise<{ locationId: string; hallId: string; seatId: string }> }) {
   try {
     const { locationId, hallId, seatId } = await context.params;
     const image = await getSeatQrImage(locationId, hallId, seatId);
@@ -12,3 +13,5 @@ export async function GET(_request: Request, context: { params: Promise<{ locati
     });
   } catch (error) { return apiError(error); }
 }
+
+export const GET = observedRoute("GET.api.admin.locations.locationId.halls.hallId.qr.seatId.image", GETHandler);

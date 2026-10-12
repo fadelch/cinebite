@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import {
   getStaffNotifications,
   markStaffNotificationsRead,
@@ -14,14 +15,14 @@ import {
 } from "@/server/http/notification-request";
 import { isSameOriginRequest } from "@/server/auth/request-security";
 export const runtime = "nodejs";
-export async function GET(request: Request) {
+async function GETHandler(request: Request) {
   try {
     return apiSuccess(await getStaffNotifications(notificationQuery(request)));
   } catch (error) {
     return apiError(error);
   }
 }
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   let input;
   try {
@@ -35,3 +36,6 @@ export async function POST(request: Request) {
     return apiError(error);
   }
 }
+
+export const GET = observedRoute("GET.api.notifications", GETHandler);
+export const POST = observedRoute("POST.api.notifications", POSTHandler);

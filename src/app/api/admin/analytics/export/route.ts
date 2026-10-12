@@ -1,3 +1,4 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { exportAnalytics } from "@/server/services/analytics.service";
 import {
   apiError,
@@ -5,7 +6,7 @@ import {
   invalidRequestBody,
 } from "@/server/http/api-response";
 import { isSameOriginRequest } from "@/server/auth/request-security";
-export async function POST(request: Request) {
+async function POSTHandler(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
   try {
     if (Number(request.headers.get("content-length") ?? 0) > 4096)
@@ -44,3 +45,5 @@ export async function POST(request: Request) {
   }
 }
 export const runtime = "nodejs";
+
+export const POST = observedRoute("POST.api.admin.analytics.export", POSTHandler);

@@ -1,9 +1,10 @@
+import { observedRoute } from "@/server/http/observed-route";
 import { prisma } from "@/lib/db/prisma";
 import { getAdminStorageBucket } from "@/lib/firebase/admin";
 import { validLogoPath } from "@/server/media/organization-logo";
 import { documentIdSchema } from "@/validation/shared";
 export const runtime = "nodejs";
-export async function GET(
+async function GETHandler(
   _request: Request,
   { params }: { params: Promise<{ organizationId: string }> },
 ) {
@@ -35,3 +36,5 @@ export async function GET(
     return new Response(null, { status: 404 });
   }
 }
+
+export const GET = observedRoute("GET.api.branding.organizationId.logo", GETHandler);
