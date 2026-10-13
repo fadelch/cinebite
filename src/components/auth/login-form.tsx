@@ -24,6 +24,14 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  function clearForm() {
+    if (submitting) return;
+    if (emailRef.current) emailRef.current.value = "";
+    if (passwordRef.current) passwordRef.current.value = "";
+    setShowPassword(false);
+    emailRef.current?.focus();
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -125,6 +133,9 @@ export function LoginForm() {
         className="h-12 w-full rounded-xl bg-amber-400 font-semibold text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? "Signing in…" : "Sign in"}
+      </button>
+      <button type="button" onClick={clearForm} disabled={submitting} className="cb-button-secondary w-full">
+        Clear form
       </button>
     </form>
   );

@@ -2,16 +2,17 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationBell } from "@/components/notifications/notification-center";
 import { KitchenOrderDetail } from "@/components/kitchen/kitchen-order-detail";
 import { useNotifications } from "@/components/ui/notification-provider";
 import { usePolling } from "@/lib/hooks/use-polling";
-import { elapsedOrderTime, nextOrderStatus, KITCHEN_STATUSES, orderActionLabel } from "@/lib/orders/status";
+import { elapsedOrderTime, nextOrderStatus, KITCHEN_STATUSES, orderActionLabel, isValidKitchenTransition } from "@/lib/orders/status";
+import { kitchenDropOrder, KITCHEN_DRAG_TYPE, type KitchenDrag } from "@/lib/orders/kitchen-drag";
 import { formatInTimeZone, todayInTimeZone } from "@/lib/screenings/timezone";
-import type { KitchenLocation, KitchenOrder, KitchenQueue as Queue } from "@/types/order";
+import type { KitchenLocation, KitchenOrder, KitchenQueue as Queue, KitchenStatus } from "@/types/order";
 import type { OrderQueueQuery } from "@/validation/kitchen";
 
 const columnLabels = { PLACED: "New orders", ACCEPTED: "Accepted", PREPARING: "Preparing", READY: "Ready" };
@@ -24,25 +25,60 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
   const { data: queue, error, refresh } = usePolling(`/api/kitchen/orders?${params}`, initialQueue);
   const [busy, setBusy] = useState<string | null>(null);
   const [selected, setSelected] = useState<KitchenOrder | null>(null);
+  const [dragged, setDragged] = useState<KitchenDrag | null>(null);
+  const [dropTarget, setDropTarget] = useState<KitchenStatus | null>(null);
+  const dragSnapshot = useRef<KitchenDrag | null>(null);
+  const transitioning = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const notifications = useNotifications();
   const reduced = useReducedMotion();
   const currentLocation = locations.find((location) => location.id === query.locationId) ?? locations[0];
 
-  async function transition(order: KitchenOrder) {
+  async function transition(order: KitchenOrder, target = nextOrderStatus[order.status]) {
+    if (transitioning.current || error || !target || !isValidKitchenTransition(order.status, target)) return;
+    transitioning.current = true;
     setBusy(order.publicOrderCode);
     try {
       const response = await fetch(`/api/kitchen/orders/${order.publicOrderCode}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedStatus: order.status, toStatus: nextOrderStatus[order.status] }),
+        body: JSON.stringify({ expectedStatus: order.status, toStatus: target }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "The order could not be updated.");
       if (selected?.publicOrderCode === order.publicOrderCode) setSelected(body);
       notifications.success(`${order.publicOrderCode}: ${columnLabels[body.status as keyof typeof columnLabels]}.`);
     } catch (failure) { notifications.error(failure instanceof Error ? failure.message : "The order could not be updated."); }
-    finally { await refresh(); setBusy(null); }
+    finally { await refresh(); transitioning.current = false; setBusy(null); }
   }
+
+  function endDrag() { dragSnapshot.current = null; setDragged(null); setDropTarget(null); }
+  function startDrag(event: DragEvent<HTMLElement>, order: KitchenOrder) {
+    if (busy || error || !orderActionLabel[order.status]) { event.preventDefault(); return; }
+    const snapshot = { publicOrderCode: order.publicOrderCode, status: order.status };
+    dragSnapshot.current = snapshot; setDragged(snapshot);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(KITCHEN_DRAG_TYPE, order.publicOrderCode);
+  }
+  function dragOver(event: DragEvent<HTMLElement>, target: KitchenStatus) {
+    if (kitchenDropOrder(queue.orders, dragSnapshot.current, target, busy !== null || !!error)) {
+      event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropTarget(target);
+    } else { event.dataTransfer.dropEffect = "none"; setDropTarget(null); }
+  }
+  async function dropOrder(event: DragEvent<HTMLElement>, target: KitchenStatus) {
+    event.preventDefault();
+    const snapshot = dragSnapshot.current;
+    const order = kitchenDropOrder(queue.orders, snapshot, target, busy !== null || !!error);
+    const ownDrag = snapshot && event.dataTransfer.getData(KITCHEN_DRAG_TYPE) === snapshot.publicOrderCode;
+    endDrag();
+    if (!ownDrag) return;
+    if (!order) {
+      notifications.error("This order can only move to its next kitchen step. It may have changed; check the refreshed queue.");
+      await refresh(); return;
+    }
+    await transition(order, target);
+  }
+
+  const allSteps = new URLSearchParams(params); allSteps.delete("status"); allSteps.delete("page");
 
   function openOrder(order: KitchenOrder) { setSelected(order); dialog.current?.showModal(); }
   function pagination(page: number) { const values = new URLSearchParams(params); values.set("page", String(page)); return `/kitchen?${values}`; }
@@ -59,10 +95,12 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
       <div className="flex items-end gap-2"><button className="cb-button-primary flex-1">Filter</button>{currentLocation ? <Link href={`/kitchen?locationId=${encodeURIComponent(currentLocation.id)}&date=${todayInTimeZone(currentLocation.timezone)}`} className="cb-button-secondary">Today</Link> : null}</div>
     </form>
     <div className="my-5 flex flex-wrap items-center justify-between gap-2 text-xs"><p role="status" className={error ? "text-amber-300" : "text-zinc-500"}>{error ?? "Queue updates automatically every 5 seconds"}</p><span className="text-zinc-600">Oldest orders first · Page {queue.page}</span></div>
+    <p id="kitchen-drag-help" className="mb-4 text-sm leading-6 text-zinc-400">Drag an order to its next highlighted column, or use its action button on touch devices and with a keyboard. {query.status ? <Link href={`/kitchen?${allSteps}`} className="text-amber-300 underline">Show all kitchen steps to drag between columns</Link> : null}</p>
     <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {KITCHEN_STATUSES.filter((status) => !query.status || status === query.status).map((status) => <section key={status} aria-label={columnLabels[status]} className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-3">
+      {KITCHEN_STATUSES.filter((status) => !query.status || status === query.status).map((status) => <section key={status} aria-label={columnLabels[status]} onDragOver={(event) => dragOver(event, status)} onDrop={(event) => { void dropOrder(event, status); }} onDragLeave={(event) => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setDropTarget(null); }} className={`min-h-52 min-w-0 rounded-2xl border p-3 transition-colors ${dropTarget === status ? "border-amber-300 bg-amber-400/10 ring-2 ring-amber-400/20" : kitchenDropOrder(queue.orders, dragged, status, busy !== null || !!error) ? "border-amber-400/50 bg-zinc-900/50" : "border-zinc-800 bg-zinc-900/30"}`}>
         <div className={`mb-4 flex items-center justify-between border-b pb-3 ${columnStyle[status]}`}><h2 className="font-semibold">{columnLabels[status]}</h2><span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs" aria-live="polite">{queue.counts[status]}</span></div>
-        <div className="space-y-3"><AnimatePresence initial={false}>{queue.orders.filter((order) => order.status === status).map((order) => <motion.article layout={!reduced} key={order.publicOrderCode} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.15 }} className="rounded-xl border border-zinc-700/70 bg-zinc-900 p-4" data-order-code={order.publicOrderCode}>
+        <div className="space-y-3"><AnimatePresence initial={false}>{queue.orders.filter((order) => order.status === status).map((order) => <motion.div layout={!reduced && !dragged} key={order.publicOrderCode} initial={reduced ? false : { opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.15 }}><article draggable={busy === null && !error && !!orderActionLabel[status]} onDragStart={(event) => startDrag(event, order)} onDragEnd={endDrag} aria-describedby="kitchen-drag-help" className={`rounded-xl border border-zinc-700/70 bg-zinc-900 p-4 ${orderActionLabel[status] && busy === null && !error ? "cursor-grab active:cursor-grabbing" : ""} ${dragged?.publicOrderCode === order.publicOrderCode ? "opacity-50" : ""}`} data-order-code={order.publicOrderCode}>
+          {orderActionLabel[status] ? <p className="mb-2 text-[0.65rem] text-zinc-500">⠿ Drag to {columnLabels[nextOrderStatus[status] as KitchenStatus]}</p> : null}
           <button className="text-left font-mono text-sm font-semibold text-zinc-100 underline-offset-4 hover:underline" onClick={() => openOrder(order)} aria-label={`Open order ${order.publicOrderCode}`}>{order.publicOrderCode}</button>
           <div className="mt-2 flex items-center justify-between gap-2"><span className="text-sm font-bold text-amber-300">{order.hallName} · {order.seatLabel}</span><span className="text-xs text-zinc-500">{elapsedOrderTime(order.createdAt, Date.parse(queue.fetchedAt))}</span></div>
           <p className="mt-1 truncate text-xs text-zinc-500">{order.movieTitle} · {order.locationName}</p>
@@ -71,14 +109,14 @@ export function KitchenQueue({ initialQueue, locations, query, canOpenAdmin }: {
           <ul className="my-4 space-y-2">{order.items.map((item, index) => <li key={index} className="flex gap-2 text-sm text-zinc-200"><span className="min-w-5 font-bold text-zinc-50">{item.quantity}×</span>{item.productName}</li>)}</ul>
           {order.customerNote ? <p className="mb-4 whitespace-pre-wrap break-words rounded-lg bg-amber-400/5 p-2 text-xs leading-5 text-amber-200">{order.customerNote}</p> : null}
           {order.screeningWarning ? <p className="mb-3 text-xs text-amber-300">{order.screeningWarning}</p> : null}
-          {orderActionLabel[status] ? <button disabled={busy !== null} onClick={() => transition(order)} className="cb-button-primary w-full" aria-busy={busy === order.publicOrderCode}>{busy === order.publicOrderCode ? "Updating…" : orderActionLabel[status]}</button> : <p className="rounded-lg bg-emerald-400/10 p-3 text-center text-xs font-medium text-emerald-300">Preparation complete</p>}
-        </motion.article>)}</AnimatePresence>{!queue.orders.some((order) => order.status === status) ? <p className="py-8 text-center text-sm text-zinc-600">No orders on this page</p> : null}</div>
+          {orderActionLabel[status] ? <button disabled={busy !== null || !!error} onClick={() => transition(order)} className="cb-button-primary w-full" aria-busy={busy === order.publicOrderCode}>{busy === order.publicOrderCode ? "Updating…" : orderActionLabel[status]}</button> : <p className="rounded-lg bg-emerald-400/10 p-3 text-center text-xs font-medium text-emerald-300">Preparation complete</p>}
+        </article></motion.div>)}</AnimatePresence>{!queue.orders.some((order) => order.status === status) ? <p className="py-8 text-center text-sm text-zinc-600">No orders on this page</p> : null}</div>
       </section>)}
     </div>
     <nav aria-label="Queue pages" className="mt-6 flex justify-end gap-3">{queue.page > 1 ? <Link href={pagination(queue.page - 1)} className="cb-button-secondary">Previous page</Link> : null}{Object.values(queue.counts).some((count) => count > queue.page * queue.pageSize) ? <Link href={pagination(queue.page + 1)} className="cb-button-secondary">Next page</Link> : null}</nav>
     <dialog ref={dialog} onClose={() => setSelected(null)} aria-label="Kitchen order detail" className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-5 text-zinc-200 shadow-2xl backdrop:bg-black/75">
       <button onClick={() => dialog.current?.close()} className="cb-button-secondary mb-5">Close ticket</button>
-      {selected ? <DrawerTicket key={selected.publicOrderCode} initialOrder={selected} transition={transition} busy={busy !== null} /> : null}
+      {selected ? <DrawerTicket key={selected.publicOrderCode} initialOrder={selected} transition={transition} busy={busy !== null || !!error} /> : null}
     </dialog>
   </main>;
 }
