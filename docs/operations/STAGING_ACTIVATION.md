@@ -64,6 +64,10 @@ The first fixture attempt stopped at nested LocationAccess creation. Only its ow
 
 The first authorized manual staging deployment, `dpl_5G8qJ4UaFpJo5vKynBHTamd9x5dw`, failed with `INVALID_DEPLOYMENT_ID`: Vercel accepts a cache/skew deployment identifier of at most 32 characters, while the prior configuration used the full 40-character SHA. The cache identifier was shortened to 32 hex characters; authenticated release evidence retains the complete SHA. Two regression tests cover this distinction and malformed release metadata. This did not change any database or production deployment. [Vercel deployment identifier requirements](https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id).
 
+The next build reached READY but its hosted health check failed: Vercel disables Node's `require(esm)` feature by default, and Firebase Admin's JWKS dependency requires it. Only the staging project received the documented `NODE_OPTIONS=--experimental-require-module` setting; dependencies were not downgraded. [Vercel runtime configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration).
+
+A same-SHA configuration redeploy then exposed Vercel's custom-ID uniqueness restriction. Hosted builds now let Vercel assign its own unique deployment identifier; self-hosted builds retain a bounded SHA-based cache identifier. A third regression test proves that hosted deployment IDs are not overridden and the complete release SHA stays separate. Failed builds and the failed health test are not counted as successful hosted acceptance.
+
 ### GitHub connection and deployment hold
 
 The staging project's ignored-build command is `exit 0` and Preview deployments are disabled. This prevents automatic app builds while setup is reviewed. No repository-wide deployment-disable flag was committed, so another project's behavior is not changed.
