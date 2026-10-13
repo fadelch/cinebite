@@ -2,6 +2,8 @@
 
 Branch: `ops/staging-activation`, based on merged Phase 22 (`2b28fd4`). Phase 23 is deferred until staging is reviewed. No production resource was modified, billing enabled, paid service provisioned or real payment processed.
 
+**Verified staging URL: [https://cinebite-staging.vercel.app](https://cinebite-staging.vercel.app).** Vercel deployment `dpl_EvQz7LdJutUgrX52VvF3FKghpCKZ` reached READY and passed the hosted smoke suite. Its full built/reported release SHA is `2e57bcf47828b7c909c36e267e56bc4235a484ca`; later documentation-only commits on this branch are not a different deployed release. Deployment protection remains enabled: unauthenticated health access returned 302, while privately authorized health/readiness returned 200. Sign into the owning Vercel account to access the protected app, then use a synthetic Firebase staff account from the local private fixture. Do not distribute an automation bypass token in a URL.
+
 ## Actual resource inventory — 13 October 2026
 
 | Service | Verified resource | State |
@@ -11,7 +13,7 @@ Branch: `ops/staging-activation`, based on merged Phase 22 (`2b28fd4`). Phase 23
 | Neon | `shiny-queen-04445605`, **CineBite Staging**, AWS Frankfurt, PostgreSQL 17 | Separate new project in the verified Free organization; empty before migrations; no production copy |
 | PostgreSQL | `cinebite_staging`, dedicated staging role | All 21 reviewed migrations applied; 42 public tables; synthetic fixtures only |
 | Vercel | `prj_UNivm0DqkOeXBTrm53ZFaxivRkwK`, **cinebite-staging** | New separate project in the verified Hobby account; Next.js, Node 24.x, deployment protection enabled |
-| Vercel domain | `cinebite-staging.vercel.app` | Allocated by Vercel; **allocation alone is not a deployed/healthy app** |
+| Vercel domain | `cinebite-staging.vercel.app` | Actual deployed app; protected health/readiness and full hosted smoke PASS |
 | Firebase Storage | No staging bucket provisioned | Intentionally disabled; no Blaze upgrade or Storage permission granted |
 
 The provider requires a lowercase project slug rather than the human-readable “CineBite Staging”; the Vercel slug is `cinebite-staging`. The application environment is `staging` even though this separate Vercel project uses its platform Production slot. This does not deploy or alter the real CineBite production environment.
@@ -26,13 +28,25 @@ The provider requires a lowercase project slug rather than the human-readable �
 - Actual read-only Vercel MCP default-scope `list_projects` returned `cinebite-staging`. `list_teams` returned an empty list. An additional explicit-team project query returned **403**; default project access works, but broader team-scoped MCP access is not claimed. The official CLI can access the staging account/project and was used for the authorized staging mutations.
 - Verification used the installed Codex app-server's native MCP client with stored OAuth, an ephemeral tool-only context and **no model turn/delegated agent**. Only read tools were called. Private sanitized evidence: `ops-private/mcp-verification.json`.
 
+Actual Neon MCP project listing:
+
+| Project name | Project ID |
+| --- | --- |
+| CineBite Staging | `shiny-queen-04445605` |
+| cinebite | `old-mode-47430788` |
+| orange-boat-24181258 | `orange-boat-24181258` |
+| steep-cloud-50527908 | `steep-cloud-50527908` |
+| dawn-leaf-76533140 | `dawn-leaf-76533140` |
+
+Vercel MCP default-scope project listing: `cinebite-staging` / `prj_UNivm0DqkOeXBTrm53ZFaxivRkwK`. Only this newly created staging project was changed.
+
 ### Safest future Neon write access
 
 No MCP write access was needed: the explicitly authorized fresh staging project and guarded migrations used the official CLI/direct staging connection. Keep the existing `Neon` entry read-only. If future staging writes genuinely need MCP, request approval first and add a **separate** `NeonStaging` entry pinned to the observed staging project ID, limited to needed tool categories, with OAuth and human mutation approval. Do not edit the account-wide read-only entry, copy production data or embed a personal API key. A URL project pin is not a substitute for reviewing OAuth/IAM scope and every destructive SQL operation. [Official MCP setup/security](https://neon.com/docs/ai/connect-mcp-clients-to-neon).
 
 ## Secure configuration
 
-There are 35 independently prepared staging variables in the separate project's Production slot. Browser Firebase config uses the existing staging web app; server/database/sandbox/job/security values are sensitive variables. No staging credentials were copied from development. Six secrets were independently generated. Scheduler is disabled; no minute cron was activated.
+There are 36 independently prepared staging variables in the separate project's Production slot, including the documented Vercel Node ESM runtime option. Browser Firebase config uses the existing staging web app; server/database/sandbox/job/security values are sensitive variables. No staging credentials were copied from development. Six secrets were independently generated. Scheduler is disabled; no minute cron was activated. The separately generated project-scoped protection-bypass credential is kept privately in the local staging env file for operator tests; it is not a browser variable or a query-string credential.
 
 The protected resource registry pins actual development and staging database, Firebase, bucket-name and origin identities. `CINEBITE_PRODUCTION_CONFIGURED=false` reflects the user's confirmed development-only starting point; no production URL was invented. The declared staging bucket name is SDK metadata, **not evidence a bucket exists**. `CINEBITE_STORAGE_ENABLED=false` prevents every Admin Storage call before Firebase initialization and cannot fall back to a different bucket.
 
@@ -40,7 +54,7 @@ Local private configuration is `.env.staging.local`; the dedicated Admin credent
 
 `.vercelignore` excludes env files, operator credentials, test databases, browser profiles, QR fixtures, dumps and portfolio artifacts from source uploads. The existing `.gitignore` already excludes private env/operator files. No Prisma schema, migration SQL, dependency version or existing database connection was changed.
 
-## Executed checks and remaining deployment work
+## Executed checks and remaining work
 
 | Check | Actual result |
 | --- | --- |
@@ -49,16 +63,30 @@ Local private configuration is `.env.staging.local`; the dedicated Admin credent
 | Dedicated Firebase Admin credential | PASS; real staging Admin user listing and synthetic staff creation/claims |
 | Neon empty-target verification and migrations | PASS; 21 finished migrations, 42 tables |
 | Staging resource-isolation preflight | PASS |
-| Secure Vercel variable upload | PASS; 35 keys, staging project only |
+| Secure Vercel variable upload | PASS; 36 keys, staging project only |
 | Synthetic fixtures | PASS; 2 organizations, 3 locations, 9 seats, 2 tracked products, live screening and 4 staff roles; no captured-money fixtures |
-| Offline safety regressions | PASS; 6 new tests |
-| Full local quality | PASS; 660 tests/76 files, lint, generated route types, TypeScript, Prisma validation and production build |
-| Secret scan | PASS in executed local quality; final staged/history review required before push |
+| Offline safety regressions | PASS; 6 new activation safeguards plus 3 deployment-ID regressions |
+| Full local quality | PASS; 663 tests/77 files, lint, generated route types, TypeScript, Prisma validation and production build |
+| Secret scan | PASS; reviewed tracked/staged files, history and browser assets; env/operator files excluded |
+| GitHub CI for deployed commit | PASS; [actual run for `2e57bcf`](https://github.com/fadelch/cinebite/actions/runs/38414728492) |
+| Dependency audit | Runtime: 0 vulnerabilities. Full tree: 5 HIGH findings in development lint dependencies; not a clean full audit |
 | GitHub repository link | BLOCKED; Vercel rejected the requested repository connection; no connection claimed |
-| Hosted deployment and full smoke | PENDING; do not count prepared resources or local checks as a passed deployment |
+| Hosted deployment, protection, health/readiness | PASS; actual READY deployment; unauthorized access protected; authorized health/readiness 200 |
+| Real browser staff sign-in | PASS; SUPER_ADMIN, CINEMA_ADMIN, KITCHEN_STAFF and DELIVERY_STAFF; Secure, HttpOnly, SameSite=Lax cookies; no auth-user localStorage or credential URL |
+| Authenticated built release/migration check | PASS; full SHA matched; migrations ready |
+| Admin QR generation/read | PASS; PostgreSQL PNG fallback; no Storage path; authenticated PNG read 200 |
+| Customer QR/cart | PASS; passive QR GET, explicit session start, 2 popcorn + 1 Pepsi, server subtotal USD 12.00 |
+| Sandbox settlement/inventory | PASS; sandbox SUCCEEDED, fulfillment eligibility, screening/seat binding and exactly 2 inventory consumption movements |
+| Kitchen/delivery/customer progress | PASS; PLACED → ACCEPTED → PREPARING → READY → OUT_FOR_DELIVERY → DELIVERED |
+| Notifications/analytics/operations | PASS; manually authenticated outbox job, scoped reads and empty control-tenant orders |
+| Mobile layout | PASS; 390×844 emulated browser viewport, no horizontal overflow. Physical-device acceptance NOT EXECUTABLE in this session |
 | Firebase-backed media | NOT EXECUTABLE; Storage intentionally disabled pending billing approval |
 | Real PSP/live payments | NOT EXECUTABLE; no approved real provider integration or merchant configuration |
 | Hosted backup/PITR, restore and Vercel rollback | NOT EXECUTABLE in this activation report; no result inferred from a plan or runbook |
+
+The hosted suite's nine check groups actually passed and its sanitized local result is `ops-private/staging-smoke-result.json`. The one synthetic completed order and its history are retained intentionally. No real money was charged; this does not prove a real payment provider's sandbox integration. The local test PostgreSQL cluster and Firebase emulators started for this work were stopped afterward; their data files were retained.
+
+The npm deprecation notices for `node-domexception`, `glob` and ESLint are not the fatal deployment-ID error. Their installed dependency paths and current audit were checked without suppressing warnings or upgrading the authentication stack. Development lint-chain findings require a separately verified dependency update before release acceptance.
 
 The first fixture attempt stopped at nested LocationAccess creation. Only its owned synthetic partial records were retained; a separately reviewed resume completed grants/claims without deleting data. Initial JSON env-file quoting and CLI top-level-array upload failures were fixed; resource isolation then passed and all 35 variables were uploaded individually. A TypeScript gate caught missing typed error codes in the new storage guard; those were fixed and the full local suite reran successfully. None of these failures were concealed as successful runs.
 
@@ -74,15 +102,15 @@ The staging project's ignored-build command is `exit 0` and Preview deployments 
 
 Authorize GitHub in the intended Vercel account and the [Vercel GitHub app](https://github.com/apps/vercel/installations/new) for `fadelch/cinebite` only. Then retry the official `vercel git connect` with the **explicit staging project ID**. The initial attempt was rejected, not bypassed. Do not change another project's link or install account-wide repository access unnecessarily.
 
-Once current CI is green and exact staging variables/release SHA are reviewed, a manual CLI source deployment to this separate staging project is also possible without Git linking. Keep the Git build hold until Git authorization and an intentional deployment policy are reviewed. Verify actual deployment ID, built SHA, health/readiness and the complete smoke before declaring staging operational.
+After the exact commit's CI passed, a manual CLI source deployment to this separate staging project was executed without Git linking. The upload dry run verified private files were excluded; actual hosted release, health/readiness and complete smoke then passed. Keep the Git build hold until Git authorization and an intentional deployment policy are reviewed. Git linking and automatic deployment are still not claimed.
 
-The opt-in hosted suite is [tests/staging](../../tests/staging/README.md). It uses real staging Auth and supported APIs/browser flows plus authoritative SQL checks. It never falls back to emulators or production. `npm run test:staging` requires the private staging configuration and synthetic fixture. Protection-bypass credentials, if used, must be injected privately and sent only to the exact staging origin. Full QR fallback and customer/Kitchen/Delivery results must be recorded after an actual hosted run.
+The opt-in hosted suite is [tests/staging](../../tests/staging/README.md). It uses real staging Auth and supported APIs/browser flows plus authoritative SQL checks. It never falls back to emulators or production. `npm run test:staging` requires the private staging configuration and synthetic fixture. Protection-bypass credentials must be injected privately and sent only to the exact staging origin. Repeats deliberately create another synthetic order; refresh the synthetic screening through the staging admin UI once it ends, rather than weakening expiry checks. Rotate/revoke private operator credentials and the protection bypass when testing is complete.
 
 ## Storage limitations
 
 Firebase-backed product images, movie posters and branding-logo upload/replacement/read/removal remain blocked. [Firebase's official billing requirements](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024) require the separately approved Blaze setup for Cloud Storage. Nothing enabled billing here.
 
-Existing QR code paths support a **PostgreSQL PNG fallback** when Storage is unavailable. This was inspected, not replaced with a new implementation. The prepared A7 customer fixture has a private locally generated QR credential; successful Admin-generated fallback images still need the actual hosted smoke. Do not label QR as dependent on a provisioned Firebase bucket or claim the bucket was created.
+Existing QR code paths support a **PostgreSQL PNG fallback** when Storage is unavailable. This was inspected, not replaced with a new implementation. Actual hosted Admin generation and authenticated PNG reads passed using this fallback. The private A7 fixture also completed customer ordering. This does not imply a Firebase bucket was created.
 
 ## Real payment provider prerequisites
 

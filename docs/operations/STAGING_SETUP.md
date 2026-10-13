@@ -4,7 +4,7 @@ Phase 22. No production changes or deployment are authorized by this guide. Valu
 
 ## Actual state
 
-The Phase 22 inventory below is historical. See [Staging activation](STAGING_ACTIVATION.md) for the follow-up resource inventory and verification. Do not mistake an allocated Vercel domain for a verified deployed application.
+The Phase 22 inventory below is historical. The follow-up activation now has an actual protected staging deployment and passed hosted sandbox smoke at [cinebite-staging.vercel.app](https://cinebite-staging.vercel.app). See [Staging activation](STAGING_ACTIVATION.md) for resource IDs, the exact built SHA, evidence and remaining blockers; Git linking, Storage and real PSP acceptance are not complete.
 
 ### Phase 22 handoff, 13 October 2026
 
@@ -34,7 +34,7 @@ Use a **separate Neon project**, **separate Firebase project**, **separate Verce
 
 ## 3. Firebase
 
-1. Use the already-created staging project above, not `cinebite-481f4`. Resolve the Auth initialization step described above and verify Email/Password login. No public application registration UI is added.
+1. Use the already-created staging project above, not `cinebite-481f4`. Standard Email/Password is now enabled without billing, and real staging sign-in passed; see the activation report. Do not repeat the older Identity Platform initialization/upgrade attempt. No public application registration UI is added.
 2. Review service-account permissions in this new project only. Generate a staging Admin credential only when needed; store `client_email` and `private_key` in the staging Vercel server environment. Do not reuse the key previously shared in chat; revoke/rotate exposed keys through an approved separate incident procedure. Never commit JSON key files.
 3. After billing approval, create Storage **in the staging project**, record the actual bucket name and apply the repository's deny-by-default client rules to this project explicitly. Admin SDK uploads use server-side role/tenant checks; do not make the bucket publicly writable. No Firestore business database is needed.
 4. Obtain the six web SDK values from the staging web app, or the ignored public configuration file. `NEXT_PUBLIC_*` values are build-time browser configuration, not Admin secrets. Server and browser project/bucket identities must agree.
@@ -46,6 +46,7 @@ Use a **separate Neon project**, **separate Firebase project**, **separate Verce
 1. Create a **new** Vercel project for this repository, named CineBite Staging if available. Inspect plan limits/costs first. Do not edit an existing production project's settings, DNS, secrets or integrations.
 2. Select Next.js, Node **24.x**, install `npm ci`, and the checked-in `vercel.json`. Its build command performs preflight and build only—never migrations/seeding. Disable automatic deployments initially. Keep deployment protection enabled and choose test-team access.
    Enable automatic exposure of [Vercel system environment variables](https://vercel.com/docs/environment-variables/system-environment-variables) and verify `VERCEL_PROJECT_ID` and `VERCEL_GIT_COMMIT_SHA` are available to build/runtime. Do not override those identifiers to make a mismatched project pass validation.
+   For this Firebase Admin dependency chain, set `NODE_OPTIONS=--experimental-require-module` in the separate staging project's deployment slot. Vercel disables this Node feature by default; [official runtime configuration](https://vercel.com/docs/functions/runtimes/node-js/advanced-node-configuration) documents the opt-in. Keep dependencies unchanged unless a separately tested update is needed. Let Vercel assign hosted deployment IDs; the full 40-character SHA is release evidence, not a custom cache ID.
 3. Record the project's actual ID and allocated HTTPS application domain from Vercel. A domain allocation/failed initial build does not mean the app is deployed. Choose that exact origin, without a trailing slash, for `CINEBITE_APP_ORIGIN`.
 4. In the new project's Environment Variables, add staging values for the slot used by staging. A **separate staging project's Production slot is still staging**, so `CINEBITE_ENVIRONMENT=staging`, `OBSERVABILITY_ENVIRONMENT=staging`, `NODE_ENV=production` are correct together. Never set `NODE_ENV=staging`.
 5. Disable or explicitly ignore untrusted PR/preview deployments until their isolated variables and protections are reviewed. Do not grant fork PRs shared staging write credentials. Preview builds must not fall back to production values. CI uses synthetic values and no provider secrets.
@@ -58,6 +59,8 @@ Use `.env.example` as a **list of variable names**, not a working credential fil
 | Group          | Staging settings                                                                                                                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Identity       | Six `NEXT_PUBLIC_FIREBASE_*` from the staging web app; staging `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`; matching `FIREBASE_STORAGE_BUCKET` |
+| Media          | `CINEBITE_STORAGE_ENABLED=false` until explicit Blaze/bucket approval; pin actual SDK bucket metadata without claiming a bucket exists. QR images use the PostgreSQL fallback |
+| Vercel runtime | `NODE_OPTIONS=--experimental-require-module` in this separate project's deployment slot; never overwrite unrelated existing runtime options without review |
 | Database       | Staging-only pooled `DATABASE_URL`; direct `DIRECT_URL`                                                                                                                                     |
 | Classification | `CINEBITE_ENVIRONMENT=staging`, `OBSERVABILITY_ENVIRONMENT=staging`                                                                                                                         |
 | Origin         | Actual HTTPS `CINEBITE_APP_ORIGIN`; `CINEBITE_ALLOWED_ORIGINS` empty or exact staged browser origin only                                                                                    |
@@ -93,7 +96,7 @@ For the confirmed development-only starting point, the registry shape is below. 
     "databaseHost": "<actual-canonical-staging-db-host>",
     "databaseName": "<actual-staging-db-name>",
     "firebaseProjectId": "cinebite-staging-20261013",
-    "storageBucket": "<actual-approved-and-created-staging-bucket>",
+    "storageBucket": "<observed-staging-SDK-bucket-name; metadata-only while Storage is disabled>",
     "origin": "<actual-Vercel-allocated-HTTPS-staging-origin>",
     "vercelProjectId": "<actual-staging-Vercel-project-id>",
     "authDomain": "<actual-staging-web-SDK-auth-domain>",
