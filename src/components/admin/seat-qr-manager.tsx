@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { useNotifications } from "@/components/ui/notification-provider";
 import type { SeatQrHallDto, SeatQrSeatDto } from "@/types/seat-qr";
+import { SeatCheckInIssuer } from "./seat-check-in-issuer";
 
 export function SeatQrManager({ hall }: { hall: SeatQrHallDto }) {
   const router = useRouter();
@@ -70,7 +71,8 @@ function SeatQrCard({ hall, seat, base, busy, operational, mutate }: { hall: Sea
       <div className="mt-4 flex flex-wrap gap-2">
         {seat.qrStatus === "MISSING" ? <button className="cb-button-secondary flex-1" disabled={disabled} onClick={() => mutate(`${seat.id}/regenerate`, `${seat.label} QR generated.`)}>Generate</button> : seat.qrStatus === "REVOKED" ? <button className="cb-button-primary flex-1" disabled={disabled} onClick={() => mutate(`${seat.id}/regenerate`, `${seat.label} received a new active QR.`)}>Regenerate</button> : <><button className="cb-button-secondary flex-1" disabled={disabled} onClick={() => mutate(`${seat.id}/rotate`, `${seat.label} QR rotated. The previous code is invalid.`)}>Rotate</button><button className="cb-button-danger flex-1" disabled={disabled} onClick={() => mutate(`${seat.id}/revoke`, `${seat.label} QR revoked.`)}>Revoke</button></>}
       </div>
-      <p className="mt-3 text-[0.68rem] leading-5 text-zinc-600">{hall.locationName} · {hall.hallName} · Raw credentials are never displayed.</p>
+      <SeatCheckInIssuer key={`check-in-${seat.version}-${seat.qrStatus}`} endpoint={`${base}/${seat.id}/check-in`} seatLabel={seat.label} disabled={disabled || seat.qrStatus !== "ACTIVE"} />
+      <p className="mt-3 text-[0.68rem] leading-5 text-zinc-600">{hall.locationName} · {hall.hallName} · The permanent QR identifies the seat; a fresh ticket check-in authorizes ordering.</p>
     </article>
   );
 }

@@ -352,6 +352,12 @@ async function main() {
     );
     const page = await mobile.newPage();
     await page.goto(base + "/s/" + fixture.qr, { waitUntil: "networkidle" });
+    const checkInResponse = await staffPost(admin,
+      `/api/admin/locations/${fixture.location.id}/halls/${fixture.hall.id}/qr/${fixture.seat.id}/check-in`,
+      { ticketVerified: true, ticketReference: "synthetic-browser-drill-ticket", replaceExistingSession: true });
+    assert.equal(checkInResponse.status(), 201);
+    const checkIn = await checkInResponse.json();
+    await page.getByLabel("Ticket check-in code", { exact: true }).fill(checkIn.accessCode);
     await page.getByRole("button", { name: "Start ordering" }).click();
     await page.waitForURL("**/customer/menu");
     const popcorn = page

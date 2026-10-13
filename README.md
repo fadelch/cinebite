@@ -4,6 +4,14 @@ CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and 
 
 Staging infrastructure and current verification/blockers are recorded in [Staging activation](docs/operations/STAGING_ACTIVATION.md). Staging uses separate resources and sandbox payments; it is not a commercial production release.
 
+## Seat QR check-in security update
+
+Permanent QR codes now identify seats only. Ordering requires a single-use,
+seat/screening-bound ticket check-in code issued by authorized cinema staff.
+QR rotation/revocation invalidates affected sessions without deleting paid orders
+or financial history. See [workflow, migration, tests and risks](docs/security/SEAT_CHECK_IN.md).
+This change requires controlled staging migration review and is not automatically deployed.
+
 ## App preview
 
 Actual CineBite screens captured with fictional demo/test data. Expand the previews below to see the complete pages; no real customer information or production financial data is shown.

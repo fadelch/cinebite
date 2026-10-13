@@ -246,6 +246,7 @@ enum AuditAction {
   SEAT_QR_GENERATED
   SEAT_QR_ROTATED
   SEAT_QR_REVOKED
+  SEAT_CHECK_IN_ISSUED
   ORDER_PLACED
   ORDER_ACCEPTED
   ORDER_PREPARING_STARTED
@@ -278,6 +279,7 @@ enum AuditEntityType {
   MOVIE
   SCREENING
   SEAT_QR_CODE
+  SEAT_CHECK_IN
   ORDER
 }
 
@@ -649,6 +651,7 @@ model Screening {
   hall             Hall              @relation(fields: [hallId], references: [id], onDelete: Restrict)
   customerSessions CustomerSession[]
   orders           Order[]
+  seatCheckIns     SeatCheckIn[]
 
   @@index([hallId, status, startsAt])
   @@index([movieId, startsAt])
@@ -670,6 +673,8 @@ model SeatQrCode {
   revokedAt          DateTime?
 
   seat Seat @relation(fields: [hallId, seatId], references: [hallId, id], onDelete: Restrict)
+  customerSessions CustomerSession[]
+  checkIns SeatCheckIn[]
 
   @@unique([hallId, seatId])
   @@index([status, updatedAt])
@@ -683,6 +688,9 @@ model CustomerSession {
   hallId        String
   seatId        String
   screeningId   String
+  qrId          String?
+  qrVersion     Int?
+  checkInId     String?               @unique
   status        CustomerSessionStatus @default(ACTIVE)
   expiresAt     DateTime              @db.Timestamptz(3)
   createdAt     DateTime              @default(now())
@@ -694,11 +702,37 @@ model CustomerSession {
   screening Screening @relation(fields: [screeningId], references: [id], onDelete: Restrict)
   cart      Cart?
   orders    Order[]
+  qrCode    SeatQrCode? @relation(fields: [qrId], references: [id], onDelete: Restrict)
+  checkIn   SeatCheckIn? @relation(fields: [checkInId], references: [id], onDelete: Restrict)
 
   @@index([tokenHash, status])
   @@index([hallId, seatId, screeningId, status])
   @@index([expiresAt])
+  @@index([qrId, status])
   @@map("customer_sessions")
+}
+
+model SeatCheckIn {
+  id               String   @id @default(uuid())
+  qrId             String
+  qrVersion        Int
+  screeningId      String
+  codeHash         String   @db.Char(64)
+  ticketReferenceHash String @db.Char(64)
+  issuedByUid      String
+  replaceSessionId String?
+  status           String   @default("ISSUED")
+  failedAttempts   Int      @default(0)
+  expiresAt        DateTime @db.Timestamptz(3)
+  createdAt        DateTime @default(now())
+  consumedAt       DateTime? @db.Timestamptz(3)
+
+  qrCode    SeatQrCode @relation(fields: [qrId], references: [id], onDelete: Restrict)
+  screening Screening @relation(fields: [screeningId], references: [id], onDelete: Restrict)
+  session   CustomerSession?
+
+  @@index([qrId, screeningId, status])
+  @@map("seat_check_ins")
 }
 
 model Cart {

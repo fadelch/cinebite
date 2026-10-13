@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { prisma } from "@/lib/db/prisma";
 import { ServiceError } from '@/server/services/service-error';
+import { assertCustomerSessionAuthorization } from "./customer-session-authorization";
 
 const cartInclude = {
   items: {
@@ -25,6 +26,7 @@ export async function setCartItemRecord(input: {
 }) {
   return prisma.$transaction(async (tx) => {
     const now = new Date();
+    await assertCustomerSessionAuthorization(tx, input.customerSessionId, now);
     const session = await tx.customerSession.findFirst({ where: {
       id: input.customerSessionId, status: 'ACTIVE', expiresAt: { gt: now },
       screening: { status: 'SCHEDULED', startsAt: { lte: now }, endsAt: { gt: now } },

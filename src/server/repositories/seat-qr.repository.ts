@@ -118,6 +118,8 @@ export async function replaceSeatQrRecord(input: {
     });
     if (result.count !== 1) throw new ServiceError("SEAT_QR_NOT_FOUND", 409, "The QR credential changed. Refresh and try again.");
     const updated = await tx.seatQrCode.findUniqueOrThrow({ where: { hallId_seatId: { hallId: input.hallId, seatId: input.seatId } } });
+    await tx.customerSession.updateMany({ where: { hallId: input.hallId, seatId: input.seatId, status: "ACTIVE" }, data: { status: "REVOKED", revokedAt: new Date() } });
+    await tx.seatCheckIn.updateMany({ where: { qrId: updated.id, status: "ISSUED" }, data: { status: "REVOKED" } });
     await tx.auditLog.create({ data: {
       actorUserId: actorId,
       action: input.action,
@@ -143,6 +145,7 @@ export async function revokeSeatQrRecord(input: {
   const actorId = await actorUserId(input.actorUid);
   return prisma.$transaction(async (tx) => {
     await assertMutationActor(tx, input.actorUid, input.organizationId, input.locationId);
+    await tx.$queryRaw`SELECT id FROM seat_qr_codes WHERE "hallId"=${input.hallId} AND "seatId"=${input.seatId} FOR UPDATE`;
     const existing = await tx.seatQrCode.findUnique({ where: { hallId_seatId: { hallId: input.hallId, seatId: input.seatId } } });
     if (!existing) throw new ServiceError("SEAT_QR_NOT_FOUND", 404, "Seat QR credential not found.");
     if (existing.status === "REVOKED") throw new ServiceError("NO_STATUS_CHANGE", 409, "This QR credential is already revoked.");
@@ -150,6 +153,8 @@ export async function revokeSeatQrRecord(input: {
       where: { id: existing.id },
       data: { status: "REVOKED", revokedAt: new Date() },
     });
+    await tx.customerSession.updateMany({ where: { hallId: input.hallId, seatId: input.seatId, status: "ACTIVE" }, data: { status: "REVOKED", revokedAt: new Date() } });
+    await tx.seatCheckIn.updateMany({ where: { qrId: existing.id, status: "ISSUED" }, data: { status: "REVOKED" } });
     await tx.auditLog.create({ data: {
       actorUserId: actorId,
       action: "SEAT_QR_REVOKED",

@@ -13,6 +13,7 @@ import { orderDto, orderInclude } from "./order.repository";
 import { reserveInventory, settleReservations } from "./payment-inventory";
 import { ServiceError } from "@/server/services/service-error";
 import { stageRefund } from "./refund-domain";
+import { assertCustomerSessionAuthorization } from "./customer-session-authorization";
 
 export async function serial<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let retry = 0; ; retry++) {
@@ -83,6 +84,7 @@ export async function initializeProviderPayment(sessionId: string, publicCode: s
 
 export async function retryPaymentRecord(sessionId: string, publicCode: string, key: string, now = new Date()) {
   return serial(async (tx) => {
+    await assertCustomerSessionAuthorization(tx, sessionId, now);
     const found = await tx.payment.findFirst({ where: { order: { customerSessionId: sessionId, publicOrderCode: publicCode } } });
     if (!found) throw new ServiceError("PAYMENT_NOT_FOUND", 404, "Payment not found.");
     await lockPayment(tx, found.id);

@@ -8,7 +8,7 @@ node tests/operations/failure-gates.mjs
 node tests/operations/guards.mjs
 ```
 
-The DB driver applies the 21 existing migrations, creates a small two-tenant fixture, encrypts a real custom-format dump, restores to a fresh local target, compares all table row digests and tests financial/tenant constraints. It does not delete existing DBs. It refuses unrelated organization data. Both test database defaults and application adapter sessions are UTC; business UI timezone remains location-specific. GitHub CI uses PG17's own dump/restore tools inside its temporary service container.
+The DB driver applies the committed migration manifest (22 migrations after seat check-in), creates a small two-tenant fixture with consumed check-in evidence, encrypts a real custom-format dump, restores to a fresh local target, compares all table row digests and tests financial/tenant constraints. It does not delete existing DBs. It refuses unrelated organization data. Both test database defaults and application adapter sessions are UTC; business UI timezone remains location-specific. GitHub CI uses PG17's own dump/restore tools inside its temporary service container.
 
 The deliberate-failure driver runs actual invalid lint/type/test/build fixtures **only under ignored `.phase22-test`**, proving later deployment steps are not reached. These intentional failures are not failures in the app. The guard driver applies a fake production marker to otherwise synthetic configurations and proves seed/load/reset/payment-test entrypoints refuse before writes. No production endpoint is contacted.
 

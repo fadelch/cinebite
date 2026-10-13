@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --background: #09090b;
   --foreground: #e4e4e7;
   --cb-surface: #111114;
@@ -47,6 +48,14 @@ button:not(:disabled) {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+select,
+select option,
+select optgroup {
+  color-scheme: dark;
+  background-color: #0d0d10;
+  color: #e4e4e7;
 }
 
 button:focus-visible,

@@ -2,7 +2,7 @@
 
 Branch: `ops/staging-activation`, based on merged Phase 22 (`2b28fd4`). Phase 23 is deferred until staging is reviewed. No production resource was modified, billing enabled, paid service provisioned or real payment processed.
 
-**Verified staging URL: [https://cinebite-staging.vercel.app](https://cinebite-staging.vercel.app).** Vercel deployment `dpl_EvQz7LdJutUgrX52VvF3FKghpCKZ` reached READY and passed the hosted smoke suite. Its full built/reported release SHA is `2e57bcf47828b7c909c36e267e56bc4235a484ca`; later documentation-only commits on this branch are not a different deployed release. Deployment protection remains enabled: unauthenticated health access returned 302, while privately authorized health/readiness returned 200. Sign into the owning Vercel account to access the protected app, then use a synthetic Firebase staff account from the local private fixture. Do not distribute an automation bypass token in a URL.
+**Verified staging URL: [https://cinebite-staging.vercel.app](https://cinebite-staging.vercel.app).** Current Vercel deployment `dpl_CMf6axSUFKAXjeVQ26K36EVae6Rk` reached READY and passed the expanded hosted smoke suite. Its full built/reported release SHA is `f54a8050e0a6d598a62818c0c70d57c764e8226f`; later documentation/test-runner-only commits on this branch are not a different deployed application release. Deployment protection remains enabled: unauthenticated health access returned 302, while privately authorized health/readiness returned 200. Sign into the owning Vercel account to access the protected app, then use a synthetic Firebase staff account from the local private fixture. Customers do not need CineBite staff accounts; they use seat-bound guest sessions after QR confirmation. Vercel protection separately limits this staging site to authorized testers. Do not distribute an automation bypass token in a URL.
 
 ## Actual resource inventory — 13 October 2026
 
@@ -66,9 +66,9 @@ Local private configuration is `.env.staging.local`; the dedicated Admin credent
 | Secure Vercel variable upload | PASS; 36 keys, staging project only |
 | Synthetic fixtures | PASS; 2 organizations, 3 locations, 9 seats, 2 tracked products, live screening and 4 staff roles; no captured-money fixtures |
 | Offline safety regressions | PASS; 6 new activation safeguards plus 3 deployment-ID regressions |
-| Full local quality | PASS; 663 tests/77 files, lint, generated route types, TypeScript, Prisma validation and production build |
+| Full local quality | PASS; 701 tests/80 files, lint, generated route types, TypeScript, Prisma validation and production build |
 | Secret scan | PASS; reviewed tracked/staged files, history and browser assets; env/operator files excluded |
-| GitHub CI for deployed commit | PASS; [actual run for `2e57bcf`](https://github.com/fadelch/cinebite/actions/runs/38414728492) |
+| GitHub CI for deployed commit | PASS; [actual run for `f54a805`](https://github.com/fadelch/cinebite/actions/runs/38422891421) |
 | Dependency audit | Runtime: 0 vulnerabilities. Full tree: 5 HIGH findings in development lint dependencies; not a clean full audit |
 | GitHub repository link | BLOCKED; Vercel rejected the requested repository connection; no connection claimed |
 | Hosted deployment, protection, health/readiness | PASS; actual READY deployment; unauthorized access protected; authorized health/readiness 200 |
@@ -84,7 +84,18 @@ Local private configuration is `.env.staging.local`; the dedicated Admin credent
 | Real PSP/live payments | NOT EXECUTABLE; no approved real provider integration or merchant configuration |
 | Hosted backup/PITR, restore and Vercel rollback | NOT EXECUTABLE in this activation report; no result inferred from a plan or runbook |
 
-The hosted suite's nine check groups actually passed and its sanitized local result is `ops-private/staging-smoke-result.json`. The one synthetic completed order and its history are retained intentionally. No real money was charged; this does not prove a real payment provider's sandbox integration. The local test PostgreSQL cluster and Firebase emulators started for this work were stopped afterward; their data files were retained.
+The original hosted suite's nine check groups passed on deployment `dpl_EvQz7LdJutUgrX52VvF3FKghpCKZ` / release `2e57bcf47828b7c909c36e267e56bc4235a484ca`. The expanded suite's 15 check groups passed on the current UI release; the sanitized local result is `ops-private/staging-smoke-result.json`. Synthetic completed orders/history and partial test carts are retained intentionally. No real money was charged; this does not prove a real payment provider's sandbox integration. The local test PostgreSQL cluster and Firebase emulators started for activation were stopped afterward; their data files were retained.
+
+### Customer entry and kitchen UI follow-up
+
+- Removed the obsolete "Phase 1" homepage placeholder. Anonymous visitors see seat-QR ordering instructions, a staff-login link and an explicit staging/sandbox notice. There is no invented cinema/seat, public demo QR credential or bypass of screening checks. Only a validated existing guest session redirects to its menu; invalid/expired sessions receive re-scan guidance. Dependency failures leave the landing page usable without disclosing diagnostics.
+- Added login **Clear form**: both fields are emptied, password visibility is reset, focus returns to email and no sign-in/password-reset request is submitted. Disabled during an active sign-in; the existing forgotten-password link remains separate.
+- Added kitchen native desktop drag-and-drop for the existing next steps only, with target highlighting, pending-write protection, current-snapshot validation and the same authenticated expected-status endpoint. Invalid, stale, foreign, backwards, skipped and terminal drops are refused. Existing action buttons remain usable for keyboard/touch; a filtered board links back to all kitchen steps.
+- Applied dark native control color schemes and dark select/option backgrounds globally. Actual hosted computed styles were checked; emulated mobile landing layout has no horizontal overflow. Native popup rendering still depends on the operating system/browser.
+- Added 38 offline regression tests. A local isolated browser check passed for homepage/Clear without external requests. Hosted checks passed for anonymous guidance, valid-session resume, all four real staff logins, Clear, dark selects, real drag transitions and a keyboard transition, plus sandbox settlement, inventory and delivery. One simulated HTTP 409 tested client feedback without committing a status change; this is not a real backend concurrency test.
+- The first expanded hosted attempt stopped at an assertion in the customer-session/cart check group. The runner now explicitly awaits every completed cart PUT before checking cart contents; the subsequent run passed. Expected quantity, USD 12.00, inventory and delivery assertions were not weakened. No application price calculation was changed.
+
+Staging is a test environment, not a public/live launch. Its checkout is CineBite's own sandbox adapter, not a real PSP sandbox. Storage, real gateway acceptance and production launch remain blocked as described below.
 
 The npm deprecation notices for `node-domexception`, `glob` and ESLint are not the fatal deployment-ID error. Their installed dependency paths and current audit were checked without suppressing warnings or upgrading the authentication stack. Development lint-chain findings require a separately verified dependency update before release acceptance.
 

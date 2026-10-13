@@ -13,6 +13,7 @@ import type { CustomerOrder, OrderStatus } from "@/types/order";
 import { reserveInventory } from "./payment-inventory";
 import { paymentConfig } from "@/lib/payments/config";
 import { paymentMinorUnits } from "@/lib/payments/policy";
+import { assertCustomerSessionAuthorization } from "./customer-session-authorization";
 
 export const orderInclude = {
   items: { orderBy: { createdAt: "asc" as const } },
@@ -54,6 +55,7 @@ export async function placeOrderRecord(input: { customerSessionId: string; idemp
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const result = await prisma.$transaction(async (tx) => {
+        await assertCustomerSessionAuthorization(tx, input.customerSessionId, input.now);
         const replay = await tx.order.findUnique({
           where: { customerSessionId_idempotencyKey: { customerSessionId: input.customerSessionId, idempotencyKey: input.idempotencyKey } },
           include: orderInclude,

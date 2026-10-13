@@ -11,9 +11,12 @@ import {
 import { resolveSeatCredential } from "@/server/services/seat-scan.service";
 import { ServiceError } from "@/server/services/service-error";
 import { customerSessionStartSchema, seatQrCredentialSchema } from "@/validation/seat-qr";
+import { consumeRateLimit } from "@/server/security/rate-limit";
+import { hasVerifiedSeatBinding } from "@/lib/customer-session/verified-binding";
 
 export async function startCustomerSession(input: unknown, now = new Date()) {
-  const { credential } = customerSessionStartSchema.parse(input);
+  const { credential, accessCode } = customerSessionStartSchema.parse(input);
+  await consumeRateLimit({ name: "seat-check-in", limit: 10, seconds: 60 }, hashOpaqueToken(credential));
   const resolution = await resolveSeatCredential(credential, now);
   if (!resolution) throw new ServiceError("CUSTOMER_SESSION_INVALID", 404, "This seat access code is unavailable.");
   if (resolution.active.state !== "ACTIVE_SCREENING") {
@@ -28,6 +31,7 @@ export async function startCustomerSession(input: unknown, now = new Date()) {
     hallId: resolution.active.hall.id,
     seatId: resolution.active.seat.id,
     screeningId: resolution.active.screening.id,
+    accessCode,
     expiresAt,
     now,
   });
@@ -37,7 +41,7 @@ export async function startCustomerSession(input: unknown, now = new Date()) {
 export async function validateCustomerSession(rawToken: string | undefined, now = new Date()) {
   if (!rawToken || !seatQrCredentialSchema.safeParse(rawToken).success) throw new ServiceError("CUSTOMER_SESSION_INVALID", 401, "Your seat session is unavailable.");
   const session = await getCustomerSessionByHashRecord(hashOpaqueToken(rawToken));
-  if (!session || session.status !== "ACTIVE") {
+  if (!session || session.status !== "ACTIVE" || !hasVerifiedSeatBinding(session)) {
     throw new ServiceError("CUSTOMER_SESSION_INVALID", 401, "Your seat session is unavailable.");
   }
   const operational = session.seat.status === "ACTIVE"

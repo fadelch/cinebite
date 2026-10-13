@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from "@/types/auth";
 import { requestProviderCancellation, serial } from "./payment.repository";
 import { settleReservations } from "./payment-inventory";
 import { createSystemIssue, stageRefund } from "./refund-domain";
+import { assertCustomerSessionAuthorization } from "./customer-session-authorization";
 
 export type CancellationActor = { type: "CUSTOMER"; sessionId: string } | { type: "STAFF"; user: AuthenticatedUser } | { type: "SYSTEM"; screeningId: string; requestedBy: AuthenticatedUser };
 
@@ -35,6 +36,7 @@ export async function cancelOrderRecord(orderId: string, actor: CancellationActo
     if (!order) throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found.");
     let actorUserId: string | undefined, requestedByUserId: string | undefined;
     if (actor.type === "CUSTOMER") {
+      await assertCustomerSessionAuthorization(tx, actor.sessionId);
       if (order.customerSessionId !== actor.sessionId) throw new ServiceError("ORDER_NOT_FOUND", 404, "Order not found for this seat session.");
       if (order.customerSession.status !== "ACTIVE" || order.customerSession.expiresAt <= new Date()) throw new ServiceError("CUSTOMER_SESSION_EXPIRED", 401, "This seat session has ended.");
     } else if (actor.type === "STAFF") actorUserId = (await authorizeOrderStaff(tx, actor.user, order)).user.id;

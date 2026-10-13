@@ -13,6 +13,9 @@ const database = vi.hoisted(() => {
 });
 
 vi.mock("server-only", () => ({}));
+// Checkout pricing/stock unit tests use a separate authorization boundary mock;
+// the real row locks and check-in bindings are exercised in isolated SQL tests.
+vi.mock("./customer-session-authorization", () => ({ assertCustomerSessionAuthorization: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/lib/db/prisma", () => ({ prisma: database.prisma }));
 vi.mock("@/lib/payments/config", () => ({ paymentConfig: () => ({ minutes: 12 }) }));
 
