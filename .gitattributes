@@ -1,0 +1,2 @@
+# Migration checksum portability. Existing SQL is not rewritten.
+prisma/migrations/**/migration.sql text eol=lf

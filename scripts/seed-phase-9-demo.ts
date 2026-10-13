@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 
 import { prisma } from "../src/lib/db/prisma";
+import { assertSafeFixtureTarget } from "../src/lib/operations/environment";
 
 const DEMO_ORGANIZATION_SLUG = "cinebite-demo-cinemas";
 const TIMEZONE = "Asia/Beirut";
@@ -12,6 +13,8 @@ function asDate(value: Temporal.ZonedDateTime): Date {
 }
 
 async function main(): Promise<void> {
+  assertSafeFixtureTarget();
+  if (!process.argv.includes("--confirm-nonproduction")) throw new Error("Demo seed requires --confirm-nonproduction and a pinned local test resource.");
   const organization = await prisma.organization.findUnique({
     where: { slug: DEMO_ORGANIZATION_SLUG },
     select: { id: true },

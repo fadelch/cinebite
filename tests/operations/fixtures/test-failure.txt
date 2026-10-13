@@ -1,0 +1,2 @@
+import { it, expect } from "vitest";
+it("intentionally fails only in the isolated gate-proof fixture", () => expect(true).toBe(false));

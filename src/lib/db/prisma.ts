@@ -17,8 +17,8 @@ function createPrismaClient(): PrismaClient {
   // Local PostgreSQL uses TCP; hosted Neon keeps its established serverless driver.
   // This enables real, isolated SQL tests without connecting test writes to Neon.
   const adapter = ["127.0.0.1", "localhost", "[::1]"].includes(hostname)
-    ? new PrismaPg({ connectionString, ...runtimePoolConfig() })
-    : new PrismaNeon({ connectionString, ...runtimePoolConfig() });
+    ? new PrismaPg({ connectionString, ...runtimePoolConfig(), options: "-c timezone=UTC" })
+    : new PrismaNeon({ connectionString, ...runtimePoolConfig(), options: "-c timezone=UTC" });
 
   return new PrismaClient({ adapter });
 }

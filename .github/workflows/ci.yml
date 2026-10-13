@@ -1,0 +1,67 @@
+name: CineBite CI
+on:
+  pull_request:
+  push:
+    branches: [main, phase-22-production-operations]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cinebite-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Offline quality and build (synthetic environment only)
+        run: node scripts/operations/ci-environment.mjs scripts/operations/quality.mjs
+      - name: Runtime dependency audit
+        run: npm audit --omit=dev --audit-level=high
+  database-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: cinebite_test
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["55414:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cinebite_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Fresh migrations, encrypted backup and isolated recovery
+        env:
+          OPS_PG_CONTAINER: ${{ job.services.postgres.id }}
+        run: npm run test:operations
+  required:
+    name: CineBite required checks
+    if: always()
+    needs: [quality, database-recovery]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail closed if any prerequisite failed or was cancelled
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          RECOVERY: ${{ needs.database-recovery.result }}
+        run: test "$QUALITY" = success && test "$RECOVERY" = success

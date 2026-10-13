@@ -1,0 +1,2 @@
+const quantity: number = "not a number";
+export { quantity };

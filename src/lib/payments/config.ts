@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ServiceError } from "@/server/services/service-error";
 
 export function paymentConfig() {
+  if (process.env.CINEBITE_ENVIRONMENT === "production") throw new ServiceError("PAYMENT_DISABLED", 503, "No verified live payment adapter is installed. Production launch remains blocked.");
   if (process.env.PAYMENT_PROVIDER !== "sandbox" || process.env.PAYMENT_SANDBOX_ENABLED !== "true") {
     throw new ServiceError("PAYMENT_DISABLED", 503, "Online payments are not configured. No money has been charged.");
   }

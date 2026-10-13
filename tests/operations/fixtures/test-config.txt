@@ -1,0 +1,2 @@
+import { defineConfig } from "vitest/config";
+export default defineConfig({ test: { include: [".phase22-test/gate-proof/failing.test.ts"] } });

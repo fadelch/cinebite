@@ -1,4 +1,12 @@
 import type { NextConfig } from "next";
+import { validateEnvironment } from "./src/lib/operations/environment";
+
+if (process.env.VERCEL === "1" || process.env.CINEBITE_ENVIRONMENT)
+  validateEnvironment();
+const release =
+  process.env.OBSERVABILITY_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA;
+const buildRelease =
+  release && /^[a-f0-9]{40}$/.test(release) ? release : "local-unversioned";
 
 function configuredDevOriginHosts(): string[] {
   const configuredOrigin = process.env.CINEBITE_APP_ORIGIN?.trim();
@@ -21,8 +29,14 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: { CINEBITE_BUILD_RELEASE: buildRelease }, // Only a safe SHA, never configuration/secrets.
+  deploymentId: buildRelease,
   // Preserve the Neon adapter's native Node runtime in production route handlers.
-  serverExternalPackages: ["@prisma/adapter-neon", "@neondatabase/serverless", "@prisma/adapter-pg"],
+  serverExternalPackages: [
+    "@prisma/adapter-neon",
+    "@neondatabase/serverless",
+    "@prisma/adapter-pg",
+  ],
   allowedDevOrigins: configuredDevOriginHosts(),
   poweredByHeader: false,
   productionBrowserSourceMaps: false,

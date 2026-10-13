@@ -1,0 +1,11 @@
+# Application rollback
+
+The actual local drill starts a built candidate, verifies authenticated smoke, stops only its owned process, starts the detached known-good Phase 21 application against the **same unchanged migrated database**, verifies ready/admin access and absence of the new release route, then redeploys the candidate and verifies that route returns. This is a local process replacement, **not** an executed Vercel rollback. Phase 22 adds no schema migration; it does not prove compatibility with an arbitrary future destructive migration.
+
+Hosted rollback is NOT EXECUTABLE without a staging Vercel deployment and retained previous artifact. Once configured, record the exact known-good deployment ID/URL and corresponding SHA. In the **staging project's** deployment list, use the supported rollback action or the authorized pinned CLI for that project; then verify the canonical app domain, built SHA, readiness and authenticated smoke. Do not remove the previous deployment. Repeat candidate redeployment and observe jobs/webhooks/outbox.
+
+For future production: human incident approval, freeze promotion, select the verified previous immutable deployment, perform [Vercel Instant Rollback](https://vercel.com/docs/instant-rollback) on the correctly resolved project, and run read-only production smoke plus health observation. Provider plan/permissions must be checked beforehand. Do not execute this on production as a rehearsal.
+
+App rollback does **not** roll back PostgreSQL schema/data, external charges/refunds, Firebase user state, secret-store changes, storage, DNS or scheduler configuration. Recheck each boundary; old secrets may have been revoked. Compatible expanded schema should remain in place. For incompatible or partially-applied DDL, investigate and forward-fix under migration approval; restoring a DB to yesterday can destroy legitimate today orders and duplicate external financial effects.
+
+Keep rollback triggers measurable: readiness failure, widespread 5xx/auth failure, unexpected release/environment, payment discrepancy, stalled processors or outbox growth. In an uncertain financial incident, stop new risky operations with approved operator settings and reconcile; do not mutate captured payments to manufacture green health.
