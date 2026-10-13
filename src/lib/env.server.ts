@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { validateEnvironment } from "./operations/environment";
 
 const serverEnvSchema = z.object({
   FIREBASE_ADMIN_PROJECT_ID: z.string().min(1),
@@ -19,6 +20,10 @@ export function getServerEnv(): ServerEnv {
   if (cachedServerEnv) {
     return cachedServerEnv;
   }
+
+  // Local legacy configuration remains usable; hosted or explicitly classified
+  // environments must pass pinned resource isolation. NODE_ENV is never staging.
+  if (process.env.VERCEL === "1" || process.env.CINEBITE_ENVIRONMENT) validateEnvironment();
 
   if (process.env.NODE_ENV === "production") {
     let originValid = false;

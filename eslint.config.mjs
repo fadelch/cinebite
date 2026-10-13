@@ -11,5 +11,7 @@ export default defineConfig([
     "build/**",
     "src/generated/prisma/**",
     "next-env.d.ts",
+    ".phase*-test/**",
+    "ops-private/**",
   ]),
 ]);

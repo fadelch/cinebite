@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getServerEnv } from "@/lib/env.server";
 import { observabilityConfig } from "@/lib/observability/config";
 import { log } from "@/lib/observability/logger";
+import { migrationReadiness } from "./release";
 export type HealthStatus = "HEALTHY" | "DEGRADED" | "UNHEALTHY" | "UNKNOWN";
 export async function databaseHealth(
   probe: () => Promise<unknown> = async () =>
@@ -43,7 +44,7 @@ export async function readiness() {
   } catch {
     return false;
   }
-  return (await databaseHealth()).status !== "UNHEALTHY";
+  return (await databaseHealth()).status !== "UNHEALTHY" && await migrationReadiness();
 }
 export function ageSeconds(date: Date | null | undefined, now = new Date()) {
   return date

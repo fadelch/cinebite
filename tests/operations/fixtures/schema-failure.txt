@@ -1,0 +1,3 @@
+model Broken {
+  id MissingType @id
+}

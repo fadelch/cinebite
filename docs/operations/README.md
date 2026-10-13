@@ -1,5 +1,7 @@
 # CineBite operations runbook
 
+Phase 22 adds [staging setup](STAGING_SETUP.md), [production procedures](PRODUCTION_RUNBOOK.md), [deployment checklist](DEPLOYMENT_CHECKLIST.md), [DB recovery](DATABASE_RECOVERY.md), [rollback](ROLLBACK.md) and [secret rotation](SECRET_ROTATION.md). These distinguish actual local evidence from unavailable hosted operations; production launch remains NO-GO.
+
 Phase 19 provides diagnostics, not permission to alter financial truth. Use the current deployed release, an authorized account and your approved secret manager. Never paste credentials, cookie headers, setup URLs, QR credentials or raw provider payloads into an incident ticket.
 
 ## First response
@@ -82,15 +84,15 @@ Environment and safe release labels distinguish test/staging/production. Do not 
 
 ## 10. Retry only supported actions
 
-| Situation | Supported approach |
-| --- | --- |
-| Checkout/provider initialization interrupted | Check original order, recover with the original checkout/attempt key. |
-| Valid webhook processing rolled back | Authenticated same-event delivery or supported provider retrieval. |
-| Pending provider cancellation/refund | Authorized payment-recovery job; retain original provider idempotency. |
-| Confirmed FAILED refund | Authorized cinema refund-retry action with confirmation and linked retry. |
-| Pending notification event | Authenticated notification processor, honoring its due time/backoff. |
-| Pending staff identity synchronization | Existing authorized Phase 18 retry action; never override a platform-disabled identity. |
-| Operations backlog/incident detection | Authenticated operations-monitor endpoint; this does not mutate money/stock. |
+| Situation                                    | Supported approach                                                                      |
+| -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Checkout/provider initialization interrupted | Check original order, recover with the original checkout/attempt key.                   |
+| Valid webhook processing rolled back         | Authenticated same-event delivery or supported provider retrieval.                      |
+| Pending provider cancellation/refund         | Authorized payment-recovery job; retain original provider idempotency.                  |
+| Confirmed FAILED refund                      | Authorized cinema refund-retry action with confirmation and linked retry.               |
+| Pending notification event                   | Authenticated notification processor, honoring its due time/backoff.                    |
+| Pending staff identity synchronization       | Existing authorized Phase 18 retry action; never override a platform-disabled identity. |
+| Operations backlog/incident detection        | Authenticated operations-monitor endpoint; this does not mutate money/stock.            |
 
 ## Scheduler setup
 

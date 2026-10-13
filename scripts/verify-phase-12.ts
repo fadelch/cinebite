@@ -1,3 +1,5 @@
+import { assertNonProductionToolEnvironment } from "../src/lib/operations/environment";
+assertNonProductionToolEnvironment();
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";

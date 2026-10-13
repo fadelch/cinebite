@@ -43,7 +43,13 @@ More reporting screenshots: [Phase 16 image gallery](linkedin/phase-16/README.md
 
 ## Current phase
 
-**Phase 21 — Performance and Scalability Testing**
+**Phase 22 — Production Operations (local acceptance; hosted staging pending)**
+
+Phase 22 adds CI quality/recovery gates, pinned environment validation, guarded migrations and seeds, UTC database sessions, authenticated cron adapters, release/migration readiness, smoke/recovery/rollback drills and operational runbooks. No production deployment is automatic; no merge or production changes were performed. Production payments and launch remain NO-GO until required hosted staging and real-payment verification exist.
+
+Start with the [exact Vercel / Neon / Firebase staging setup](docs/operations/STAGING_SETUP.md), [Phase 22 report](docs/operations/PHASE_22_REPORT.md), [local operations tests](tests/operations/README.md) and [safe image gallery](linkedin/phase-22/README.md). A free Firebase staging project and web app were verified; Auth/Storage and a staging app deployment are not operational yet. No staging application URL is claimed.
+
+### Phase 21 — Performance and Scalability Testing
 
 Phase 21 measures the secured application using isolated synthetic data, batches customer-menu/cart stock reads, bounds connection/image/job work, and reduces unchanged polling payloads without caching permissions or financial state. PostgreSQL remains authoritative; payment, inventory and tenant guards remain enforced. No production load or real-money transactions were performed.
 

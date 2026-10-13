@@ -1,4 +1,6 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { assertNonProductionToolEnvironment } from "../../src/lib/operations/environment";
+assertNonProductionToolEnvironment();
 if (!process.argv.includes("--local"))
   throw new Error("Performance writes require --local. Never load .env.local.");
 export const stage = process.argv.includes("--baseline")

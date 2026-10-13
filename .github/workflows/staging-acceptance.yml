@@ -1,0 +1,27 @@
+name: Manual staging acceptance (no deployment)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  checks: read
+jobs:
+  staging-smoke:
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+      - name: Verify required CI and smoke the existing staging deployment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CINEBITE_STAGING_ORIGIN: ${{ vars.CINEBITE_STAGING_ORIGIN }}
+          CINEBITE_RESOURCE_REGISTRY: ${{ vars.CINEBITE_RESOURCE_REGISTRY }}
+          CINEBITE_SMOKE_COOKIE: ${{ secrets.CINEBITE_SMOKE_COOKIE }}
+          CINEBITE_VERCEL_PROTECTION_BYPASS: ${{ secrets.CINEBITE_VERCEL_PROTECTION_BYPASS }}
+        run: node scripts/operations/staging-smoke.mjs

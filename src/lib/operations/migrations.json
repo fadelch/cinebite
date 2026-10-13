@@ -1,0 +1,107 @@
+[
+  {
+    "name": "20260922160000_initial_postgresql_cutover",
+    "checksum": "023a520f2ee3522e912dd5f6acecde4c2eeee9a0d49f2025d4a09d0eac076bb3",
+    "legacyWindowsChecksum": "47894bd86ca74fdb8ce68f996a344cdb3f91a94f32f6ad2b43425f73f933883c"
+  },
+  {
+    "name": "20260924140000_phase_7_menu_management",
+    "checksum": "1be5eaa475d385d1ac62718ad75155067893e5004acc4782963ab7f7b16629d8",
+    "legacyWindowsChecksum": "95d29c9f4e5fd71e49e2e400554325be626eda6f8e98df49cba16048bbd09361"
+  },
+  {
+    "name": "20260925120000_phase_8_inventory_management",
+    "checksum": "cde2357f6ae8a9752849f3359aaf6ec013f82274465e445adcb4b44fba13d549",
+    "legacyWindowsChecksum": "6f1e1541822e85bf64182e5f4692cc1feace227e5da61348aca17e3f2d848121"
+  },
+  {
+    "name": "20260927120000_phase_9_movie_screening_system",
+    "checksum": "131cb7bc4c281623c26c7909397ba918323932ff35477cdc48aff30082f01c7e",
+    "legacyWindowsChecksum": "3889fcf7298e2d53114cdd40092dc370cad14b3b8d3df1cb3641f88cb6a947cb"
+  },
+  {
+    "name": "20260929120000_phase_10_seat_qr_sessions",
+    "checksum": "5ac94cc3c726b48fc5de209a178af0fb2a2663e864813da42cd0e770400e0a7c",
+    "legacyWindowsChecksum": "07ec162cbe7b513dc12b24bfe37b84b70bb04a0aeae6e5c8c470337874112702"
+  },
+  {
+    "name": "20260929223000_phase_10_qr_image_fallback",
+    "checksum": "1305b81906f7d8e32bcf3188ec4ea67c08eb73d158feb9082647fb4c78972da2",
+    "legacyWindowsChecksum": "9076fc84c593afa130ec972b12b49898f728f7fe29ace143b714cd27a7527f49"
+  },
+  {
+    "name": "20261005120000_phase_11_customer_orders",
+    "checksum": "da077aad913eca1bace18c9403952e03b81377865dc7324b15c3dca6ad81fcd1",
+    "legacyWindowsChecksum": "80154960685105427316c6ce93a48662301cc134f7d96f09ef75eee4659c1311"
+  },
+  {
+    "name": "20261005190000_phase_12_kitchen_operations",
+    "checksum": "f67736ba7934c7a87f3020642b929b3c6b876c44cbf96e643c2acd010ec47e77",
+    "legacyWindowsChecksum": "d7497da897348cebadc8f7f5b241ead9adce392c2a36d7d38ea866112ce95f7c"
+  },
+  {
+    "name": "20261005210000_phase_13_delivery_operations",
+    "checksum": "28cd800ba1c03344f30dba02add1467d58e7af22958cda3cc18d09bbab48eba3",
+    "legacyWindowsChecksum": "1b50cbf5c57df6f9821cfda672b4516204c29b846d594e8bba4fc165ad7e333c"
+  },
+  {
+    "name": "20261006010000_phase_14_secure_payments",
+    "checksum": "0d8d0b1b71c83ec4efbd795bb6c854065a9d37ee1edbc96d02c2846a86ad8779",
+    "legacyWindowsChecksum": "00d0f4e3d581f6d77f01720fc3e54fb55b3d95329c020c2f4cf6e01b08af9c2e"
+  },
+  {
+    "name": "20261006011500_phase_14_payment_outbox_index",
+    "checksum": "ee0ebb2c7ab5931a9214f1dd7a97bd0778f493474334d203283cd2d7c61249f6",
+    "legacyWindowsChecksum": "7d51d725e841074c407e1dcbfdef50f0dc745484bdbef1659bacf65a2eb810c1"
+  },
+  {
+    "name": "20261006120000_phase_15_cancellations_refunds",
+    "checksum": "bf5b9cd9441c921bfb7581a720a36305b9db53b7a062a23dca8bd4cf77ce92c1",
+    "legacyWindowsChecksum": "f25fc9ea5eb2d3adafff1ee441422710cf86cc1730b4a5fa7c9a0c8e124c3a19"
+  },
+  {
+    "name": "20261006121000_phase_15_financial_guards",
+    "checksum": "12ca0270371809c2cedf1922b400d360fbec97cb74d3d821a2673a383fc94ac8",
+    "legacyWindowsChecksum": "35df06566169eea6125cbdc7d3713832052befe8a619dad592fbd1241859065d"
+  },
+  {
+    "name": "20261006122000_phase_15_operational_cancellation_guards",
+    "checksum": "3951d78506e7a405eebbe540b1e91d66bd7a3256d29b70edbcbde0b608604acc",
+    "legacyWindowsChecksum": "b8a1946acbe3e4293e0063cef2a0a43f680b865766c584661f539c562a9119fd"
+  },
+  {
+    "name": "20261006123000_phase_15_original_consumption_guards",
+    "checksum": "6d565ac154c1551d1e36ead2daf03d71c6a4b46ec563de669a0f09ccce11a9c6",
+    "legacyWindowsChecksum": "2871fc2756e014dc198dc23e8c612e63935281cd03e59eec2023013d38b619a8"
+  },
+  {
+    "name": "20261006160000_phase_16_analytics_reporting",
+    "checksum": "44d5973e9faf24779f3fb66d34d58b7e92d1d1fc3a4c89ea9273f6b9d0b4965e",
+    "legacyWindowsChecksum": "be15c35389077aaf3df97d2ad7d4e2b6fe991dae43498382064f949a1b888dbb"
+  },
+  {
+    "name": "20261006170000_phase_17_notifications_alerts",
+    "checksum": "a5de39c61463d7cf63f398e43ee93e9f3cfb1f38ddec9cdc3a962070096e585d",
+    "legacyWindowsChecksum": "ad978ee428178acce33bf82401590d8978d76a6a595df48ae1e122f545f766e2"
+  },
+  {
+    "name": "20261012180000_phase_18_org_settings_staff",
+    "checksum": "ffedc3c5459154e1a1955db2ed48637b8afe5992cb4ac3ee7b01255e06be4c9b",
+    "legacyWindowsChecksum": "98268f1c6739f277ed9417d32fe33cdd44d9d9407f398338cfe761b0088aefeb"
+  },
+  {
+    "name": "20261012190000_phase_19_observability",
+    "checksum": "569c159f0af9fecf31d25b6baffd4c736864a9741418c01f88ee39ada746c17e",
+    "legacyWindowsChecksum": "b23ca75fc56d71b3146648064b1a3a43587537ca873de0492a9a05d9394e5230"
+  },
+  {
+    "name": "20261012200000_phase_20_security",
+    "checksum": "99f014ebcbe8905efe6aaec6f439dba8e21520284516bba7a793db82bc3f271f",
+    "legacyWindowsChecksum": "fb55fa6395d40c999066e2eaf8bd7e93c1eeadc381d8cfeb3d7ba70720fdd00e"
+  },
+  {
+    "name": "20261012210000_phase_21_notification_history_index",
+    "checksum": "14bfa131564f8e2f29c9d65208565635ce270bdcb4b19e516f2c4079500f0edd",
+    "legacyWindowsChecksum": "341c7e2bc0e8952e6062972c546b4fa5f4758a00f3e7e82faa2ec16f081d6e5c"
+  }
+]
