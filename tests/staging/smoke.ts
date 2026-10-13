@@ -131,9 +131,17 @@ async function main() {
     assert.ok(cookie?.httpOnly && cookie.secure && cookie.sameSite === "Lax");
     const popcorn = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Large Popcorn", exact: true }) });
     const pepsi = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Pepsi", exact: true }) });
-    await popcorn.getByRole("button", { name: "Add", exact: true }).click();
-    await popcorn.getByRole("button", { name: "Add one", exact: true }).click();
-    await pepsi.getByRole("button", { name: "Add", exact: true }).click();
+    check = "mobile authoritative cart quantities";
+    async function waitForCartUpdate(click: () => Promise<unknown>) {
+      const completion = page.waitForResponse(r => r.url() === base + "/api/customer/cart" && r.request().method() === "PUT");
+      await click();
+      const response = await completion;
+      assert.equal(response.status(), 200);
+      await response.finished();
+    }
+    await waitForCartUpdate(() => popcorn.getByRole("button", { name: "Add", exact: true }).click());
+    await waitForCartUpdate(() => popcorn.getByRole("button", { name: "Add one", exact: true }).click());
+    await waitForCartUpdate(() => pepsi.getByRole("button", { name: "Add", exact: true }).click());
     await page.getByRole("link", { name: /View cart/ }).click();
     await page.waitForURL(base + "/customer/cart");
     const cart = await expectStatus(await request(guest, "/api/customer/cart"), 200);
@@ -217,6 +225,13 @@ async function main() {
 main().catch(error => {
   report.status = "FAIL"; report.failedCheck = check;
   report.safeErrorCategory = error instanceof Error ? error.name : "Error";
+  // Numeric/boolean assertions help diagnose timing without logging tokens,
+  // URLs, staff details or arbitrary assertion payloads.
+  if (error instanceof assert.AssertionError) {
+    const safeValue = (value: unknown) => typeof value === "number" || typeof value === "boolean" ||
+      (typeof value === "string" && /^\d{1,10}(?:\.\d{1,4})?$/.test(value)) ? value : "suppressed";
+    report.assertion = { expected: safeValue(error.expected), actual: safeValue(error.actual) };
+  }
   process.exitCode = 1;
 }).finally(async () => {
   await writeFile("ops-private/staging-smoke-result.json", JSON.stringify(report, null, 2));
