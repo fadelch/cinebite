@@ -2,7 +2,7 @@ name: CineBite CI
 on:
   pull_request:
   push:
-    branches: [main, phase-22-production-operations, ops/staging-activation]
+    branches: [main, phase-22-production-operations, ops/staging-activation, security/seat-check-in]
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +54,10 @@ jobs:
         env:
           OPS_PG_CONTAINER: ${{ job.services.postgres.id }}
         run: npm run test:operations
+      - name: Seat check-in transactions and QR revocation races (isolated PostgreSQL)
+        env:
+          SEAT_CHECK_IN_TEST_PORT: "55414"
+        run: npm run test:seat-check-in
   required:
     name: CineBite required checks
     if: always()

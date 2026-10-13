@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { SeatQrEntry } from "@/components/customer/seat-qr-entry";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
 import { log } from "@/lib/observability/logger";
 import { validateCustomerSession } from "@/server/services/customer-session.service";
@@ -34,7 +35,7 @@ export default async function Home() {
   const sandbox = process.env.PAYMENT_PROVIDER === "sandbox";
   const steps = [
     { title: "Scan your seat QR", detail: "Use your phone camera to scan the QR code on your cinema seat. The code identifies your cinema, hall and seat." },
-    { title: "Confirm and choose", detail: "Check your seat and the current movie, then tap Start ordering to browse your cinema’s snacks and drinks." },
+    { title: "Check in and confirm", detail: "Ask staff to check your ticket and give you a one-time code. Confirm your seat and movie, enter that code, then browse your cinema’s snacks and drinks." },
     { title: "Order and relax", detail: "Complete checkout and follow your order while the cinema team prepares it and delivers it to your seat." },
   ];
 
@@ -59,7 +60,7 @@ export default async function Home() {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">Order from your seat</p>
             <h1 id="home-title" className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-5xl">Your movie.<br />Your snacks.<br /><span className="text-amber-300">Delivered to your seat.</span></h1>
             <p className="mt-6 max-w-md text-base leading-7 text-zinc-400">Scan the QR code at your seat to start ordering. No customer account or staff login is needed.</p>
-            <a href="#how-to-order" className="cb-button-primary mt-7">How to start your order</a>
+            <SeatQrEntry />
             <p className="mt-4 text-sm leading-6 text-zinc-500">Ordering is available during a live screening. Your seat QR is at the cinema—not on this homepage.</p>
             {sessionEnded ? <p role="status" className="mt-5 rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-300">Your previous seat session has ended. Scan your seat QR again during a live screening.</p> : null}
             {resumeUnavailable ? <p role="status" className="mt-5 text-sm leading-6 text-zinc-300">We couldn’t reconnect to your seat right now. <Link href="/customer/menu" className="text-amber-300 underline">Try your menu again</Link> or ask the cinema team for help.</p> : null}

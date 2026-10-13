@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:security": "vitest run src/security",
+    "test:seat-check-in": "tsx --conditions=react-server tests/security/seat-check-in.ts --local",
     "test:performance": "tsx --conditions=react-server tests/performance/run.ts --local",
     "test:performance:regression": "vitest run src/performance",
     "security:scan": "node scripts/security-scan.mjs",

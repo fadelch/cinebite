@@ -14,7 +14,7 @@ export const steps = [
     command: ["node_modules/next/dist/bin/next", "typegen"],
   },
   { name: "types", command: ["node_modules/typescript/bin/tsc", "--noEmit"] },
-  { name: "tests", command: ["node_modules/vitest/vitest.mjs", "run"] },
+  { name: "tests", command: ["node_modules/vitest/vitest.mjs", "run", "--maxWorkers=2"] },
   {
     name: "prisma validate",
     command: ["node_modules/prisma/build/index.js", "validate"],

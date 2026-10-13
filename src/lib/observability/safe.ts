@@ -1,6 +1,6 @@
 // Deny-by-default telemetry: free text, URLs, payloads and exception messages are not accepted.
 const secretKey =
-  /authorization|cookie|password|token|secret|private.?key|card|cvv|credential|database.?url|direct.?url|email|phone|note|payload|headers|stack|message/i;
+  /access.?code|code.?hash|ticket.?reference|authorization|cookie|password|token|secret|private.?key|card|cvv|credential|database.?url|direct.?url|email|phone|note|payload|headers|stack|message/i;
 const identifiers = new Set([
   "requestId",
   "jobRunId",

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
+import { checkInHash } from "@/lib/security/seat-check-in";
 import {
   createOpaqueToken,
   hashOpaqueToken,
@@ -93,18 +94,25 @@ export async function operationFixtures() {
     },
   });
   const token = createOpaqueToken();
+  const qr = createOpaqueToken();
+  const qrRecord = await prisma.seatQrCode.create({
+    data: { hallId: hall.id, seatId: seat.id, tokenHash: hashOpaqueToken(qr) },
+  });
+  const checkIn = await prisma.seatCheckIn.create({ data: {
+    qrId: qrRecord.id, qrVersion: qrRecord.version, screeningId: screening.id,
+    codeHash: checkInHash("synthetic-consumed-fixture", randomUUID()),
+    ticketReferenceHash: checkInHash("synthetic-ticket", prefix),
+    issuedByUid: "synthetic-fixture", status: "CONSUMED", consumedAt: new Date(), expiresAt: screening.endsAt,
+  } });
   const session = await prisma.customerSession.create({
     data: {
+      qrId: qrRecord.id, qrVersion: qrRecord.version, checkInId: checkIn.id,
       hallId: hall.id,
       seatId: seat.id,
       screeningId: screening.id,
       tokenHash: hashOpaqueToken(token),
       expiresAt: screening.endsAt,
     },
-  });
-  const qr = createOpaqueToken();
-  await prisma.seatQrCode.create({
-    data: { hallId: hall.id, seatId: seat.id, tokenHash: hashOpaqueToken(qr) },
   });
   const order = await prisma.order.create({
     data: {

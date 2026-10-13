@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/server/security/rate-limit", () => ({ consumeRateLimit: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/server/services/seat-scan.service", () => ({ resolveSeatCredential: vi.fn() }));
 vi.mock("@/server/repositories/customer-session.repository", () => ({
   createCustomerSessionRecord: vi.fn(), getCustomerSessionByHashRecord: vi.fn(), revokeCustomerSessionByHashRecord: vi.fn(), touchCustomerSessionRecord: vi.fn(),
@@ -17,6 +18,9 @@ const active = {
   state: "ACTIVE_SCREENING", organization: { id: "org-1", name: "Demo" }, location: { id: "loc-1", name: "Beirut", timezone: "Asia/Beirut" }, hall: { id: "hall-1", name: "Hall 1", number: 1 }, seat: { id: "seat-a7", label: "A7", row: "A", number: 7 }, screening: { id: "screen-1", startsAt: "2026-09-29T10:00:00.000Z", endsAt: "2026-09-29T12:00:00.000Z", temporalState: "LIVE" }, movie: { id: "movie-1", title: "Interstellar", durationMinutes: 169, posterUrl: null },
 } as const;
 const persisted = {
+  qrId: "qr-1", qrVersion: 1, checkInId: "check-in-1",
+  qrCode: { id: "qr-1", version: 1, status: "ACTIVE", hallId: "hall-1", seatId: "seat-a7" },
+  checkIn: { id: "check-in-1", qrId: "qr-1", qrVersion: 1, screeningId: "screen-1", status: "CONSUMED", consumedAt: now },
   id: "session-1", tokenHash: "a".repeat(64), status: "ACTIVE", hallId: "hall-1", seatId: "seat-a7", screeningId: "screen-1", expiresAt: new Date("2026-09-29T12:15:00.000Z"), lastSeenAt: null,
   seat: { id: "seat-a7", label: "A7", status: "ACTIVE", hall: { id: "hall-1", name: "Hall 1", status: "ACTIVE", location: { id: "loc-1", name: "Beirut", organizationId: "org-1", status: "ACTIVE", organization: { status: "ACTIVE" } } } },
   screening: { id: "screen-1", hallId: "hall-1", status: "SCHEDULED", startsAt: new Date("2026-09-29T10:00:00.000Z"), endsAt: new Date("2026-09-29T12:00:00.000Z"), movie: { title: "Interstellar" } },
@@ -33,21 +37,27 @@ describe("anonymous customer sessions", () => {
     vi.mocked(resolveSeatCredential).mockResolvedValue({ qr: {}, seat: {}, active } as never);
     vi.mocked(createCustomerSessionRecord).mockResolvedValue(persisted as never);
     await expect(startCustomerSession({ credential, seatId: "attacker-seat", screeningId: "attacker-screen" }, now)).rejects.toThrow();
-    const result = await startCustomerSession({ credential }, now);
+    await expect(startCustomerSession({ credential }, now)).rejects.toThrow();
+    const result = await startCustomerSession({ credential, accessCode: "123456789012" }, now);
     expect(result.rawToken).toHaveLength(43);
     expect(createCustomerSessionRecord).toHaveBeenCalledWith(expect.objectContaining({ hallId: "hall-1", seatId: "seat-a7", screeningId: "screen-1", tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/) }));
   });
 
   it("refuses invalid QR and no-active-screening contexts", async () => {
     vi.mocked(resolveSeatCredential).mockResolvedValueOnce(null);
-    await expect(startCustomerSession({ credential }, now)).rejects.toMatchObject({ code: "CUSTOMER_SESSION_INVALID" });
+    await expect(startCustomerSession({ credential, accessCode: "123456789012" }, now)).rejects.toMatchObject({ code: "CUSTOMER_SESSION_INVALID" });
     vi.mocked(resolveSeatCredential).mockResolvedValueOnce({ qr: {}, seat: {}, active: { state: "NO_ACTIVE_SCREENING" } } as never);
-    await expect(startCustomerSession({ credential }, now)).rejects.toMatchObject({ code: "NO_ACTIVE_SCREENING" });
+    await expect(startCustomerSession({ credential, accessCode: "123456789012" }, now)).rejects.toMatchObject({ code: "NO_ACTIVE_SCREENING" });
   });
 
   it("rejects expiry, revocation, cancellation, ended screening, and a switched Hall", async () => {
     for (const value of [
       { ...persisted, status: "REVOKED" },
+      { ...persisted, qrCode: { ...persisted.qrCode, status: "REVOKED" } },
+      { ...persisted, qrCode: { ...persisted.qrCode, version: 2 } },
+      { ...persisted, qrCode: { ...persisted.qrCode, seatId: "another-seat" } },
+      { ...persisted, checkIn: { ...persisted.checkIn, screeningId: "old-screening" } },
+      { ...persisted, checkIn: null },
       { ...persisted, expiresAt: now },
       { ...persisted, screening: { ...persisted.screening, status: "CANCELLED" } },
       { ...persisted, screening: { ...persisted.screening, endsAt: now } },

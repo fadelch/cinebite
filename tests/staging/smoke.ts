@@ -120,6 +120,10 @@ async function main() {
     const before = await prisma.customerSession.count();
     await page.goto(base + "/s/" + fixture.credential, { waitUntil: "networkidle" });
     assert.equal(await prisma.customerSession.count(), before, "QR GET must be passive.");
+    const checkIn = await expectStatus(await request(admin, qrRoot + "/a7/check-in", "POST", {
+      ticketVerified: true, ticketReference: "synthetic-staging-smoke-ticket", replaceExistingSession: true,
+    }), 201);
+    await page.getByLabel("Ticket check-in code", { exact: true }).fill(checkIn.accessCode);
     await page.getByRole("button", { name: "Start ordering" }).click();
     await page.waitForURL(base + "/customer/menu");
     const sessionsAfterStart = await prisma.customerSession.count();

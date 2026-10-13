@@ -1394,6 +1394,7 @@ async function main() {
     await assert.rejects(
       createCustomerSessionRecord({
         qrId: qr.id,
+        accessCode: "000000000000",
         qrHash: qr.tokenHash,
         tokenHash: hashOpaqueToken(createOpaqueToken()),
         hallId,

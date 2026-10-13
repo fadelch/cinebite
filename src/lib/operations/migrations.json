@@ -103,5 +103,9 @@
     "name": "20261012210000_phase_21_notification_history_index",
     "checksum": "14bfa131564f8e2f29c9d65208565635ce270bdcb4b19e516f2c4079500f0edd",
     "legacyWindowsChecksum": "341c7e2bc0e8952e6062972c546b4fa5f4758a00f3e7e82faa2ec16f081d6e5c"
+  },
+  {
+    "name": "20261013200000_seat_check_in",
+    "checksum": "99b1d7e6b7ad7f969f396c668019eac647eaa417f5f2cab25317b916e0808481"
   }
 ]

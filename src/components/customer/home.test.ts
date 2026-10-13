@@ -1,8 +1,9 @@
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn((path: string) => { throw new Error("redirect:" + path); }) }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn((path: string) => { throw new Error("redirect:" + path); }), useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/server/services/customer-session.service", () => ({ validateCustomerSession: vi.fn() }));
 vi.mock("@/lib/observability/logger", () => ({ log: vi.fn() }));
 import { cookies } from "next/headers";
@@ -11,6 +12,11 @@ import { validateCustomerSession } from "@/server/services/customer-session.serv
 import { ServiceError } from "@/server/services/service-error";
 import { CUSTOMER_SESSION_COOKIE } from "@/lib/customer-session/policy";
 import Home from "@/app/page";
+import { NotificationProvider } from "@/components/ui/notification-provider";
+
+async function renderHome() {
+  return renderToStaticMarkup(createElement(NotificationProvider, null, await Home()));
+}
 
 function cookie(value?: string) {
   const get = vi.fn(() => value ? { value } : undefined);
@@ -24,18 +30,21 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 it("explains QR ordering without requiring an account, fake seat or database call", async () => {
-  const html = renderToStaticMarkup(await Home());
+  const html = await renderHome();
   expect(html).not.toContain("Phase 1");
   expect(html).toContain("Scan your seat QR");
   expect(html).toContain("No customer account or staff login is needed");
-  expect(html).toContain('href="#how-to-order"');
+  expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>Start my order<\/button>/);
+  expect(html).toContain('id="seat-qr-entry" hidden=""');
+  expect(html).toContain('method="post"');
+  expect(html).toContain("Continue to my seat");
   expect(html).toContain('href="/login"');
   expect(validateCustomerSession).not.toHaveBeenCalled();
   expect(redirect).not.toHaveBeenCalled();
 });
 it.each(["staging", "development"])("clearly labels %s sandbox rather than real checkout", async (environment) => {
   vi.stubEnv("CINEBITE_ENVIRONMENT", environment); vi.stubEnv("PAYMENT_PROVIDER", "sandbox");
-  const html = renderToStaticMarkup(await Home());
+  const html = await renderHome();
   expect(html).toContain("No real payments are processed");
   expect(html).toContain(environment === "staging" ? "Staging test environment" : "Sandbox demo");
 });
@@ -49,7 +58,7 @@ it("resumes only a validated customer session, not a cookie's mere presence", as
 it.each(["CUSTOMER_SESSION_INVALID", "CUSTOMER_SESSION_EXPIRED"] as const)("keeps %s on QR guidance", async (code) => {
   cookie("synthetic-cookie");
   vi.mocked(validateCustomerSession).mockRejectedValue(new ServiceError(code, 401, "private diagnostic"));
-  const html = renderToStaticMarkup(await Home());
+  const html = await renderHome();
   expect(html).toContain("Your previous seat session has ended");
   expect(html).not.toContain("private diagnostic");
   expect(redirect).not.toHaveBeenCalled();
@@ -57,7 +66,7 @@ it.each(["CUSTOMER_SESSION_INVALID", "CUSTOMER_SESSION_EXPIRED"] as const)("keep
 it("keeps the homepage usable on a session dependency failure without leaking details", async () => {
   cookie("synthetic-cookie");
   vi.mocked(validateCustomerSession).mockRejectedValue(new Error("private diagnostic"));
-  const html = renderToStaticMarkup(await Home());
+  const html = await renderHome();
   expect(html).toContain("Try your menu again");
   expect(html).not.toContain("private diagnostic");
   expect(redirect).not.toHaveBeenCalled();
