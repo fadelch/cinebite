@@ -2,7 +2,11 @@
 
 Phase 22. No production changes or deployment are authorized by this guide. Values in angle brackets are inputs to obtain from your actual provider accounts, not existing resources or URLs.
 
-## Actual state, 13 October 2026
+## Actual state
+
+The Phase 22 inventory below is historical. See [Staging activation](STAGING_ACTIVATION.md) for the follow-up resource inventory and verification. Do not mistake an allocated Vercel domain for a verified deployed application.
+
+### Phase 22 handoff, 13 October 2026
 
 Firebase CLI account access was verified. The **new free project `cinebite-staging-20261013` and its web app were created and verified**. Billing was independently queried and is disabled. Public web SDK configuration is saved locally in ignored `ops-private/firebase-staging-web.json`. No Admin key was generated or committed. [Open that project's console](https://console.firebase.google.com/project/cinebite-staging-20261013/overview).
 

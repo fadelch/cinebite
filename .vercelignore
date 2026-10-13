@@ -1,0 +1,20 @@
+# Never upload operator credentials, test databases, browser profiles or artifacts.
+.env*
+ops-private/
+.phase*-test/
+.git/
+.codex/
+.agents/
+.aws/
+linkedin/
+node_modules/
+.next/
+coverage/
+*.dump
+*.backup
+*.enc
+*.pem
+*.key
+serviceAccount.json
+firebase-admin.json
+*-debug.log

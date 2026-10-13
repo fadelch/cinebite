@@ -23,6 +23,7 @@
     "prisma:migrate:deploy": "tsx scripts/operations/migrate.ts",
     "ops:preflight": "tsx scripts/operations/preflight.ts",
     "ops:smoke": "tsx scripts/operations/smoke.ts",
+    "test:staging": "node --env-file=.env.staging.local node_modules/tsx/dist/cli.mjs --conditions=react-server tests/staging/smoke.ts --confirm-staging-smoke",
     "test:operations": "tsx --conditions=react-server tests/operations/run.ts --local",
     "test:operations:browser": "tsx --conditions=react-server tests/operations/browser.ts --local",
     "ci:quality": "node scripts/operations/ci-environment.mjs scripts/operations/quality.mjs",

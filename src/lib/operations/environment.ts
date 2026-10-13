@@ -60,6 +60,7 @@ export function validateEnvironment(env: Variables = process.env): {
 } {
   const environment = env.CINEBITE_ENVIRONMENT as Environment;
   if (!environments.includes(environment)) return refuse();
+  if (env.CINEBITE_STORAGE_ENABLED !== undefined && !["true", "false"].includes(env.CINEBITE_STORAGE_ENABLED)) return refuse();
   let registry: Registry;
   try {
     registry = JSON.parse(env.CINEBITE_RESOURCE_REGISTRY ?? "");
