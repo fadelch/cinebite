@@ -37,7 +37,7 @@ No production migration, seed, automatic scheduler activation, live PSP adapter 
 ## Executed local evidence
 
 - Clean `npm ci` regenerated Prisma from the reviewed lockfile; Node 24.x is pinned in `.nvmrc` and package engines.
-- Full suite: 653 tests across 75 files; security suite 34 tests; performance regression 11 tests. Final branch quality output is authoritative if counts change.
+- Full suite: 654 tests across 75 files; security suite 34 tests; performance regression 11 tests. Final branch quality output is authoritative if counts change.
 - Lint, TypeScript, Prisma validation/generation and Next production build passed locally using synthetic settings. Both workflow YAMLs were validated with checksum-verified official actionlint 1.7.12; Actions references were resolved to official tag SHAs.
 - Actual intentional failure exits: lint 1, typecheck 2, tests 1, build 1; invalid Prisma schema and copied-migration checksum drift also failed preflight. Subsequent deployment marker never ran.
 - Actual seed, reset, load, operations and legacy payment-test entrypoints refused a fake production marker before fixture writes.
@@ -49,6 +49,8 @@ No production migration, seed, automatic scheduler activation, live PSP adapter 
 - Git tree/history/browser-asset and staged secret scans are required before push. Eight DPR2 images were visually reviewed; private synthetic account IDs are redacted to a demo alias. No usable QR/cookie/key, backup content, credential URL or real customer data is included.
 
 The local PostgreSQL timezone issue discovered during acceptance was fixed by explicitly requesting UTC adapter sessions. Database defaults and operator test connections also use UTC. Location-specific UI timezones remain unchanged. Initial failed harness fixtures were retained in renamed local test databases, not deleted; later correct runs passed. No production state was involved.
+
+The first actual GitHub run passed isolated database recovery but correctly failed quality on a clean checkout: generated `RouteContext`/`LayoutProps` were absent before type checking. The pipeline now explicitly runs `next typegen` before `tsc`, as documented by the installed Next.js CLI. Generated types are not committed or copied from a developer cache. The required aggregate correctly refused that initial failure; final remote results must be checked on the follow-up commit.
 
 ## Mandatory A–AL matrix
 

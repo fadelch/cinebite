@@ -9,6 +9,10 @@ export function runGate(steps, run) {
 }
 export const steps = [
   { name: "lint", command: ["node_modules/eslint/bin/eslint.js", "."] },
+  {
+    name: "route type generation",
+    command: ["node_modules/next/dist/bin/next", "typegen"],
+  },
   { name: "types", command: ["node_modules/typescript/bin/tsc", "--noEmit"] },
   { name: "tests", command: ["node_modules/vitest/vitest.mjs", "run"] },
   {
