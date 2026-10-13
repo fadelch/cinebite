@@ -12,6 +12,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 import { getServerEnv } from "@/lib/env.server";
+import { assertMediaStorageEnabled } from "./storage-policy";
 
 let cachedAdminApp: App | undefined;
 
@@ -43,6 +44,7 @@ export function getAdminFirestore() {
 }
 
 export function getAdminStorageBucket() {
+  assertMediaStorageEnabled();
   const env = getServerEnv();
   return getStorage(getAdminApp()).bucket(env.FIREBASE_STORAGE_BUCKET);
 }

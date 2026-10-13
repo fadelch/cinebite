@@ -2,6 +2,8 @@
 
 CineBite is a multi-tenant cinema food-service application. Neon PostgreSQL and Prisma are the authoritative business-data layer, Firebase Authentication provides identity, and Firebase Storage holds normalized product and movie media.
 
+Staging infrastructure and current verification/blockers are recorded in [Staging activation](docs/operations/STAGING_ACTIVATION.md). Staging uses separate resources and sandbox payments; it is not a commercial production release.
+
 ## App preview
 
 Actual CineBite screens captured with fictional demo/test data. Expand the previews below to see the complete pages; no real customer information or production financial data is shown.

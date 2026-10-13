@@ -2,7 +2,7 @@ name: CineBite CI
 on:
   pull_request:
   push:
-    branches: [main, phase-22-production-operations]
+    branches: [main, phase-22-production-operations, ops/staging-activation]
   workflow_dispatch:
 permissions:
   contents: read
