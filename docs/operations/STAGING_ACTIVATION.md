@@ -62,6 +62,8 @@ Local private configuration is `.env.staging.local`; the dedicated Admin credent
 
 The first fixture attempt stopped at nested LocationAccess creation. Only its owned synthetic partial records were retained; a separately reviewed resume completed grants/claims without deleting data. Initial JSON env-file quoting and CLI top-level-array upload failures were fixed; resource isolation then passed and all 35 variables were uploaded individually. A TypeScript gate caught missing typed error codes in the new storage guard; those were fixed and the full local suite reran successfully. None of these failures were concealed as successful runs.
 
+The first authorized manual staging deployment, `dpl_5G8qJ4UaFpJo5vKynBHTamd9x5dw`, failed with `INVALID_DEPLOYMENT_ID`: Vercel accepts a cache/skew deployment identifier of at most 32 characters, while the prior configuration used the full 40-character SHA. The cache identifier was shortened to 32 hex characters; authenticated release evidence retains the complete SHA. Two regression tests cover this distinction and malformed release metadata. This did not change any database or production deployment. [Vercel deployment identifier requirements](https://vercel.com/docs/skew-protection#custom-skew-protection-deployment-id).
+
 ### GitHub connection and deployment hold
 
 The staging project's ignored-build command is `exit 0` and Preview deployments are disabled. This prevents automatic app builds while setup is reviewed. No repository-wide deployment-disable flag was committed, so another project's behavior is not changed.

@@ -30,7 +30,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   env: { CINEBITE_BUILD_RELEASE: buildRelease }, // Only a safe SHA, never configuration/secrets.
-  deploymentId: buildRelease,
+  // Vercel caps this cache/skew identifier at 32 characters. Keep the full
+  // commit SHA above for authenticated release verification.
+  deploymentId: buildRelease.slice(0, 32),
   // Preserve the Neon adapter's native Node runtime in production route handlers.
   serverExternalPackages: [
     "@prisma/adapter-neon",
