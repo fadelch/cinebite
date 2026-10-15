@@ -1,13 +1,14 @@
 "use client";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type DragEvent } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NotificationBell } from "@/components/notifications/notification-center";
 import { DeliveryOrderCard } from "@/components/delivery/delivery-order-card";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { useNotifications } from "@/components/ui/notification-provider";
 import { usePolling } from "@/lib/hooks/use-polling";
+import { DELIVERY_DRAG_TYPE, deliveryDropOrder, deliveryNextColumn, type DeliveryColumn, type DeliveryDrag } from "@/lib/orders/delivery-drag";
 import type { DeliveryOrder, DeliveryQueue as Queue, KitchenLocation } from "@/types/order";
 import type { DeliveryQueueQuery } from "@/validation/delivery";
 
@@ -18,14 +19,18 @@ export function DeliveryQueue({ initialQueue, query, locations, staff, superviso
   const { data: queue, error, refresh } = usePolling(`/api/delivery/orders?${params}`, initialQueue);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const [dragged, setDragged] = useState<DeliveryDrag | null>(null);
+  const [dropTarget, setDropTarget] = useState<DeliveryColumn | null>(null);
+  const dragSnapshot = useRef<DeliveryDrag | null>(null);
   const [selected, setSelected] = useState<DeliveryOrder | null>(null);
   const activeHeading = useRef<HTMLHeadingElement>(null);
   const deliveredHeading = useRef<HTMLHeadingElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const notifications = useNotifications();
   const reduced = useReducedMotion();
+  const orders = [...queue.ready, ...queue.active, ...queue.delivered];
   async function action(order: DeliveryOrder) {
-    if (busyRef.current) return;
+    if (busyRef.current || error || supervisor || !deliveryNextColumn(order)) return;
     busyRef.current = true; setBusy(true);
     let completed: string | null = null;
     try {
@@ -42,6 +47,35 @@ export function DeliveryQueue({ initialQueue, query, locations, staff, superviso
       await refresh(); busyRef.current = false; setBusy(false);
       if (completed && !dialog.current?.open) (completed === "DELIVERED" ? deliveredHeading : activeHeading).current?.focus();
     }
+  }
+  function endDrag() { dragSnapshot.current = null; setDragged(null); setDropTarget(null); }
+  function startDrag(event: DragEvent<HTMLElement>, order: DeliveryOrder) {
+    if (busyRef.current || error || supervisor || !deliveryNextColumn(order) ||
+      (event.target instanceof Element && event.target.closest("button, a, input, select, textarea"))) {
+      event.preventDefault(); return;
+    }
+    const snapshot = { publicOrderCode: order.publicOrderCode, status: order.status };
+    dragSnapshot.current = snapshot; setDragged(snapshot);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(DELIVERY_DRAG_TYPE, order.publicOrderCode);
+  }
+  function dragOver(event: DragEvent<HTMLElement>, target: DeliveryColumn) {
+    if (deliveryDropOrder(orders, dragSnapshot.current, target, busyRef.current || !!error || supervisor)) {
+      event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDropTarget(target);
+    } else { event.dataTransfer.dropEffect = "none"; setDropTarget(null); }
+  }
+  async function dropOrder(event: DragEvent<HTMLElement>, target: DeliveryColumn) {
+    event.preventDefault();
+    const snapshot = dragSnapshot.current;
+    const ownDrag = snapshot && event.dataTransfer.getData(DELIVERY_DRAG_TYPE) === snapshot.publicOrderCode;
+    const order = deliveryDropOrder(orders, snapshot, target, busyRef.current || !!error || supervisor);
+    endDrag();
+    if (!ownDrag) return;
+    if (!order) {
+      notifications.error("This delivery changed or cannot move there. Check the refreshed queue.");
+      await refresh(); return;
+    }
+    await action(order);
   }
   function open(order: DeliveryOrder) { setSelected(order); dialog.current?.showModal(); }
   function pageHref(page: number) { const values = new URLSearchParams(params); values.set("page", String(page)); return `/delivery?${values}`; }
@@ -60,9 +94,17 @@ export function DeliveryQueue({ initialQueue, query, locations, staff, superviso
       <div className="flex items-end gap-2"><button className="cb-button-primary flex-1">Filter</button><Link href="/delivery" className="cb-button-secondary">Reset</Link></div>
     </form></details>
     <p role="status" className="my-5 text-xs text-zinc-500">{error ?? "Queue updates automatically every 5 seconds"}</p>
-    <div className="grid items-start gap-4 lg:grid-cols-3">{visibleSections.map((section) => <section key={section.key} aria-label={section.title} className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-3">
+    {!supervisor ? <p id="delivery-drag-help" className="mb-4 text-sm leading-6 text-zinc-400">Drag a ready order to My deliveries to claim it. After handing it to the customer, drag it to Recently delivered. You can also use the action buttons on touch devices and with a keyboard.</p> : null}
+    <div className="grid items-start gap-4 lg:grid-cols-3">{visibleSections.map((section) => <section key={section.key} aria-label={section.title}
+      onDragOver={(event) => dragOver(event, section.key)} onDrop={(event) => { void dropOrder(event, section.key); }}
+      onDragLeave={(event) => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setDropTarget(null); }}
+      className={`min-h-52 min-w-0 rounded-2xl border p-3 transition-colors ${dropTarget === section.key ? "border-amber-300 bg-amber-400/10 ring-2 ring-amber-400/20" : deliveryDropOrder(orders, dragged, section.key, busy || !!error || supervisor) ? "border-amber-400/50 bg-zinc-900/50" : "border-zinc-800 bg-zinc-900/30"}`}>
       <div className="mb-4 border-b border-zinc-800 pb-3"><div className="flex items-center justify-between gap-2"><h2 ref={section.key === "active" ? activeHeading : section.key === "delivered" ? deliveredHeading : undefined} tabIndex={-1} className="font-semibold text-white focus:outline-amber-400">{section.title}</h2><span aria-live="polite" className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-amber-200">{queue.counts[section.key]}</span></div><p className="mt-2 text-xs text-zinc-500">{section.hint}</p></div>
-      <div className="space-y-3"><AnimatePresence initial={false}>{queue[section.key].map((order) => <motion.div key={order.publicOrderCode} layout={!reduced} initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.15 }}><DeliveryOrderCard order={order} now={queue.fetchedAt} busy={busy} action={action} open={open} /></motion.div>)}</AnimatePresence>{queue[section.key].length === 0 ? <p className="py-6 text-center text-sm text-zinc-600">No deliveries on this page</p> : null}</div>
+      <div className="space-y-3"><AnimatePresence initial={false}>{queue[section.key].map((order) => <motion.div key={order.publicOrderCode} layout={!reduced && !dragged} initial={reduced ? false : { opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: reduced ? 0 : 0.15 }}>
+        <div draggable={!busy && !error && !supervisor && !!deliveryNextColumn(order)} onDragStart={(event) => startDrag(event, order)} onDragEnd={endDrag}
+          aria-describedby={!supervisor ? "delivery-drag-help" : undefined} className={!busy && !error && !supervisor && deliveryNextColumn(order) ? "cursor-grab active:cursor-grabbing" : undefined}>
+          <DeliveryOrderCard order={order} now={queue.fetchedAt} busy={busy || !!error} action={action} open={open} />
+        </div></motion.div>)}</AnimatePresence>{queue[section.key].length === 0 ? <p className="py-6 text-center text-sm text-zinc-600">No deliveries on this page</p> : null}</div>
     </section>)}</div>
     <nav aria-label="Delivery pages" className="mt-6 flex flex-wrap items-center justify-end gap-3"><span className="text-xs text-zinc-500">Page {queue.page} · up to {queue.pageSize} per section</span>{queue.page > 1 ? <Link href={pageHref(queue.page - 1)} className="cb-button-secondary">Previous page</Link> : null}{Object.values(queue.counts).some((n) => n > queue.page * queue.pageSize) ? <Link href={pageHref(queue.page + 1)} className="cb-button-secondary">Next page</Link> : null}</nav>
     <dialog ref={dialog} onClose={() => setSelected(null)} aria-label="Delivery destination and timeline" className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-5 text-zinc-200 backdrop:bg-black/75"><button onClick={() => dialog.current?.close()} className="cb-button-secondary mb-4">Close delivery</button>{selected ? <DeliveryTicket key={selected.publicOrderCode} initialOrder={selected} busy={busy} action={action} /> : null}</dialog>
